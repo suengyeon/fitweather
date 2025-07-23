@@ -1,4 +1,5 @@
-# fitweather
+# Getting Started with Create React App
+>>>>>>> a1bd49e63a675c7813d742e819ea0b438b777914
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
@@ -68,4 +69,7 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+<<<<<<< HEAD
 >>>>>>> 19971e0 (Initialize project using Create React App)
+=======
+>>>>>>> a1bd49e63a675c7813d742e819ea0b438b777914
