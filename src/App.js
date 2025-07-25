@@ -1,20 +1,11 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Record from './pages/Record';
-import Feed from './pages/Feed';
-import MyPage from './pages/MyPage';
+// src/App.js
 
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/record" element={<Record />} />
-        <Route path="/feed" element={<Feed />} />
-        <Route path="/mypage" element={<MyPage />} />
-      </Routes>
-    </BrowserRouter>
+    <div className="bg-blue-500 text-white p-10 rounded-2xl">
+      Tailwind 적용 테스트!
+    </div>
   );
 }
+export default App;
+
