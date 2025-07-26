@@ -1,4 +1,3 @@
-// src/pages/ProfileSetup.js
 import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { doc, setDoc, query, collection, where, getDocs } from "firebase/firestore";
@@ -16,14 +15,12 @@ function ProfileSetup() {
   const [region, setRegion] = useState("");
   const [error, setError] = useState("");
 
-  // ⬇️ 여기가 핵심: handleSave 함수
   const handleSave = async () => {
     if (!nickname || !region) {
       setError("닉네임과 지역을 모두 입력해주세요!");
       return;
     }
     try {
-      // 닉네임 중복 검사 쿼리
       const q = query(
         collection(db, "users"),
         where("nickname", "==", nickname)
@@ -40,7 +37,6 @@ function ProfileSetup() {
         return;
       }
 
-      // 중복 없으면 저장
       await setDoc(doc(db, "users", uid), {
         nickname,
         region,
@@ -53,27 +49,31 @@ function ProfileSetup() {
   };
 
   return (
-    <div className="max-w-xs mx-auto mt-10">
-      <h2 className="text-xl font-bold mb-4">회원정보 입력</h2>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <h2 className="text-2xl font-semibold mb-4">회원정보 입력</h2>
       <input
+        className="border p-2 mb-2 w-64 rounded"
+        placeholder="닉네임"
         value={nickname}
-        onChange={e => setNickname(e.target.value)}
-        placeholder="닉네임을 입력하세요."
-        className="border p-2 mb-2 w-full"
+        onChange={(e) => setNickname(e.target.value)}
       />
-      <input
+      <select
+        className="border p-2 mb-2 w-64 rounded"
         value={region}
-        onChange={e => setRegion(e.target.value)}
-        placeholder="지역(예: 서울)"
-        className="border p-2 mb-2 w-full"
-      />
+        onChange={(e) => setRegion(e.target.value)}
+      >
+        <option value="">지역 선택</option>
+        <option value="서울">서울</option>
+        <option value="부산">부산</option>
+        {/* 필요 시 더 추가 */}
+      </select>
+      {error && <p className="text-red-500 text-sm">{error}</p>}
       <button
         onClick={handleSave}
-        className="bg-blue-500 text-white w-full py-2 rounded"
+        className="mt-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
       >
         저장
       </button>
-      {error && <p className="text-red-500 mt-2">{error}</p>}
     </div>
   );
 }
