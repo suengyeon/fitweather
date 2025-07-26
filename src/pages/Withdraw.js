@@ -4,6 +4,7 @@ import { doc, deleteDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { GoogleAuthProvider, reauthenticateWithPopup } from "firebase/auth";
 import { useState } from "react";
+import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 
 function Withdraw() {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ function Withdraw() {
       await deleteDoc(doc(db, "users", user.uid));
       // 🔵 3. 계정 삭제
       await user.delete();
-      setInfoMsg("회원탈퇴 완료! 메인으로 이동합니다.");
+      setInfoMsg("회원탈퇴 완료. 메인으로 이동합니다.");
       setTimeout(() => {
         logout();
         navigate("/");
@@ -33,26 +34,55 @@ function Withdraw() {
   };
 
   return (
-    <div className="max-w-xs mx-auto mt-16">
-      <h2 className="text-xl font-bold mb-6">회원탈퇴</h2>
-      <p className="mb-4 text-red-500">
-        회원탈퇴 시 모든 정보가 삭제되며, 복구할 수 없습니다.<br/>
-        정말 탈퇴하시겠습니까?
-      </p>
-      <button
-        onClick={handleWithdraw}
-        className="bg-red-500 text-white w-full py-2 rounded mb-2"
-      >
-        회원탈퇴
-      </button>
-      <button
-        onClick={() => navigate(-1)}
-        className="bg-gray-300 text-black w-full py-2 rounded"
-      >
-        돌아가기
-      </button>
-      {error && <p className="text-red-500 mt-4">{error}</p>}
-      {infoMsg && <p className="text-green-600 mt-4">{infoMsg}</p>}
+    <div className="h-screen bg-gray-100 flex flex-col">
+      {/* 상단 네비게이션 */}
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+        <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
+          <Bars3Icon className="w-5 h-5" />
+        </button>
+        <h2 className="font-bold text-lg">회원탈퇴</h2>
+        <button
+          onClick={() => navigate("/")}
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+        >
+          <HomeIcon className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="mt-10 flex justify-center">
+          <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
+      </div>
+
+      {/* 중앙 콘텐츠 */}
+      <div className="flex flex-col items-center justify-start flex-1 px-4 mt-12">
+        {/* 안내 메시지 카드 */}
+        <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
+          <div className="text-center text-black text-base leading-relaxed">
+            <p>회원탈퇴 시 모든 정보가 삭제되며, 복구할 수 없습니다.</p>
+            <p className="mt-2">정말 탈퇴하시겠습니까?</p>
+          </div>
+        </div>
+
+        {/* ✅ 버튼 그룹: 카드 외부 */}
+        <div className="flex justify-center gap-4 mb-4">
+          <button
+            onClick={handleWithdraw}
+            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md"
+          >
+            동의
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-md"
+          >
+            이전
+          </button>
+        </div>
+
+        {/* 메시지 출력 */}
+        {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+        {infoMsg && <p className="text-black mt-2 text-sm">{infoMsg}</p>}
+      </div>
     </div>
   );
 }

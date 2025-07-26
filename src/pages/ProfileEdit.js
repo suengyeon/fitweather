@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { doc, getDoc, updateDoc, query, collection, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 
 function ProfileEdit() {
   const { user } = useAuth();
@@ -66,35 +67,81 @@ function ProfileEdit() {
   };
 
   return (
-    <div className="max-w-xs mx-auto mt-16">
-      <h2 className="text-xl font-bold mb-6">회원정보 수정</h2>
-      <input
-        value={nickname}
-        onChange={e => setNickname(e.target.value)}
-        placeholder="닉네임을 입력하세요"
-        className="border p-2 mb-2 w-full"
-      />
-      <input
-        value={region}
-        onChange={e => setRegion(e.target.value)}
-        placeholder="지역(예: 서울)"
-        className="border p-2 mb-2 w-full"
-      />
-      <button
-        onClick={handleSave}
-        className="bg-blue-500 text-white w-full py-2 rounded mb-2"
-      >
-        저장
-      </button>
-      <button
-        onClick={() => navigate(-1)}
-        className="bg-gray-300 text-black w-full py-2 rounded"
-      >
-        돌아가기
-      </button>
-      <div className="mt-2 text-xs text-neutral-400">이메일: {email}</div>
-      {error && <p className="text-red-500 mt-4">{error}</p>}
-      {infoMsg && <p className="text-green-600 mt-4">{infoMsg}</p>}
+    <div className="h-screen bg-gray-100 flex flex-col">
+      {/* 네비게이션 바 */}
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+        <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
+          <Bars3Icon className="w-5 h-5 text-white" />
+        </button>
+        <h2 className="font-bold text-lg">내 정보 수정</h2>
+        <button
+          onClick={() => navigate("/")}
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+        >
+          <HomeIcon className="w-5 h-5 text-white" />
+        </button>
+      </div>
+
+       <div className="mt-10 flex justify-center">
+          <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
+      </div>
+
+      {/* 중앙 콘텐츠 */}
+      <div className="flex flex-col items-center justify-start flex-1 px-4 mt-12">
+
+        <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
+          {/* 입력 항목 */}
+          <div className="mb-10 flex items-center">
+            <label className="w-28 font-semibold text-base">지역</label>
+             <select
+                value={region}
+                onChange={e => setRegion(e.target.value)}
+                className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
+              >
+                <option value="서울">서울</option>
+                <option value="부산">부산</option>
+              </select>
+          </div>
+          <div className="mb-10 flex items-center">
+            <label className="w-28 font-semibold text-base">이름</label>
+            <input
+              type="text"
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+              className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
+            />
+          </div>
+          <div className="mb-10 flex items-center">
+            <label className="w-28 font-semibold text-base">이메일</label>
+            <input
+              type="text"
+              value={email}
+              readOnly
+              className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
+            />
+          </div>
+        </div>
+
+        {/* 버튼 영역 */}
+        <div className="flex gap-4">
+          <button
+            onClick={handleSave}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md"
+          >
+            저장
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-md"
+          >
+            이전
+          </button>
+        </div>
+
+        {/* 메시지 */}
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+        {infoMsg && <p className="text-black0 mt-4">{infoMsg}</p>}
+      </div>
     </div>
   );
 }
