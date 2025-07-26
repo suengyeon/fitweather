@@ -46,7 +46,7 @@ function Home() {
             className="mt-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded mr-2"
             onClick={() => navigate("/mypage_userinfo")}
           >
-            내 정보 보기
+            내 정보
           </button>
           <button
             onClick={logout}

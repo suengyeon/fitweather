@@ -40,14 +40,14 @@ function MyPageUserInfo() {
         onClick={() => navigate("/profile-edit")}
       >
 
-        
+
         수정
       </button>
       <button
         className="bg-red-400 text-white w-full py-2 rounded"
         onClick={() => navigate("/withdraw")}
       >
-        회원탈퇴
+        탈퇴
       </button>
     </div>
   );
