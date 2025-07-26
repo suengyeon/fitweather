@@ -1,10 +1,8 @@
-// Import the functions you need from the SDKs you need
+// src/firebase.js
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-
+import { signOut } from "firebase/auth";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -20,13 +18,18 @@ const firebaseConfig = {
   measurementId: "G-YW36DSG53V"
 };
 
-// Initialize Firebase
+// 2. Firebase 앱 초기화
 const app = initializeApp(firebaseConfig);
 
+// 3. Auth 객체 생성
 export const auth = getAuth(app);
-export const db = getFirestore(app);
-
-const analytics = getAnalytics(app);
-
-console.log("Auth:", auth);
-console.log("DB:", db);
+export const db = getFirestore(app);     
+// 4. Google 로그인 함수 만들기 (Promise 반환)
+export async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  return result; // result.user.uid로 uid 추출 가능!
+}
+export async function logout() {
+    await signOut(auth);
+  }
