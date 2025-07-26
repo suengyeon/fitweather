@@ -39,6 +39,8 @@ function MyPageUserInfo() {
         className="bg-blue-500 text-white w-full py-2 rounded mb-3"
         onClick={() => navigate("/profile-edit")}
       >
+
+        
         수정
       </button>
       <button
