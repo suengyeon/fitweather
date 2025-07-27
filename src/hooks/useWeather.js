@@ -20,7 +20,11 @@ export default function useWeather(region) {
         if (forecastItems) {
           const selected = selectNextForecast(forecastItems);
           console.log("✅ selected forecast:", selected);
-          setWeather(selected);
+          setWeather({
+            temp: selected.temp,
+            rain: selected.rainAmount,  // ✅ 이렇게 받아오도록!
+            icon: selected.iconCode,
+          });
         } else {
           setWeather(null);
         }
