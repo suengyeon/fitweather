@@ -71,14 +71,14 @@ function ProfileEdit() {
       {/* 네비게이션 바 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
-          <Bars3Icon className="w-5 h-5 text-white" />
+          <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">내 정보 수정</h2>
         <button
           onClick={() => navigate("/")}
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
         >
-          <HomeIcon className="w-5 h-5 text-white" />
+          <HomeIcon className="w-5 h-5" />
         </button>
       </div>
 
@@ -88,7 +88,6 @@ function ProfileEdit() {
 
       {/* 중앙 콘텐츠 */}
       <div className="flex flex-col items-center justify-start flex-1 px-4 mt-12">
-
         <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
           {/* 입력 항목 */}
           <div className="mb-10 flex items-center">
