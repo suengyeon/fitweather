@@ -97,12 +97,17 @@ function ProfileEdit() {
                 onChange={e => setRegion(e.target.value)}
                 className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
               >
-                <option value="서울">서울</option>
-                <option value="부산">부산</option>
+              <option value="Seoul">서울</option>
+              <option value="Busan">부산</option>
+              <option value="Gwangju">광주</option>
+              <option value="Daegu">대구</option>
+              <option value="Daejeon">대전</option>
+              <option value="Ulsan">울산</option>
+              <option value="Incheon">인천</option>
               </select>
           </div>
           <div className="mb-10 flex items-center">
-            <label className="w-28 font-semibold text-base">이름</label>
+            <label className="w-28 font-semibold text-base">닉네임</label>
             <input
               type="text"
               value={nickname}

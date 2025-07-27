@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { doc, setDoc, query, collection, where, getDocs } from "firebase/firestore";
 import { useState } from "react";
+import { HomeIcon, Bars3Icon } from "@heroicons/react/24/solid";
 
 function ProfileSetup() {
   const location = useLocation();
@@ -49,30 +50,71 @@ function ProfileSetup() {
   };
 
   return (
-    <div className="max-w-xs mx-auto mt-10">
-      <h2 className="text-xl font-bold mb-4">회원정보 입력</h2>
-      <input
-        value={nickname}
-        onChange={e => setNickname(e.target.value)}
-        placeholder="닉네임을 입력하세요."
-        className="border p-2 mb-2 w-full"
-      />
-      <select
-        value={region}
-        onChange={e => setRegion(e.target.value)}
-        className="border p-2 mb-2 w-full"
-      >
-        <option value="">지역 선택</option>
-        <option value="서울">서울</option>
-        <option value="부산">부산</option>
-      </select>
-      {error && <p className="text-red-500 mt-2">{error}</p>}
-      <button
-        onClick={handleSave}
-        className="bg-blue-500 text-white w-full py-2 rounded"
-      >
-        저장
-      </button>
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* 상단 네비게이션 */}
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+        <button className="bg-blue-300 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-400">
+          <Bars3Icon className="w-5 h-5" />
+        </button>
+        <h2 className="font-bold text-lg">회원 정보 입력</h2>
+        <button
+          onClick={() => navigate("/")}
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+        >
+          <HomeIcon className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* 로고 */}
+      <div className="mt-10 flex justify-center">
+        <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
+      </div>
+
+      {/* 콘텐츠 영역 */}
+      <div className="flex flex-col items-center justify-start flex-1 px-4 mt-12">
+        <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-md mb-8">
+          <div className="mb-6">
+            <label className="block font-semibold mb-2">닉네임</label>
+            <input
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+              placeholder="닉네임을 입력하세요."
+              className="w-full border border-gray-300 px-4 py-2 rounded"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block font-semibold mb-2">지역</label>
+            <select
+              value={region}
+              onChange={e => setRegion(e.target.value)}
+              className="w-full border border-gray-300 px-4 py-2 rounded bg-white"
+            >
+              <option value="">지역 선택</option>
+              <option value="Seoul">서울</option>
+              <option value="Busan">부산</option>
+              <option value="Gwangju">광주</option>
+              <option value="Daegu">대구</option>
+              <option value="Daejeon">대전</option>
+              <option value="Ulsan">울산</option>
+              <option value="Incheon">인천</option>
+            </select>
+          </div>
+
+          {error && (
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+          )}
+
+          <div className="flex justify-center">
+            <button
+              onClick={handleSave}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded w-auto"
+            >
+              저장
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

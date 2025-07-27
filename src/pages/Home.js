@@ -100,7 +100,7 @@ function Home() {
 
             {/* 기록하기 버튼 */}
             <button
-              className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded mt-8"
+              className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded"
               onClick={() => navigate("/record")}
             >
               기록하기
