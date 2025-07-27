@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export default function Skeleton() {
     return (
         <div className="w-60 h-72 bg-gray-200 border border-gray-300 rounded flex flex-col items-center justify-center gap-2 animate-pulse">
@@ -17,3 +18,16 @@ export default function Skeleton() {
         </div>
     );
 }
+=======
+// src/components/Skeleton.js
+import React from 'react';
+
+const Skeleton = () => (
+  <div style={{ padding: '20px', textAlign: 'center' }}>
+    로딩중...
+  </div>
+);
+
+export default Skeleton;
+
+>>>>>>> 68676bf (날씨 api 연동 및 Home 페이지 리팩터링 완료)

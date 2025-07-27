@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export default function WeatherCard({ region, temp, rain, desc, icon }) {
     const iconText = icon === "rain" ? "☔️" : "☀️";
 
@@ -19,3 +20,19 @@ export default function WeatherCard({ region, temp, rain, desc, icon }) {
         </div>
     );
 }
+=======
+// src/components/WeatherCard.js
+import React from 'react';
+
+const WeatherCard = ({ temp, rainProb, iconCode, region }) => (
+  <div style={{ border: '1px solid #ccc', padding: '16px', textAlign: 'center' }}>
+    <div>Region: {region}</div>
+    <div>Temp: {temp}</div>
+    <div>RainProb: {rainProb}</div>
+    <div>IconCode: {iconCode}</div>
+  </div>
+);
+
+export default WeatherCard;
+
+>>>>>>> 68676bf (날씨 api 연동 및 Home 페이지 리팩터링 완료)
