@@ -28,6 +28,25 @@ function Record() {
   const [regionName, setRegionName] = useState(region);
   const [isPublic, setIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [weatherEmojis, setWeatherEmojis] = useState([]);
+  const emojiList = [
+    "☀️", // 태양
+    "🌩️", // 번개
+    "❄️", // 눈결정
+    "🌧️", // 비
+    "💨", // 바람
+    "☁️"  // 구름
+  ];
+  const toggleEmoji = (emoji) => {
+    setWeatherEmojis((prev) =>
+      prev.includes(emoji)
+        ? prev.filter((e) => e !== emoji)
+        : prev.length < 2
+          ? [...prev, emoji]
+          : prev // 최대 2개까지 선택
+    );
+  };
+  const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
 
   const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef() };
 
@@ -55,11 +74,19 @@ function Record() {
     }
     setImage(URL.createObjectURL(files[0]));
     setImageFiles(files);
+    setImagePreviewIdx(0);
   };
 
   const handleAddItem = (category, value) => {
     if (!value.trim()) return;
     setOutfit((prev) => ({ ...prev, [category]: [...prev[category], value] }));
+  };
+
+  const handleRemoveItem = (category, idx) => {
+    setOutfit((prev) => ({
+      ...prev,
+      [category]: prev[category].filter((_, i) => i !== idx)
+    }));
   };
 
   const handleSubmit = async () => {
@@ -117,6 +144,7 @@ function Record() {
         memo,
         isPublic,
         imageUrls,
+        weatherEmojis,
         createdAt: new Date(),
       };
       await addDoc(collection(db, "records"), recordData);
@@ -187,6 +215,25 @@ function Record() {
                   <option value="cold">💨 추움</option>
                   <option value="ice">🥶 동태</option>
                 </select>
+                {/* 날씨 이모지 선택 UI */}
+                <div className="mt-4">
+                  <label className="block font-semibold mb-2">날씨 이모지 (최대 2개)</label>
+                  <div className="flex justify-center">
+                    <div className="grid grid-cols-3 gap-2 w-48">
+                      {emojiList.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          className={`text-2xl px-2 py-1 rounded ${weatherEmojis.includes(emoji) ? "bg-blue-200" : "bg-gray-100"}`}
+                          onClick={() => toggleEmoji(emoji)}
+                          disabled={weatherEmojis.length >= 2 && !weatherEmojis.includes(emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 {/* 지역 피드 업로드 체크박스 */}
                 <div className="mt-4 flex items-center justify-center space-x-2">
                   <input
@@ -220,8 +267,9 @@ function Record() {
           </div>
           {/* 이미지 업로드 및 미리보기 */}
           <div className="flex flex-col md:flex-row gap-4 w-full">
-            <div className="w-full md:w-1/2 flex justify-center items-center">
-              {!image ? (
+            {/* 이미지 미리보기 영역 */}
+            <div className="w-full md:w-1/2 flex flex-col items-center justify-center">
+              {imageFiles.length === 0 ? (
                 <label
                   htmlFor="imageUpload"
                   className="w-72 aspect-[3/4] border-2 border-gray-300 bg-gray-100 rounded-md flex justify-center items-center text-gray-600 cursor-pointer hover:bg-gray-200"
@@ -237,17 +285,38 @@ function Record() {
                   />
                 </label>
               ) : (
-                <div className="w-72 aspect-[3/4] border rounded mt-2 p-2 bg-gray-100 flex justify-center">
+                <div className="w-72 aspect-[3/4] border rounded mt-2 p-2 bg-gray-100 flex flex-col items-center justify-center relative">
                   <img
-                    src={image}
+                    src={URL.createObjectURL(imageFiles[imagePreviewIdx])}
                     alt="preview"
                     className="w-full h-full object-cover rounded"
                   />
+                  {imageFiles.length > 1 && (
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-between px-2">
+                      <button
+                        type="button"
+                        className="bg-white bg-opacity-70 rounded-full px-2 py-1 text-lg"
+                        onClick={() => setImagePreviewIdx((prev) => (prev - 1 + imageFiles.length) % imageFiles.length)}
+                        disabled={imageFiles.length <= 1}
+                      >
+                        ◀
+                      </button>
+                      <span className="text-xs text-gray-700 mx-2">{imagePreviewIdx + 1} / {imageFiles.length}</span>
+                      <button
+                        type="button"
+                        className="bg-white bg-opacity-70 rounded-full px-2 py-1 text-lg"
+                        onClick={() => setImagePreviewIdx((prev) => (prev + 1) % imageFiles.length)}
+                        disabled={imageFiles.length <= 1}
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
             {/* 착장 입력 필드 (outer, top, bottom 등) */}
-            <div className="w-full md:w-1/2 space-y-4">
+            <div className="w-full md:w-1/2 space-y-4 max-h-96 overflow-y-auto">
               {Object.keys(inputRefs).map((category) => {
                 const inputRef = inputRefs[category];
                 return (
@@ -273,7 +342,16 @@ function Record() {
                     {outfit[category].length > 0 && (
                       <ul className="ml-2 mt-1 text-sm text-gray-600">
                         {outfit[category].map((item, idx) => (
-                          <li key={idx}>• {item}</li>
+                          <li key={idx} className="flex items-center gap-1">
+                            • {item}
+                            <button
+                              type="button"
+                              className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                              onClick={() => handleRemoveItem(category, idx)}
+                            >
+                              -
+                            </button>
+                          </li>
                         ))}
                       </ul>
                     )}
@@ -289,7 +367,7 @@ function Record() {
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
               placeholder="오늘의 착장은 어땠나요?"
-              className="w-full h-24 px-4 py-2 border rounded bg-white"
+              className="w-full h-24 px-4 py-2 border rounded bg-white resize-none overflow-y-auto"
             />
           </div>
         </div>
