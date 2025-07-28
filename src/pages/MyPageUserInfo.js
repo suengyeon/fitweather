@@ -53,7 +53,7 @@ function MyPageUserInfo() {
         <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
         {[
           { label: "지역", value: region },
-          { label: "이름", value: nickname },
+          { label: "닉네임", value: nickname },
           { label: "아이디", value: email },
           { label: "비밀번호", value: "********" }, // 마스킹 처리
         ].map((item, idx) => (

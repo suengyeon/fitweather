@@ -14,7 +14,7 @@ function ProfileSetup() {
 
   const [nickname, setNickname] = useState(displayName);
   const [region, setRegion] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); // eslint-disable-next-line no-unused-vars
 
   const handleSave = async () => {
     if (!nickname || !region) {

@@ -2,7 +2,14 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+<<<<<<< HEAD
 import { getStorage } from "firebase/storage";
+=======
+import { signOut } from "firebase/auth";
+import { getStorage } from "firebase/storage";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+>>>>>>> origin/main
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -20,6 +27,7 @@ const app = initializeApp(firebaseConfig);
 
 // Auth
 export const auth = getAuth(app);
+<<<<<<< HEAD
 
 // Firestore
 export const db = getFirestore(app);
@@ -28,6 +36,11 @@ export const db = getFirestore(app);
 export const storage = getStorage(app, "gs://fitweather-638a3.firebasestorage.app");
 
 // Google login
+=======
+export const storage = getStorage(app);
+export const db = getFirestore(app);     
+// 4. Google 로그인 함수 만들기 (Promise 반환)
+>>>>>>> origin/main
 export async function loginWithGoogle() {
   const provider = new GoogleAuthProvider();
   const result = await signInWithPopup(auth, provider);
