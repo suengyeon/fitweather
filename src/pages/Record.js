@@ -37,7 +37,6 @@ export default function Record() {
    * 통합하여 Firebase에 저장하고, 완료 메시지를 표시한 뒤 이동합니다.
    */
   const handleSave = async ({ files, feeling, weatherEmojis, feedback, outfit, isPublic }) => {
-    console.log("handleSave - 전달된 파일 수:", files.length, files);
     setLoading(true);
     setSaved(false);
     try {
@@ -53,42 +52,74 @@ export default function Record() {
         where("uid", "==", uid),
         where("date", "==", date)
       );
-      const querySnapshot = await getDocs(q);
+      let querySnapshot;
+      try {
+        querySnapshot = await getDocs(q);
+      } catch (err) {
+        toast.error("네트워크 오류로 기존 기록 확인에 실패했습니다. 인터넷 연결을 확인해 주세요.");
+        setLoading(false);
+        return;
+      }
       if (!querySnapshot.empty) {
         toast.error("이미 기록하셨습니다.");
         setLoading(false);
         return;
       }
-
       // 1) 다중 이미지 업로드
-      const imageUrls = await Promise.all(
-        files.map((file) => uploadOutfitImage(file, uid))
-      );
-      console.log("upload complete - URLs:", imageUrls);
-
+      let imageUrls = [];
+      try {
+        imageUrls = await Promise.all(
+          files.map((file) => uploadOutfitImage(file, uid))
+        );
+      } catch (err) {
+        if (err.code === "storage/unauthorized") {
+          toast.error("이미지 업로드 권한이 없습니다. 다시 로그인해 주세요.");
+        } else if (err.code === "storage/canceled") {
+          toast.error("이미지 업로드가 취소되었습니다.");
+        } else {
+          toast.error("이미지 업로드 중 네트워크 오류가 발생했습니다. 다시 시도해 주세요.");
+        }
+        setLoading(false);
+        return;
+      }
+      if (!imageUrls.length) {
+        toast.error("업로드된 이미지가 없습니다. 이미지를 선택해 주세요.");
+        setLoading(false);
+        return;
+      }
       // 2) Firestore 저장 (온도, 강수량 포함)
-      await saveOutfitRecord({
-        uid,
-        region,
-        date,
-        temp: weather.temp,
-        rain: weather.rain,
-        feeling,
-        weatherEmojis,
-        imageUrls,
-        feedback,
-        outfit,
-        isPublic
-      });
-
+      try {
+        await saveOutfitRecord({
+          uid,
+          region,
+          date,
+          temp: weather.temp,
+          rain: weather.rain,
+          feeling,
+          weatherEmojis,
+          imageUrls,
+          feedback,
+          outfit,
+          isPublic
+        });
+      } catch (err) {
+        if (err.code === "permission-denied") {
+          toast.error("저장 권한이 없습니다. 다시 로그인해 주세요.");
+        } else if (err.message && err.message.includes("undefined")) {
+          toast.error("날씨 정보가 올바르지 않습니다. 새로고침 후 다시 시도해 주세요.");
+        } else {
+          toast.error("기록 저장 중 네트워크 오류가 발생했습니다. 다시 시도해 주세요.");
+        }
+        setLoading(false);
+        return;
+      }
       // 저장 완료 표시
       toast.success("착장 기록이 저장되었습니다!", { autoClose: 1000 });
-
       // 딜레이 없이 즉시 페이지 이동
       navigate("/calendar");
     } catch (err) {
+      toast.error("알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.");
       console.error("저장 중 오류:", err);
-      toast.error("저장에 실패했습니다.");
     } finally {
       setLoading(false);
     }
