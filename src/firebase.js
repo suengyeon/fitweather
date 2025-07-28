@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { signOut } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -23,6 +24,7 @@ const app = initializeApp(firebaseConfig);
 
 // 3. Auth 객체 생성
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 export const db = getFirestore(app);     
 // 4. Google 로그인 함수 만들기 (Promise 반환)
 export async function loginWithGoogle() {
