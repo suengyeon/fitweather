@@ -4,7 +4,7 @@ export default function WeatherCard({ region, temp, rain, desc, icon }) {
     return (
       <div className="flex flex-col items-center">
         {/* 날씨 아이콘 박스 */}
-        <div className="w-60 h-60 bg-white border border-gray-400 rounded mb-4 flex items-center justify-center text-6xl">
+        <div className="w-60 h-60 bg-white border border-gray-400 rounded mb-8 flex items-center justify-center text-6xl">
           {iconText}
         </div>
   
