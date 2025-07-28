@@ -60,6 +60,7 @@ function Record() {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).filter(f => f && f.name);
     if (!files.length) return;
+
     const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
     const maxSizeMB = 3;
     for (const file of files) {
@@ -72,9 +73,18 @@ function Record() {
         return;
       }
     }
-    setImage(URL.createObjectURL(files[0]));
-    setImageFiles(files);
-    setImagePreviewIdx(0);
+
+    setImageFiles((prev) => {
+      const newList = [...prev, ...files];
+
+      // 처음 업로드인 경우만 preview 초기화
+      if (prev.length === 0 && newList.length > 0) {
+        setImage(URL.createObjectURL(newList[0]));
+        setImagePreviewIdx(0);
+      }
+
+      return newList;
+    });
   };
 
   const handleAddItem = (category, value) => {
@@ -92,7 +102,8 @@ function Record() {
   const handleSubmit = async () => {
     if (!uid) { toast.error("로그인이 필요합니다."); return; }
     if (!imageFiles.length || imageFiles.some(f => !f || !f.name)) {
-      toast.error("사진을 업로드해주세요."); return; }
+      toast.error("사진을 업로드해주세요."); return;
+    }
     if (!feeling) { toast.error("체감을 선택해주세요."); return; }
     if (typeof weather?.temp === "undefined" || typeof weather?.rain === "undefined") {
       toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
@@ -165,7 +176,7 @@ function Record() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* 상단 네비게이션 */}
-      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 ">
         <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
           <Bars3Icon className="w-5 h-5" />
         </button>
@@ -193,15 +204,15 @@ function Record() {
                 desc=""
                 icon={weather.icon}
               />
-              <div className="flex flex-col items-center space-y-6 mt-4">
+              <div className="flex flex-col items-center space-y-4">
                 <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                  <span className="text-lg font-semibold">온도 : {weather.temp}°C</span>
+                  <span className="text-base font-semibold">온도 : {weather.temp}°C</span>
                 </div>
                 <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                  <span className="text-lg font-semibold">강수량 : {weather.rain}mm</span>
+                  <span className="text-base font-semibold">강수량 : {weather.rain}mm</span>
                 </div>
               </div>
-              <div className="mt-6">
+              <div className="mt-4">
                 {/* 체감 선택 드롭다운 */}
                 <select
                   value={feeling}
@@ -268,7 +279,7 @@ function Record() {
           {/* 이미지 업로드 및 미리보기 */}
           <div className="flex flex-col md:flex-row gap-4 w-full">
             {/* 이미지 미리보기 영역 */}
-            <div className="w-full md:w-1/2 flex flex-col items-center justify-center">
+            <div className="w-full md:w-1/2 flex flex-col items-center justify-center ">
               {imageFiles.length === 0 ? (
                 <label
                   htmlFor="imageUpload"
@@ -285,38 +296,64 @@ function Record() {
                   />
                 </label>
               ) : (
-                <div className="w-72 aspect-[3/4] border rounded mt-2 p-2 bg-gray-100 flex flex-col items-center justify-center relative">
+                <div className="w-72 aspect-[3/4] relative rounded overflow-hidden border bg-gray-100 mt-2 p-2">
+                  {/* 이미지 미리보기 */}
                   <img
                     src={URL.createObjectURL(imageFiles[imagePreviewIdx])}
                     alt="preview"
-                    className="w-full h-full object-cover rounded"
+                    className="w-full h-full object-cover rounded object-cover "
                   />
+
+                  {/* ◀ / ▶ 이미지 전환 버튼 */}
                   {imageFiles.length > 1 && (
                     <div className="absolute bottom-2 left-0 right-0 flex justify-between px-2">
                       <button
                         type="button"
                         className="bg-white bg-opacity-70 rounded-full px-2 py-1 text-lg"
-                        onClick={() => setImagePreviewIdx((prev) => (prev - 1 + imageFiles.length) % imageFiles.length)}
-                        disabled={imageFiles.length <= 1}
+                        onClick={() =>
+                          setImagePreviewIdx((prev) => (prev - 1 + imageFiles.length) % imageFiles.length)
+                        }
                       >
                         ◀
                       </button>
-                      <span className="text-xs text-gray-700 mx-2">{imagePreviewIdx + 1} / {imageFiles.length}</span>
+                      {/* 이미지 순서 */}
+                      <span className="text-sm bg-white bg-opacity-70 px-2 py-1 rounded">
+                        {imagePreviewIdx + 1} / {imageFiles.length}
+                      </span>
                       <button
                         type="button"
                         className="bg-white bg-opacity-70 rounded-full px-2 py-1 text-lg"
-                        onClick={() => setImagePreviewIdx((prev) => (prev + 1) % imageFiles.length)}
-                        disabled={imageFiles.length <= 1}
+                        onClick={() =>
+                          setImagePreviewIdx((prev) => (prev + 1) % imageFiles.length)
+                        }
                       >
                         ▶
                       </button>
                     </div>
                   )}
+
+                  {/* ✅ + 사진 추가 버튼 (우상단 겹쳐도 상관 없음) */}
+                  <label
+                    htmlFor="imageUpload"
+                    className="absolute top-2 right-2 bg-white bg-opacity-70 text-sm text-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-opacity-90 z-10"
+                  >
+                    + 사진 추가
+                    <input
+                      id="imageUpload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
+
               )}
             </div>
+
             {/* 착장 입력 필드 (outer, top, bottom 등) */}
-            <div className="w-full md:w-1/2 space-y-4 max-h-96 overflow-y-auto">
+            <div className="w-full md:w-1/2 space-y-4 max-h-96 overflow-y-auto pr-6">
               {Object.keys(inputRefs).map((category) => {
                 const inputRef = inputRefs[category];
                 return (
@@ -372,7 +409,7 @@ function Record() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 
