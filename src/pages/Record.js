@@ -1,286 +1,140 @@
 // src/pages/Record.js
-<<<<<<< HEAD
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
+import { auth, db, storage } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
-import useWeather from "../hooks/useWeather";
-import RecordForm from "../components/RecordForm";
-import { uploadOutfitImage } from "../api/uploadOutfitImage";
-import { saveOutfitRecord } from "../api/saveOutfitRecord";
-import { toast } from "react-toastify";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
-
-export default function Record() {
-  const navigate = useNavigate();
-  const { profile, loading: profileLoading } = useUserProfile();
-  const uid = auth.currentUser.uid;
-  const region = profile?.region || "";
-
-  // 날짜 기본값: 오늘 (YYYY-MM-DD)
-  const today = new Date().toISOString().slice(0, 10);
-  const [date, setDate] = useState(today);
-
-  // profile이 준비된 후에만 useWeather 호출
-  const { weather, loading: weatherLoading } = useWeather(region);
-
-  // 로딩/저장완료 상태
-  const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  if (profileLoading) {
-    return <div className="p-4 max-w-md mx-auto">사용자 정보를 불러오는 중...</div>;
-  }
-
-  /**
-   * RecordForm에서 전달된 데이터와 자동 획득한 날씨 정보를
-   * 통합하여 Firebase에 저장하고, 완료 메시지를 표시한 뒤 이동합니다.
-   */
-  const handleSave = async ({ files, feeling, weatherEmojis, feedback, outfit, isPublic }) => {
-    setLoading(true);
-    setSaved(false);
-    try {
-      // 온도/강수량 값 체크
-      if (typeof weather?.temp === "undefined" || typeof weather?.rain === "undefined") {
-        toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
-        setLoading(false);
-        return;
-      }
-      // 0) 이미 기록된 날짜인지 확인
-      const q = query(
-        collection(db, "outfits"),
-        where("uid", "==", uid),
-        where("date", "==", date)
-      );
-      let querySnapshot;
-      try {
-        querySnapshot = await getDocs(q);
-      } catch (err) {
-        toast.error("네트워크 오류로 기존 기록 확인에 실패했습니다. 인터넷 연결을 확인해 주세요.");
-        setLoading(false);
-        return;
-      }
-      if (!querySnapshot.empty) {
-        toast.error("이미 기록하셨습니다.");
-        setLoading(false);
-        return;
-      }
-      // 1) 다중 이미지 업로드
-      let imageUrls = [];
-      try {
-        imageUrls = await Promise.all(
-          files.map((file) => uploadOutfitImage(file, uid))
-        );
-      } catch (err) {
-        if (err.code === "storage/unauthorized") {
-          toast.error("이미지 업로드 권한이 없습니다. 다시 로그인해 주세요.");
-        } else if (err.code === "storage/canceled") {
-          toast.error("이미지 업로드가 취소되었습니다.");
-        } else {
-          toast.error("이미지 업로드 중 네트워크 오류가 발생했습니다. 다시 시도해 주세요.");
-        }
-        setLoading(false);
-        return;
-      }
-      if (!imageUrls.length) {
-        toast.error("업로드된 이미지가 없습니다. 이미지를 선택해 주세요.");
-        setLoading(false);
-        return;
-      }
-      // 2) Firestore 저장 (온도, 강수량 포함)
-      try {
-        await saveOutfitRecord({
-          uid,
-          region,
-          date,
-          temp: weather.temp,
-          rain: weather.rain,
-          feeling,
-          weatherEmojis,
-          imageUrls,
-          feedback,
-          outfit,
-          isPublic
-        });
-      } catch (err) {
-        if (err.code === "permission-denied") {
-          toast.error("저장 권한이 없습니다. 다시 로그인해 주세요.");
-        } else if (err.message && err.message.includes("undefined")) {
-          toast.error("날씨 정보가 올바르지 않습니다. 새로고침 후 다시 시도해 주세요.");
-        } else {
-          toast.error("기록 저장 중 네트워크 오류가 발생했습니다. 다시 시도해 주세요.");
-        }
-        setLoading(false);
-        return;
-      }
-      // 저장 완료 표시
-      toast.success("착장 기록이 저장되었습니다!", { autoClose: 1000 });
-      // 딜레이 없이 즉시 페이지 이동
-      navigate("/calendar");
-    } catch (err) {
-      toast.error("알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.");
-      console.error("저장 중 오류:", err);
-    } finally {
-      setLoading(false);
-=======
-import { useState, useEffect, useRef } from "react";
-import { db, storage } from "../firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import useWeather from "../hooks/useWeather";
 import WeatherCard from "../components/WeatherCard";
-import useUserProfile from "../hooks/useUserProfile";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import { toast } from "react-toastify";
+import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 function Record() {
   const navigate = useNavigate();
   const today = new Date();
   const formattedDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
 
-  const { profile } = useUserProfile();
-  const { user } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const uid = auth.currentUser?.uid;
   const region = profile?.region || "서울";
   const { weather, loading: weatherLoading } = useWeather(region);
 
   const [image, setImage] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [], });
+  const [imageFiles, setImageFiles] = useState([]);
+  const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] });
   const [feeling, setFeeling] = useState("");
   const [memo, setMemo] = useState("");
   const [regionName, setRegionName] = useState(region);
   const [isPublic, setIsPublic] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef(), };
+  const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef() };
 
   useEffect(() => {
     const regionMap = {
-      seoul: "서울",
-      busan: "부산",
-      daegu: "대구",
-      incheon: "인천",
-      gwangju: "광주",
-      daejeon: "대전",
-      ulsan: "울산",
-      suwon: "수원",
+      seoul: "서울", busan: "부산", daegu: "대구", incheon: "인천", gwangju: "광주", daejeon: "대전", ulsan: "울산", suwon: "수원"
     };
     setRegionName(regionMap[region.toLowerCase()] || region);
   }, [region]);
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
+    const files = Array.from(e.target.files).filter(f => f && f.name);
+    if (!files.length) return;
     const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
     const maxSizeMB = 3;
-
-    if (!allowedTypes.includes(file.type)) {
-      alert("jpg, png, gif 형식의 이미지 파일만 업로드 가능합니다.");
-      return;
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        alert("jpg, png, gif 형식의 이미지 파일만 업로드 가능합니다.");
+        return;
+      }
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        alert(`이미지 용량은 ${maxSizeMB}MB 이하로 업로드해주세요.`);
+        return;
+      }
     }
-
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      alert(`이미지 용량은 ${maxSizeMB}MB 이하로 업로드해주세요.`);
-      return;
-    }
-
-    setImage(URL.createObjectURL(file));
-    setImageFile(file);
+    setImage(URL.createObjectURL(files[0]));
+    setImageFiles(files);
   };
 
   const handleAddItem = (category, value) => {
     if (!value.trim()) return;
-    setOutfit((prev) => ({
-      ...prev,
-      [category]: [...prev[category], value],
-    }));
+    setOutfit((prev) => ({ ...prev, [category]: [...prev[category], value] }));
   };
 
   const handleSubmit = async () => {
+    if (!uid) { toast.error("로그인이 필요합니다."); return; }
+    if (!imageFiles.length || imageFiles.some(f => !f || !f.name)) {
+      toast.error("사진을 업로드해주세요."); return; }
+    if (!feeling) { toast.error("체감을 선택해주세요."); return; }
+    if (typeof weather?.temp === "undefined" || typeof weather?.rain === "undefined") {
+      toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+    if (!storage) {
+      toast.error("스토리지 인스턴스가 올바르지 않습니다. 새로고침 후 다시 시도해 주세요.");
+      return;
+    }
+    setLoading(true);
     try {
-      if (!user) {
-        alert("로그인이 필요합니다.");
+      // 중복 기록 체크 (오늘 날짜 기준, uid)
+      const dateStr = today.toISOString().slice(0, 10);
+      const q = query(
+        collection(db, "records"),
+        where("uid", "==", uid),
+        where("date", "==", dateStr)
+      );
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        toast.error("이미 기록하셨습니다.");
+        setLoading(false);
         return;
       }
-      if (!imageFile) {
-        alert("사진을 업로드해주세요.");
-        return;
-      }
-      if (!feeling) {
-        alert("체감을 선택해주세요.");
-        return;
-      }
-
-      // 🔥 1. 이미지 업로드 → Storage
-      const imageRef = ref(storage, `records/${user.uid}/${Date.now()}_${imageFile.name}`);
-      await uploadBytes(imageRef, imageFile);
-      const imageUrl = await getDownloadURL(imageRef);
-
-      // 🔥 2. Firestore 저장
+      // 이미지 업로드 (여러 장)
+      const imageUrls = await Promise.all(
+        imageFiles.map(async (file) => {
+          if (!file || !file.name) throw new Error("잘못된 파일입니다.");
+          const imageRef = ref(storage, `records/${uid}/${Date.now()}_${file.name}`);
+          await uploadBytes(imageRef, file);
+          return await getDownloadURL(imageRef);
+        })
+      );
+      // Firestore 저장 (temp/rain/weather 모두 저장)
       const recordData = {
-        uid: user.uid,
+        uid,
         region,
         regionName,
+        date: dateStr,
+        temp: weather.temp ?? null,
+        rain: weather.rain ?? null,
         weather: {
-          temp: weather?.temp || null,
-          rain: weather?.rain || null,
-          icon: weather?.icon || null,
+          temp: weather.temp ?? null,
+          rain: weather.rain ?? null,
+          icon: weather.icon ?? null,
         },
-        outfit, feeling, memo, isPublic, imageUrl,
-        createdAt: serverTimestamp(),
+        outfit,
+        feeling,
+        memo,
+        isPublic,
+        imageUrls,
+        createdAt: new Date(),
       };
-
       await addDoc(collection(db, "records"), recordData);
-
-      // ✅ 성공 메시지
-      toast.success("오늘 기록이 저장되었어요!", {
-        position: "top-center",
-        autoClose: 2000,
-      });
-
-      setTimeout(() => navigate("/calendar"), 2200); // Toast가 보이고 나서 이동
-    } catch (error) {
-      console.error("🔥 저장 오류:", error);
-      alert("저장 실패. 다시 시도해주세요.");
->>>>>>> origin/main
+      toast.success("오늘 기록이 저장되었어요!", { position: "top-center", autoClose: 1200 });
+      setTimeout(() => navigate("/calendar"), 1300);
+    } catch (err) {
+      console.error("저장 오류:", err);
+      toast.error("저장에 실패했습니다.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (profileLoading) {
+    return <div className="p-4 max-w-md mx-auto">사용자 정보를 불러오는 중...</div>;
+  }
+
   return (
-<<<<<<< HEAD
-    <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-xl font-semibold mb-4">나의 기록</h1>
-      {/* 저장 완료 메시지 */}
-      {saved && (
-        <div className="mb-4 p-2 bg-green-100 text-green-800 rounded">
-          저장이 완료되었습니다!
-        </div>
-      )}
-      {/* 온도/강수량 표시 */}
-      <div className="mb-4 flex space-x-4">
-        <div className="bg-blue-100 px-4 py-2 rounded text-center">
-          <span className="text-lg font-semibold">{typeof weather?.temp !== "undefined" ? `${weather.temp}°C` : "온도 불러오는 중..."}</span>
-        </div>
-        <div className="bg-blue-100 px-4 py-2 rounded text-center">
-          <span className="text-lg font-semibold">{typeof weather?.rain !== "undefined" ? `${weather.rain}mm` : "강수량 불러오는 중..."}</span>
-        </div>
-      </div>
-      <RecordForm
-        date={date}
-        onDateChange={setDate}
-        region={region}
-        loading={loading}
-        onSave={handleSave}
-        disableSave={typeof weather?.temp === "undefined" || typeof weather?.rain === "undefined"}
-      />
-    </div>
-  );
-}
-=======
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
@@ -295,7 +149,6 @@ function Record() {
           <HomeIcon className="w-5 h-5" />
         </button>
       </div>
-
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row md:items-start md:justify-center gap-6 overflow-y-auto">
         {/* 왼쪽: 날씨 카드 */}
@@ -353,7 +206,6 @@ function Record() {
             <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
           )}
         </div>
-
         {/* 오른쪽 입력 폼 */}
         <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center">
           {/* 입력폼 상단 바 */}
@@ -361,8 +213,9 @@ function Record() {
             <button
               onClick={handleSubmit}
               className="px-4 py-2 rounded text-gray-600 font-normal hover:font-bold transition"
+              disabled={loading}
             >
-              저장
+              {loading ? "저장 중..." : "저장"}
             </button>
           </div>
           {/* 이미지 업로드 및 미리보기 */}
@@ -378,6 +231,7 @@ function Record() {
                     id="imageUpload"
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleImageChange}
                     className="hidden"
                   />
@@ -392,10 +246,9 @@ function Record() {
                 </div>
               )}
             </div>
-
             {/* 착장 입력 필드 (outer, top, bottom 등) */}
             <div className="w-full md:w-1/2 space-y-4">
-              {["outer", "top", "bottom", "shoes", "acc"].map((category) => {
+              {Object.keys(inputRefs).map((category) => {
                 const inputRef = inputRefs[category];
                 return (
                   <div key={category}>
@@ -446,4 +299,3 @@ function Record() {
 }
 
 export default Record;
->>>>>>> origin/main

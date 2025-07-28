@@ -5,7 +5,7 @@ import { selectNextForecast } from "../utils/forecastUtils";
 
 export default function useWeather(region) {
   const [weather, setWeather] = useState(null);
-  const [loading, setLoading] = useState(true); // eslint-disable-next-line no-unused-vars
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!region) return;
@@ -13,10 +13,13 @@ export default function useWeather(region) {
     const load = async () => {
       setLoading(true);
       try {
+        console.log("📡 fetch forecast for", region);
         const forecastItems = await fetchKmaForecast(region);
+        console.log("🌤️ forecast result:", forecastItems);
 
         if (forecastItems) {
           const selected = selectNextForecast(forecastItems);
+          console.log("✅ selected forecast:", selected);
           setWeather({
             temp: selected.temp,
             rain: selected.rainAmount,  // ✅ 이렇게 받아오도록!

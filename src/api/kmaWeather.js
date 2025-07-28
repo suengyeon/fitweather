@@ -37,7 +37,7 @@ export const fetchKmaForecast = async (region) => {
   try {
       const res = await fetch(url);
       const text = await res.text();
-      // console.log("🔍 KMA raw response:", text);
+      console.log("🔍 KMA raw response:", text);
       const json = JSON.parse(text);
 
     if (json.response.header.resultCode !== "00") {

@@ -20,6 +20,7 @@ import { ToastContainer } from "react-toastify";
 // 전역 테스트 함수: 브라우저 콘솔에서 testSaveOutfitRecord() 호출
 window.testSaveOutfitRecord = async () => {
   if (!auth.currentUser) {
+    console.error("❗️ 로그인된 사용자가 없습니다.");
     return;
   }
 
@@ -42,8 +43,11 @@ window.testSaveOutfitRecord = async () => {
   };
 
   try {
+    console.log("⚙️ saveOutfitRecord 호출…");
     const id = await saveOutfitRecord(dummyRecord);
+    console.log("✅ 저장 성공! 문서 ID:", id);
   } catch (err) {
+    console.error("❌ 저장 에러:", err);
   }
 };
 

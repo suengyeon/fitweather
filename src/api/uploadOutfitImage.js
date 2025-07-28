@@ -19,7 +19,8 @@ export const uploadOutfitImage = async (file, uid) => {
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
   } catch (error) {
-    console.warn("⚠️ 이미지 업로드 실패:", error);
-    throw error;
+    console.warn("⚠️ 이미지 업로드 실패, Blob URL로 대체:", error);
+    // CORS 문제 시 blob URL로 대체
+    return URL.createObjectURL(file);
   }
 };

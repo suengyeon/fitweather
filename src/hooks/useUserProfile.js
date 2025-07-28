@@ -6,8 +6,8 @@ import { db } from "../firebase";
 
 export default function useUserProfile() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null); // eslint-disable-next-line no-unused-vars
-  const [loading, setLoading] = useState(true); // eslint-disable-next-line no-unused-vars
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
