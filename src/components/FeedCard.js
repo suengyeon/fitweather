@@ -38,7 +38,7 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
     if (record.uid === currentUserUid) {
       navigate(`/calendar_record/${record.id}`);
     } else {
-      navigate(`/feed_detail/${record.id}`);
+      navigate(`/FeedDetail/${record.id}`);
     }
   };
 
