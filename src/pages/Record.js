@@ -209,10 +209,9 @@ function Record() {
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row md:items-start md:justify-center gap-6 overflow-y-auto">
         {/* 왼쪽: 날씨 카드 */}
-        <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center">
+        <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center min-h-[705px]">
           {/* 지역 선택 드롭다운 */}
           <div className="mb-4">
-            <label className="block font-semibold mb-2">지역 선택</label>
             <select
               value={region}
               onChange={e => setRegion(e.target.value)}
@@ -228,7 +227,6 @@ function Record() {
               <option value="Suwon">수원</option>
             </select>
           </div>
-          <h3 className="text-lg font-semibold mb-3">{regionName}</h3>
           {weatherLoading ? (
             <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
           ) : weather ? (
@@ -300,8 +298,9 @@ function Record() {
             <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
           )}
         </div>
+
         {/* 오른쪽 입력 폼 */}
-        <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center">
+        <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center min-h-[705px]">
           {/* 입력폼 상단 바 */}
           <div className="flex justify-end bg-gray-200 items-center mb-4">
             <button

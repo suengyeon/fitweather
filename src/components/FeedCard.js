@@ -54,7 +54,7 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
           position: "absolute",
           top: 8,
           left: 8,
-          fontSize: 22,
+          fontSize: 28,
           fontWeight: 700,
           zIndex: 2
         }}>
