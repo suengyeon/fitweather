@@ -10,7 +10,8 @@ export async function getRecords(region, order) {
   let q = query(
     collection(db, "records"),
     where("region", "==", region),
-    where("date", "==", todayStr)
+    where("date", "==", todayStr),
+    where("isPublic", "==", true)
   );
 
   // 최신순 정렬 (createdAt)

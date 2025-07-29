@@ -44,7 +44,8 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
 
   return (
     <div
-      style={{ border: "1px solid #ccc", padding: "12px", marginBottom: "14px", cursor: "pointer", position: "relative" }}
+      className="aspect-[3/4] bg-gray-100 rounded p-2 flex flex-col justify-between cursor-pointer hover:shadow-md transition"
+      style={{ minWidth: 180, maxWidth: 220, minHeight: 240, maxHeight: 320, position: "relative" }}
       onClick={handleCardClick}
     >
       {/* TOP3 순위 뱃지 */}
@@ -62,16 +63,20 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
       )}
       {/* 사진 캐러셀 */}
       {record.imageUrls && record.imageUrls.length > 0 ? (
-        <div style={{ position: "relative", width: 120, marginBottom: 8 }}>
+        <div style={{ position: "relative", width: "100%", height: "85%", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <img
             src={record.imageUrls[imagePreviewIdx]}
             alt="코디"
-            style={{ width: 120, borderRadius: 10 }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }}
           />
           {record.imageUrls.length > 1 && (
             <div style={{ position: "absolute", bottom: 2, left: 0, right: 0, display: "flex", justifyContent: "space-between", padding: "0 4px" }}>
               <button
-                onClick={() => setImagePreviewIdx(prev => (prev - 1 + record.imageUrls.length) % record.imageUrls.length)}
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setImagePreviewIdx(prev => (prev - 1 + record.imageUrls.length) % record.imageUrls.length);
+                }}
                 style={{ background: "rgba(255,255,255,0.8)", border: "none", borderRadius: "50%", width: 24, height: 24, cursor: "pointer" }}
               >
                 ◀
@@ -80,7 +85,11 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
                 {imagePreviewIdx + 1} / {record.imageUrls.length}
               </span>
               <button
-                onClick={() => setImagePreviewIdx(prev => (prev + 1) % record.imageUrls.length)}
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setImagePreviewIdx(prev => (prev + 1) % record.imageUrls.length);
+                }}
                 style={{ background: "rgba(255,255,255,0.8)", border: "none", borderRadius: "50%", width: 24, height: 24, cursor: "pointer" }}
               >
                 ▶
@@ -89,32 +98,29 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
           )}
         </div>
       ) : (
-        <div style={{ width: 120, height: 80, background: "#eee", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, marginBottom: 8 }}>
+        <div style={{ width: "100%", height: "70%", background: "#eee", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, marginBottom: 8, fontSize: 40 }}>
           사진 없음
         </div>
       )}
 
       {/* 닉네임/uid */}
-      <div style={{ fontWeight: "bold", margin: "6px 0 4px 0" }}>
-        {displayName}
-      </div>
-
+      {/* (닉네임/피드백은 피드 카드에서 숨김) */}
       {/* 메모/피드백 */}
-      {feedback && (
-        <div style={{ color: "#666", fontSize: 14, marginBottom: 8 }}>
-          {feedback}
-        </div>
-      )}
+      {/* (피드백도 피드 카드에서 숨김) */}
 
       {/* 하트(♥️), 하트수, 체감 이모지 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
         {/* 내 기록엔 하트 버튼 X, 하트수 O */}
         {record.uid === currentUserUid ? (
           <>
-            <span style={{ color: liked ? "red" : "#ccc", fontSize: 22 }}>
-              {likeIcon}
+            <span style={{ color: "#111", fontSize: 22 }}>
+              {"♥"}
             </span>
             <span style={{ fontWeight: 600 }}>{record.likes?.length || 0}</span>
+            {/* 나의 기록 텍스트 */}
+            <span style={{ margin: "0 8px", fontWeight: 700, color: "#222", fontSize: 16, letterSpacing: 1 }}>{"나의 기록"}</span>
+            {/* 체감 이모지는 여기서만 */}
+            <span style={{ fontSize: 20 }}>{feelingEmoji}</span>
           </>
         ) : (
           <button
@@ -133,9 +139,10 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
             <span style={{ marginLeft: 6, fontWeight: 600 }}>{record.likes?.length || 0}</span>
           </button>
         )}
-
-        {/* 체감 이모지 */}
-        <span style={{ fontSize: 20 }}>{feelingEmoji}</span>
+        {/* 체감 이모지 오른쪽 (남의 기록만) */}
+        {record.uid !== currentUserUid && (
+          <span style={{ fontSize: 20, marginLeft: "auto" }}>{feelingEmoji}</span>
+        )}
       </div>
     </div>
   );
