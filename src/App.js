@@ -68,6 +68,7 @@ function App() {
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/" element={<Home />} />
+          
         </Routes>
       </BrowserRouter>
     </AuthProvider>
