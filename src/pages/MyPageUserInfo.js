@@ -55,7 +55,6 @@ function MyPageUserInfo() {
           { label: "지역", value: region },
           { label: "닉네임", value: nickname },
           { label: "아이디", value: email },
-          { label: "비밀번호", value: "********" }, // 마스킹 처리
         ].map((item, idx) => (
           <div key={idx} className="mb-12 flex items-center">
             <label className="w-28 font-semibold text-base">{item.label}</label>

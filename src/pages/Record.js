@@ -9,6 +9,8 @@ import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-toastify";
 import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useAuth } from "../contexts/AuthContext";
+import { doc, getDoc } from "firebase/firestore";
 
 function Record() {
   const navigate = useNavigate();
@@ -16,8 +18,9 @@ function Record() {
   const formattedDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
 
   const { profile, loading: profileLoading } = useUserProfile();
-  const uid = auth.currentUser?.uid;
-  const region = profile?.region || "서울";
+  const { user } = useAuth();
+  const [region, setRegion] = useState("");
+  const [regionName, setRegionName] = useState(region);
   const { weather, loading: weatherLoading } = useWeather(region);
 
   const [image, setImage] = useState(null);
@@ -25,7 +28,6 @@ function Record() {
   const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] });
   const [feeling, setFeeling] = useState("");
   const [memo, setMemo] = useState("");
-  const [regionName, setRegionName] = useState(region);
   const [isPublic, setIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
   const [weatherEmojis, setWeatherEmojis] = useState([]);
@@ -49,6 +51,20 @@ function Record() {
   const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
 
   const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef() };
+
+  useEffect(() => {
+    async function fetchUserRegion() {
+      if (!user) return;
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        setRegion(userSnap.data().region || "Seoul");
+      } else {
+        setRegion("Seoul");
+      }
+    }
+    fetchUserRegion();
+  }, [user]);
 
   useEffect(() => {
     const regionMap = {
@@ -90,7 +106,7 @@ function Record() {
   };
 
   const handleSubmit = async () => {
-    if (!uid) { toast.error("로그인이 필요합니다."); return; }
+    if (!user) { toast.error("로그인이 필요합니다."); return; }
     if (!imageFiles.length || imageFiles.some(f => !f || !f.name)) {
       toast.error("사진을 업로드해주세요."); return; }
     if (!feeling) { toast.error("체감을 선택해주세요."); return; }
@@ -108,7 +124,7 @@ function Record() {
       const dateStr = today.toISOString().slice(0, 10);
       const q = query(
         collection(db, "records"),
-        where("uid", "==", uid),
+        where("uid", "==", user.uid),
         where("date", "==", dateStr)
       );
       const querySnapshot = await getDocs(q);
@@ -121,14 +137,14 @@ function Record() {
       const imageUrls = await Promise.all(
         imageFiles.map(async (file) => {
           if (!file || !file.name) throw new Error("잘못된 파일입니다.");
-          const imageRef = ref(storage, `records/${uid}/${Date.now()}_${file.name}`);
+          const imageRef = ref(storage, `records/${user.uid}/${Date.now()}_${file.name}`);
           await uploadBytes(imageRef, file);
           return await getDownloadURL(imageRef);
         })
       );
       // Firestore 저장 (temp/rain/weather 모두 저장)
       const recordData = {
-        uid,
+        uid: user.uid,
         region,
         regionName,
         date: dateStr,
@@ -146,6 +162,8 @@ function Record() {
         imageUrls,
         weatherEmojis,
         createdAt: new Date(),
+        likes: [], // 새로 저장할 때 likes 필드도 항상 생성
+        nickname: profile?.nickname || user.uid, // 닉네임도 같이 저장
       };
       await addDoc(collection(db, "records"), recordData);
       toast.success("오늘 기록이 저장되었어요!", { position: "top-center", autoClose: 1200 });
@@ -181,6 +199,24 @@ function Record() {
       <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row md:items-start md:justify-center gap-6 overflow-y-auto">
         {/* 왼쪽: 날씨 카드 */}
         <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center">
+          {/* 지역 선택 드롭다운 */}
+          <div className="mb-4">
+            <label className="block font-semibold mb-2">지역 선택</label>
+            <select
+              value={region}
+              onChange={e => setRegion(e.target.value)}
+              className="w-36 px-4 py-2 border rounded bg-white"
+            >
+              <option value="Seoul">서울</option>
+              <option value="Busan">부산</option>
+              <option value="Daejeon">대전</option>
+              <option value="Daegu">대구</option>
+              <option value="Incheon">인천</option>
+              <option value="Gwangju">광주</option>
+              <option value="Ulsan">울산</option>
+              <option value="Suwon">수원</option>
+            </select>
+          </div>
           <h3 className="text-lg font-semibold mb-3">{regionName}</h3>
           {weatherLoading ? (
             <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>

@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { useNavigate } from "react-router-dom";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -20,9 +21,11 @@ const app = initializeApp(firebaseConfig);
 
 // Auth
 export const auth = getAuth(app);
+
 // Firestore
 export const db = getFirestore(app);
-// Storage (명시적으로 버킷 지정)
+
+// Storage
 export const storage = getStorage(app, "gs://fitweather-638a3.firebasestorage.app");
 
 // Google login
@@ -35,4 +38,7 @@ export async function loginWithGoogle() {
 // Logout
 export async function logout() {
   await signOut(auth);
+  if (typeof window !== "undefined") {
+    window.location.href = "/";
+  }
 }

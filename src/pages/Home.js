@@ -5,29 +5,62 @@ import { Bars3Icon } from "@heroicons/react/24/solid";
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
 import { logout } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import { useAuth } from "../contexts/AuthContext";
 
 import Skeleton from "../components/Skeleton";
 import WeatherCard from "../components/WeatherCard";
 
 function Home() {
-  const { profile, loading: profileLoading } = useUserProfile();
-  const nickname = profile?.nickname || "회원";
+  const { user } = useAuth();
+  const [region, setRegion] = useState("");
+  const [nickname, setNickname] = useState("");
+
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (!user) return;
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        setRegion(userData.region || "Seoul");
+        setNickname(userData.nickname || "회원");
+      } else {
+        setRegion("Seoul");
+        setNickname("회원");
+      }
+    }
+    fetchUserProfile();
+  }, [user]);
 
   const [selectedRegion, setSelectedRegion] = useState(null);
 
   useEffect(() => {
-    if (profile?.region) {
-      setSelectedRegion(profile.region);
+    if (region) {
+      setSelectedRegion(region);
     }
-  }, [profile?.region]);
+  }, [region]);
 
   const { weather, loading: weatherLoading } = useWeather(selectedRegion);
   const navigate = useNavigate();
-  const loading = profileLoading || weatherLoading;
+  const loading = user?.loading || weatherLoading;
+
+  const regionMap = {
+    Seoul: "서울",
+    Busan: "부산",
+    Daegu: "대구",
+    Incheon: "인천",
+    Gwangju: "광주",
+    Daejeon: "대전",
+    Ulsan: "울산",
+    Suwon: "수원",
+  };
+  const displayRegion = regionMap[region] || region;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      {profile ? (
+      {user ? (
         <div className="w-full min-h-screen bg-gray-100 flex flex-col">
           {/* 상단 네비게이션 */}
           <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
@@ -44,6 +77,7 @@ function Home() {
               >
                 Mypage
               </button>
+              {/* 상단에 {nickname}님 표시 */}
               <div className="bg-blue-200 px-2 py-1 rounded text-sm font-medium">
                 {nickname}님
               </div>
@@ -123,6 +157,25 @@ function Home() {
           </div>
         </div>
       )}
+      {/* 좌측 하단에 임시 피드 버튼 */}
+      <button
+        style={{
+          position: "fixed",
+          left: "24px",
+          bottom: "24px",
+          padding: "10px 18px",
+          borderRadius: "24px",
+          background: "#eee",
+          color: "#333",
+          border: "1px solid #ccc",
+          fontSize: "16px",
+          zIndex: 100,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+        }}
+        onClick={() => navigate("/feed")}
+      >
+        피드로
+      </button>
     </div>
   );
 }
