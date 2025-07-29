@@ -16,6 +16,7 @@ import MyPage from "./pages/MyPage";
 import Calendar from "./pages/Calendar";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
+import FeedDetail from "./pages/FeedDetail";
 
 // 전역 테스트 함수: 브라우저 콘솔에서 testSaveOutfitRecord() 호출
 window.testSaveOutfitRecord = async () => {
@@ -64,6 +65,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/record" element={<Record />} />
           <Route path="/feed" element={<Feed />} />
+          <Route path="/FeedDetail/:id" element={<FeedDetail />} />
           <Route path="/mypage" element={<MyPage />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/calendar" element={<Calendar />} />

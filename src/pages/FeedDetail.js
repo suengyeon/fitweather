@@ -5,32 +5,56 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import WeatherCard from "../components/WeatherCard";
+import { toggleLike } from "../api/toggleLike";
+import { useAuth } from "../contexts/AuthContext";
 
 function FeedDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
 
+    const { user } = useAuth();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [liked, setLiked] = useState(false);
     const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
+    const [author, setAuthor] = useState(null);
+    const [likeCount, setLikeCount] = useState(0);
 
     useEffect(() => {
         const fetchData = async () => {
             const ref = doc(db, "records", id);
             const snapshot = await getDoc(ref);
             if (snapshot.exists()) {
-                setData(snapshot.data());
+                const record = snapshot.data();
+                setData(record);
+                setLikeCount(record.likes?.length || 0);
+                setLiked(user && record.likes?.includes(user.uid));
+                // 작성자 정보 fetch
+                const userRef = doc(db, "users", record.uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    setAuthor(userSnap.data());
+                } else {
+                    setAuthor({ nickname: record.uid });
+                }
             }
             setLoading(false);
         };
         fetchData();
-    }, [id]);
+    }, [id, user]);
 
     if (loading) return <div className="p-6">불러오는 중...</div>;
     if (!data) return <div className="p-6 text-red-500">게시물을 찾을 수 없습니다.</div>;
 
     const { date, regionName, weather, outfit, memo, imageUrls, weatherEmojis, feeling } = data;
+
+    // 하트 버튼 클릭 핸들러
+    const handleLike = async () => {
+        if (!user) return;
+        const newLikes = await toggleLike(id, user.uid);
+        setLiked(newLikes.includes(user.uid));
+        setLikeCount(newLikes.length);
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -48,6 +72,21 @@ function FeedDetail() {
                     className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
                 >
                     <HomeIcon className="w-5 h-5" />
+                </button>
+            </div>
+            {/* 하트/닉네임 상단 바 */}
+            <div className="flex items-center justify-end bg-gray-200 px-6 py-3 gap-4">
+                <span className="text-lg font-semibold text-gray-700">
+                  {author ? `${author.nickname || author.uid}님의 기록` : ""}
+                </span>
+                <button
+                    onClick={handleLike}
+                    className="px-4 py-2 rounded text-xl transition hover:scale-110"
+                >
+                    <span style={{ color: liked ? "red" : "#aaa", fontSize: 28 }}>
+                      {liked ? "♥" : "♡"}
+                    </span>
+                    <span style={{ marginLeft: 6, fontWeight: 600, fontSize: 18 }}>{likeCount}</span>
                 </button>
             </div>
 
@@ -90,16 +129,6 @@ function FeedDetail() {
 
                 {/* 오른쪽: 이미지 & 착장 */}
                 <div className="w-full md:w-2/3 bg-white px-6 py-6">
-                    {/* 하트 버튼 */}
-                    <div className="flex justify-end bg-gray-200 items-center mb-4">
-                        <button
-                            onClick={() => setLiked((prev) => !prev)}
-                            className="px-4 py-2 rounded text-xl transition hover:scale-110"
-                        >
-                            {liked ? "♥︎" : "♡"}
-                        </button>
-                    </div>
-
                     {/* 이미지 */}
                     <div className="flex flex-col items-center">
                         {imageUrls?.length > 0 && (
