@@ -1,22 +1,32 @@
 // src/pages/Record.js
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { auth, db, storage } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
 import WeatherCard from "../components/WeatherCard";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-toastify";
-import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "../contexts/AuthContext";
-import { doc, getDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 
+function formatDateLocal(date) {
+  return date.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식 (KST 기준)
+}
+
+
 function Record() {
-  const navigate = useNavigate();
   const today = new Date();
-  const formattedDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const existingRecord = location.state?.existingRecord || null;
+  const passedDateStr = location.state?.date || null;
+  const dateObj = passedDateStr ? new Date(passedDateStr) : new Date();
+  const formattedDate = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일`;
+  const dateStr = formatDateLocal(today);
 
   const { profile, loading: profileLoading } = useUserProfile();
   const { user } = useAuth();
@@ -31,14 +41,7 @@ function Record() {
   const [isPublic, setIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
   const [weatherEmojis, setWeatherEmojis] = useState([]);
-  const emojiList = [
-    "☀️", // 태양
-    "🌩️", // 번개
-    "❄️", // 눈결정
-    "🌧️", // 비
-    "💨", // 바람
-    "☁️"  // 구름
-  ];
+  const emojiList = ["☀️", "🌩️", "❄️", "🌧️", "💨", "☁️"];
   const toggleEmoji = (emoji) => {
     setWeatherEmojis((prev) =>
       prev.includes(emoji)
@@ -50,6 +53,8 @@ function Record() {
   };
   const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [recordId, setRecordId] = useState(null);
 
   const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef() };
 
@@ -61,6 +66,21 @@ function Record() {
       setRegionName(regionMap[profile.region.toLowerCase()] || profile.region);
     }
   }, [profile?.region]);
+
+  useEffect(() => {
+    if (existingRecord) {
+      setIsEditMode(true);
+      setRecordId(existingRecord.id);
+
+      setOutfit(existingRecord.outfit || {});
+      setFeeling(existingRecord.feeling || "");
+      setMemo(existingRecord.memo || "");
+      setIsPublic(existingRecord.isPublic || false);
+      setWeatherEmojis(existingRecord.weatherEmojis || []);
+      setImageFiles(existingRecord.imageUrls.map((url) => ({ name: url, isUrl: true })));
+      setImagePreviewIdx(0);
+    }
+  }, [existingRecord]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).filter(f => f && f.name);
@@ -104,45 +124,79 @@ function Record() {
     }));
   };
 
-  const handleSubmit = async () => {
-    if (!user) { toast.error("로그인이 필요합니다."); return; }
-    if (!imageFiles.length || imageFiles.some(f => !f || !f.name)) {
-      toast.error("사진을 업로드해주세요."); return;
+  const handleDelete = async () => {
+    if (!recordId) return;
+    const confirmDelete = window.confirm("정말 삭제하시겠어요?");
+    if (!confirmDelete) return;
+
+    try {
+      await deleteDoc(doc(db, "records", recordId));
+      toast.success("기록이 삭제되었어요!", { autoClose: 1200 });
+      setTimeout(() => navigate("/calendar"), 1300);
+    } catch (err) {
+      console.error("삭제 오류:", err);
+      toast.error("삭제에 실패했습니다.");
     }
-    if (!feeling) { toast.error("체감을 선택해주세요."); return; }
+  };
+
+
+  const handleSubmit = async () => {
+    if (!user) {
+      toast.error("로그인이 필요합니다.");
+      return;
+    }
+
+    if (!imageFiles.length || imageFiles.some(f => !f || (!f.name && !f.isUrl))) {
+      toast.error("사진을 업로드해주세요.");
+      return;
+    }
+
+    if (!feeling) {
+      toast.error("체감을 선택해주세요.");
+      return;
+    }
+
     if (typeof weather?.temp === "undefined" || typeof weather?.rain === "undefined") {
       toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
       return;
     }
+
     if (!storage) {
       toast.error("스토리지 인스턴스가 올바르지 않습니다. 새로고침 후 다시 시도해 주세요.");
       return;
     }
+
     setLoading(true);
+
     try {
-      // 중복 기록 체크 (오늘 날짜 기준, uid)
-      const dateStr = today.toISOString().slice(0, 10);
-      const q = query(
-        collection(db, "records"),
-        where("uid", "==", user.uid),
-        where("date", "==", dateStr)
-      );
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        toast.error("이미 기록하셨습니다.");
-        setLoading(false);
-        return;
+      const dateStr = formatDateLocal(today);
+
+      // ✅ (수정 모드가 아닐 때만) 중복 기록 체크
+      if (!isEditMode) {
+        const q = query(
+          collection(db, "records"),
+          where("uid", "==", user.uid),
+          where("date", "==", dateStr)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          toast.error("이미 기록하셨습니다.");
+          setLoading(false);
+          return;
+        }
       }
-      // 이미지 업로드 (여러 장)
+
+      // ✅ 이미지 업로드: 새로 추가된 이미지만 업로드, 기존은 그대로 사용
       const imageUrls = await Promise.all(
         imageFiles.map(async (file) => {
+          if (file.isUrl) return file.name; // 기존 URL
           if (!file || !file.name) throw new Error("잘못된 파일입니다.");
           const imageRef = ref(storage, `records/${user.uid}/${Date.now()}_${file.name}`);
           await uploadBytes(imageRef, file);
           return await getDownloadURL(imageRef);
         })
       );
-      // Firestore 저장 (temp/rain/weather 모두 저장)
+
       const recordData = {
         uid: user.uid,
         region: profile?.region,
@@ -161,12 +215,22 @@ function Record() {
         isPublic,
         imageUrls,
         weatherEmojis,
-        createdAt: new Date(),
-        likes: [], // 새로 저장할 때 likes 필드도 항상 생성
-        nickname: profile?.nickname || user.uid, // 닉네임도 같이 저장
+        updatedAt: new Date(),
+        nickname: profile?.nickname || user.uid,
       };
-      await addDoc(collection(db, "records"), recordData);
-      toast.success("오늘 기록이 저장되었어요!", { position: "top-center", autoClose: 1200 });
+
+      if (isEditMode && recordId) {
+        // ✅ 기존 기록 수정
+        await updateDoc(doc(db, "records", recordId), recordData);
+        toast.success("기록이 수정되었어요!", { position: "top-center", autoClose: 1200 });
+      } else {
+        // ✅ 새 기록 저장
+        recordData.createdAt = new Date();
+        recordData.likes = [];
+        await addDoc(collection(db, "records"), recordData);
+        toast.success("오늘 기록이 저장되었어요!", { position: "top-center", autoClose: 1200 });
+      }
+
       setTimeout(() => navigate("/calendar"), 1300);
     } catch (err) {
       console.error("저장 오류:", err);
@@ -186,7 +250,7 @@ function Record() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 ">
-        <button 
+        <button
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
@@ -307,6 +371,16 @@ function Record() {
             >
               {loading ? "저장 중..." : "저장"}
             </button>
+
+            {/* ✅ 삭제 버튼 (수정 모드일 때만) */}
+            {isEditMode && (
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 text-red-600 font-normal hover:bg-red-300 transition bg-red-200"
+              >
+                삭제
+              </button>
+            )}
           </div>
           {/* 이미지 업로드 및 미리보기 */}
           <div className="flex flex-col md:flex-row gap-4 w-full">
@@ -331,9 +405,13 @@ function Record() {
                 <div className="w-72 aspect-[3/4] relative rounded overflow-hidden border bg-gray-100 mt-2 p-2">
                   {/* 이미지 미리보기 */}
                   <img
-                    src={URL.createObjectURL(imageFiles[imagePreviewIdx])}
+                    src={
+                      imageFiles[imagePreviewIdx]?.isUrl
+                        ? imageFiles[imagePreviewIdx].name // URL 그대로 사용
+                        : URL.createObjectURL(imageFiles[imagePreviewIdx]) // 새로 업로드한 파일
+                    }
                     alt="preview"
-                    className="w-full h-full object-cover rounded object-cover "
+                    className="w-full h-full object-cover rounded object-cover"
                   />
 
                   {/* ◀ / ▶ 이미지 전환 버튼 */}

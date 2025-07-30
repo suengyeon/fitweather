@@ -68,7 +68,7 @@ function Home() {
             <select
               value={selectedRegion || profile?.region || "Seoul"}
               onChange={(e) => setSelectedRegion(e.target.value)}
-              className="border border-gray-300 bg-white px-4 py-2 rounded mb-6"
+              className="bg-white px-4 py-2 rounded mb-6"
             >
               <option value="Seoul">서울</option>
               <option value="Busan">부산</option>
