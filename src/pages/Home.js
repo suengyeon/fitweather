@@ -116,7 +116,11 @@ function Home() {
             {/* 기록하기 버튼 */}
             <button
               className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded font-semibold"
-              onClick={() => navigate("/record")}
+              onClick={() => {
+                const today = new Date();
+                const todayStr = today.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식
+                navigate("/record", { state: { date: todayStr } });
+              }}
             >
               기록하기
             </button>
