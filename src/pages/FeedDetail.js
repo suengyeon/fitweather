@@ -12,6 +12,32 @@ function FeedDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    
+    // 이전 페이지 경로 확인
+    const getPreviousPath = () => {
+        // location.state에서 이전 경로 확인
+        if (location.state?.fromLikes) {
+            return "/mypage_likes";
+        }
+        // 기본값은 피드로
+        return "/feed";
+    };
+
+    // 뒤로가기 핸들러
+    const handleGoBack = () => {
+        if (location.state?.fromLikes) {
+            // 좋아요한 코디에서 온 경우, 선택된 날짜 정보와 함께 이동
+            navigate("/mypage_likes", {
+                state: {
+                    selectedDate: location.state.selectedDate,
+                    availableDates: location.state.availableDates
+                }
+            });
+        } else {
+            // 피드에서 온 경우
+            navigate("/feed");
+        }
+    };
     const [formattedDate, setFormattedDate] = useState("");
 
 
@@ -72,7 +98,7 @@ function FeedDetail() {
             {/* 상단 네비게이션 */}
             <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
                 <button
-                    onClick={() => navigate("/feed", { state: { fromCard: true } })}
+                    onClick={handleGoBack}
                     className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
                 >
                     <ArrowLeftIcon className="w-5 h-5" />
