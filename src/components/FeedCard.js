@@ -36,7 +36,7 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
 
   const handleCardClick = () => {
     if (record.uid === currentUserUid) {
-      navigate(`/calendar_record/${record.id}`, { state: { fromCard: true } });
+      navigate(`/record`, { state: { existingRecord: record } });
     } else {
       navigate(`/FeedDetail/${record.id}`, { state: { fromCard: true } });
     }

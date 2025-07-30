@@ -196,33 +196,20 @@ function Feed() {
              ) : weather ? (
                <div className="flex flex-col items-center">
                  {/* 날씨 아이콘 박스 */}
-                 <div className={`w-60 h-60 bg-gray-200 rounded mb-8 flex items-center justify-center text-6xl relative overflow-hidden`}>
-                   <div 
-                     className="absolute text-8xl"
-                     style={{
-                       animation: 'float-in-place 4s ease-in-out infinite',
-                       animationDelay: '0s'
-                     }}
-                   >
-                     {weather.icon === "rain" ? "☔️" : "☀️"}
-                   </div>
-                 </div>
+                                   <div className={`w-60 h-60 bg-gray-200 rounded mb-8 flex items-center justify-center text-6xl relative overflow-hidden`}>
+                    <div 
+                      className="absolute text-8xl animate-bounce"
+                    >
+                      {weather.icon === "rain" ? "☔️" : "☀️"}
+                    </div>
+                  </div>
                </div>
              ) : (
                <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
              )}
            </div>
            
-           <style jsx>{`
-             @keyframes float-in-place {
-               0%, 100% {
-                 transform: translateY(0px);
-               }
-               50% {
-                 transform: translateY(-10px);
-               }
-             }
-           `}</style>
+
            <div className="flex flex-col items-center gap-4 mt-6 relative">
              <div className="flex items-center gap-2 relative">
                <label htmlFor="region">지역</label>
