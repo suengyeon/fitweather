@@ -4,13 +4,30 @@ import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import Sidebar from "../components/Sidebar";
 
 function MyPageUserInfo() {
   const { user } = useAuth();
   const [nickname, setNickname] = useState("");
   const [region, setRegion] = useState("");
   const [email, setEmail] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+
+  // 지역 이름을 한글로 변환하는 함수
+  const getKoreanRegionName = (englishRegion) => {
+    const regionMap = {
+      Seoul: "서울",
+      Busan: "부산", 
+      Daegu: "대구",
+      Incheon: "인천",
+      Gwangju: "광주",
+      Daejeon: "대전",
+      Ulsan: "울산",
+      Suwon: "수원"
+    };
+    return regionMap[englishRegion] || englishRegion;
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -27,13 +44,18 @@ function MyPageUserInfo() {
   }, [user]);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100 flex flex-col relative">
+      {/* 사이드바 */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
-        <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
+        <button 
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
           <Bars3Icon className="w-5 h-5" />
         </button>
-        <h2 className="font-bold text-lg">내 정보</h2>
+        <h2 className="font-bold text-lg">회원정보</h2>
         <button
           onClick={() => navigate("/")}
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
@@ -52,7 +74,7 @@ function MyPageUserInfo() {
         {/* 정보 카드 */}
         <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
         {[
-          { label: "지역", value: region },
+          { label: "지역", value: getKoreanRegionName(region) },
           { label: "닉네임", value: nickname },
           { label: "아이디", value: email },
         ].map((item, idx) => (

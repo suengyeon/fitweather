@@ -11,6 +11,7 @@ import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "../contexts/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
+import Sidebar from "../components/Sidebar";
 
 function Record() {
   const navigate = useNavigate();
@@ -48,6 +49,7 @@ function Record() {
     );
   };
   const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef() };
 
@@ -179,10 +181,15 @@ function Record() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100 flex flex-col relative">
+      {/* 사이드바 */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 ">
-        <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
+        <button 
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">{formattedDate}</h2>

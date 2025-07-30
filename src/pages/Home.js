@@ -8,12 +8,15 @@ import { logout } from "../firebase";
 
 import Skeleton from "../components/Skeleton";
 import WeatherCard from "../components/WeatherCard";
+import Sidebar from "../components/Sidebar";
 
 function Home() {
   const { profile, loading: profileLoading } = useUserProfile();
   const nickname = profile?.nickname || "회원";
+  const navigate = useNavigate();
 
   const [selectedRegion, setSelectedRegion] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (profile?.region) {
@@ -22,16 +25,20 @@ function Home() {
   }, [profile?.region]);
 
   const { weather, loading: weatherLoading } = useWeather(selectedRegion);
-  const navigate = useNavigate();
   const loading = profileLoading || weatherLoading;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       {profile ? (
-        <div className="w-full min-h-screen bg-gray-100 flex flex-col">
+        <div className="w-full min-h-screen bg-gray-100 flex flex-col relative">
+          {/* 사이드바 */}
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           {/* 상단 네비게이션 */}
           <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
-            <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
+            <button 
+              className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
               <Bars3Icon className="w-5 h-5" />
             </button>
             <div className="flex items-center space-x-4">
@@ -42,7 +49,7 @@ function Home() {
                 onClick={() => navigate("/mypage_userinfo")}
                 className="text-sm hover:underline"
               >
-                Mypage
+                회원정보
               </button>
               <div className="bg-blue-200 px-2 py-1 rounded text-sm font-medium">
                 {nickname}님

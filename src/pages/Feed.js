@@ -5,28 +5,54 @@ import { toggleLike } from "../api/toggleLike";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import useWeather from "../hooks/useWeather";
 import WeatherCard from "../components/WeatherCard";
+import Sidebar from "../components/Sidebar";
 
 function Feed() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [outfits, setOutfits] = useState([]);
   const [order, setOrder] = useState("popular"); // 인기순 or 최신순
   const [region, setRegion] = useState(""); // 초기값 빈 문자열
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // 세션스토리지에서 저장된 날짜 정보 가져오기
+  const getStoredDate = () => {
+    // 저장된 날짜가 있으면 사용 (브라우저 뒤로가기 포함)
+    const stored = sessionStorage.getItem('feedDate');
+    if (stored) {
+      const [year, month, day] = stored.split('-').map(Number);
+      return { year, month, day };
+    }
+    
+    // 홈에서 직접 들어온 경우에만 오늘 날짜 사용
+    const isFromHome = !location.state?.fromCard;
+    if (isFromHome) {
+      sessionStorage.removeItem('feedDate');
+    }
+    
+    // 기본적으로는 오늘 날짜
+    const today = new Date();
+    return {
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+      day: today.getDate()
+    };
+  };
   
   // 날짜 선택 상태
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+  const [selectedYear, setSelectedYear] = useState(getStoredDate().year);
+  const [selectedMonth, setSelectedMonth] = useState(getStoredDate().month);
+  const [selectedDay, setSelectedDay] = useState(getStoredDate().day);
   const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const { year, month, day } = getStoredDate();
+    const monthStr = String(month).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    return `${year}-${monthStr}-${dayStr}`;
   });
 
   // 날씨 데이터 fetch
@@ -47,14 +73,18 @@ function Feed() {
     fetchUserRegion();
   }, [user]);
 
-  // 날짜가 변경될 때 selectedDate 업데이트
+  // 날짜가 변경될 때 selectedDate 업데이트 및 세션스토리지에 저장
   useEffect(() => {
     const date = new Date(selectedYear, selectedMonth - 1, selectedDay);
     // 로컬 시간을 사용하여 YYYY-MM-DD 형식으로 변환
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    setSelectedDate(`${year}-${month}-${day}`);
+    const newSelectedDate = `${year}-${month}-${day}`;
+    setSelectedDate(newSelectedDate);
+    
+    // 세션스토리지에 날짜 정보 저장 (카드 상세보기 후 뒤로가기 시 사용)
+    sessionStorage.setItem('feedDate', `${selectedYear}-${selectedMonth}-${selectedDay}`);
   }, [selectedYear, selectedMonth, selectedDay]);
 
   // region/order/selectedDate 바뀔 때마다 records fetch
@@ -109,10 +139,15 @@ function Feed() {
   const days = Array.from({ length: getDaysInMonth(selectedYear, selectedMonth) }, (_, i) => i + 1);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100 flex flex-col relative">
+      {/* 사이드바 */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
-        <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
+        <button 
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">우리 동네</h2>
@@ -226,8 +261,8 @@ function Feed() {
           </div>
           {/* TOP3 강조 */}
           {isPopular && top3.length > 0 && (
-            <div className="w-full h-[300px] bg-gray-200 rounded px-6 pb-6 pt-4">
-              <div className="flex justify-center gap-20 h-[270px]">
+            <div className="w-full bg-gray-200 rounded px-6 pb-6 pt-4">
+              <div className="flex justify-center gap-20">
                 {top3.map((outfit, idx) => (
                   <FeedCard
                     key={outfit.id}

@@ -1,6 +1,6 @@
 // src/pages/FeedDetail.js
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
@@ -11,6 +11,7 @@ import { useAuth } from "../contexts/AuthContext";
 function FeedDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const today = new Date();
     const formattedDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
 
@@ -65,7 +66,7 @@ function FeedDetail() {
             {/* 상단 네비게이션 */}
             <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate("/feed", { state: { fromCard: true } })}
                     className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
                 >
                     <ArrowLeftIcon className="w-5 h-5" />
