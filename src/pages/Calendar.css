@@ -1,0 +1,108 @@
+.react-calendar {
+    width: 100%;
+    max-width: none;   
+    margin: 1rem auto;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px ;
+    font-family: inherit;
+}
+
+/* 캘린터 네비바 */
+.react-calendar__navigation {
+    background-color: #bfdbfe;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.react-calendar__navigation button:hover {
+    background-color: #9cc9ff !important;
+    border-radius: 6px;
+}
+
+/* 요일 전체 영역 스타일 */
+.react-calendar__month-view__weekdays {
+    text-align: center;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background-color: #dbeafe;
+    border-radius: 10px;
+    border: 1px ;
+}
+
+/* 개별 요일 셀 */
+.react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+/* 캘린더 타일 */
+.has-record {
+    font-weight: bold;
+}
+
+.react-calendar__tile {
+    padding: 0.5rem 0.5rem;
+    height: 100px;
+    vertical-align: top;
+    position: relative;
+    font-size: 0.9rem;
+}
+
+.calendar-tile-content {
+  position: relative;
+  height: 100%;
+  padding: 0.25rem;
+}
+
+.calendar-tile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+/* 날씨 이모지 */
+.calendar-weather {
+  font-size: 1.2rem;
+  margin-left: 0.25rem;
+}
+
+/* 하단: 체감 이모지 */
+.calendar-feeling {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.5rem;
+}
+
+.react-calendar__tile--now {
+    background-color: #bfdbfe !important;
+    color: black;
+    border-radius: 0.2rem;
+}
+
+.react-calendar__tile:hover {
+    background-color: #e2e2e2;
+    border-radius: 0.2rem;
+}
+
+.react-calendar__tile--active {
+    background-color: #bfdbfe !important;
+    border-radius: 0.5rem;
+}
+
+.react-calendar__tile--active:hover {
+    background-color: #bfdbfe !important;
+}
+
+.hidden-date {
+  visibility: hidden;
+}
+
+.has-record {
+  font-weight: bold;
+}
