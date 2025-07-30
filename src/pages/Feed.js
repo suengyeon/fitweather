@@ -110,7 +110,7 @@ function Feed() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* 상단 네비게이션 (A의 스타일 반영) */}
+      {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
         <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
           <Bars3Icon className="w-5 h-5" />
@@ -125,11 +125,11 @@ function Feed() {
       </div>
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex md:flex-row gap-6 h-[700px]">
-        {/* 왼쪽: 지역/정렬/날씨 카드 영역 (A의 스타일 반영) */}
-        <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded h-[700px] flex flex-col justify-between">
+        {/* 왼쪽: 지역/정렬/날씨 카드 영역 */}
+        <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded h-[700px]">
           <h3 className="text-lg font-semibold mb-3">{regionMap[region] || region}</h3>
           {/* 날씨 일러스트 (WeatherCard) */}
-          <div className="flex justify-center items-center mb-6" style={{ minHeight: 120 }}>
+          <div className="flex justify-center items-center" style={{ minHeight: 120 }}>
             {weatherLoading ? (
               <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
             ) : weather ? (
@@ -151,7 +151,7 @@ function Feed() {
                 id="region"
                 value={region}
                 onChange={e => setRegion(e.target.value)}
-                className="px-3 py-2 rounded bg-white border"
+                className="px-3 py-2 rounded bg-blue-100 border"
               >
                 {Object.entries(regionMap).map(([eng, kor]) => (
                   <option key={eng} value={eng}>{kor}</option>
@@ -164,7 +164,7 @@ function Feed() {
                 id="sort"
                 value={order}
                 onChange={e => setOrder(e.target.value)}
-                className="px-3 py-2 rounded bg-white border"
+                className="px-3 py-2 rounded bg-blue-100 border"
               >
                 <option value="popular">인기순</option>
                 <option value="latest">최신순</option>
@@ -176,6 +176,7 @@ function Feed() {
             <h1 className="text-5xl font-lilita text-indigo-500 text-center">Fitweather</h1>
           </div>
         </div>
+
         {/* 오른쪽: 피드 카드 영역 */}
         <div className="w-full md:w-3/4 bg-white rounded flex flex-col h-[700px]">
           {/* 선택된 날짜 표시 및 날짜 선택 드롭다운 */}
