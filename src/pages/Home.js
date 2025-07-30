@@ -42,12 +42,12 @@ function Home() {
               <Bars3Icon className="w-5 h-5" />
             </button>
             <div className="flex items-center space-x-4">
-              <button onClick={logout} className="text-sm hover:underline">
+              <button onClick={logout} className="text-sm font-bold hover:underline">
                 logout
               </button>
               <button
                 onClick={() => navigate("/mypage_userinfo")}
-                className="text-sm hover:underline"
+                className="text-sm font-semibold hover:underline"
               >
                 회원정보
               </button>
@@ -70,13 +70,27 @@ function Home() {
               onChange={(e) => setSelectedRegion(e.target.value)}
               className="border border-gray-300 bg-white px-4 py-2 rounded mb-6"
             >
-              <option value="Seoul">서울</option>
-              <option value="Busan">부산</option>
-              <option value="Gwangju">광주</option>
-              <option value="Daegu">대구</option>
-              <option value="Daejeon">대전</option>
-              <option value="Ulsan">울산</option>
+              <option value="Baengnyeongdo">백령도</option>
               <option value="Incheon">인천</option>
+              <option value="Seoul">서울</option>
+              <option value="Chuncheon">춘천</option>
+              <option value="Gangneung">강릉</option>
+              <option value="Ulleungdo">울릉도/독도</option>
+              <option value="Hongseong">홍성</option>
+              <option value="Suwon">수원</option>
+              <option value="Cheongju">청주</option>
+              <option value="Andong">안동</option>
+              <option value="Jeonju">전주</option>
+              <option value="Daejeon">대전</option>
+              <option value="Daegu">대구</option>
+              <option value="Pohang">포항</option>
+              <option value="Heuksando">흑산도</option>
+              <option value="Mokpo">목포</option>
+              <option value="Jeju">제주</option>
+              <option value="Ulsan">울산</option>
+              <option value="Yeosu">여수</option>
+              <option value="Changwon">창원</option>
+              <option value="Busan">부산</option>
             </select>
 
             {/* 날씨 카드 */}
@@ -88,18 +102,12 @@ function Home() {
                   region={selectedRegion}
                   temp={weather.temp}
                   rain={weather.rain}
+                  humidity={weather.humidity}
                   icon={weather.icon}
+                  isHome={true}
                 />
 
-                {/* ✅ 온도/강수량 박스 */}
-                <div className="flex space-x-12 mb-12">
-                  <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                    <span className="text-lg font-semibold">{weather.temp}°C</span>
-                  </div>
-                  <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                    <span className="text-lg font-semibold">{weather.rain}mm</span>
-                  </div>
-                </div>
+
               </>
             ) : (
               <p>날씨 정보를 불러올 수 없습니다.</p>
@@ -107,7 +115,7 @@ function Home() {
 
             {/* 기록하기 버튼 */}
             <button
-              className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded"
+              className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded font-semibold"
               onClick={() => navigate("/record")}
             >
               기록하기

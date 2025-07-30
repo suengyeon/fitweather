@@ -23,6 +23,7 @@ export default function useWeather(region) {
           setWeather({
             temp: selected.temp,
             rain: selected.rainAmount,  // ✅ 이렇게 받아오도록!
+            humidity: selected.humidity, // ✅ 습도 추가
             icon: selected.iconCode,
           });
         } else {

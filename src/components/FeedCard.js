@@ -125,6 +125,7 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
         ) : (
           <button
             onClick={handleLikeClick}
+            className="transition hover:scale-110"
             style={{
               background: "none",
               border: "none",

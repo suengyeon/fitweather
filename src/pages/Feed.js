@@ -22,17 +22,23 @@ function Feed() {
   
   // 세션스토리지에서 저장된 날짜 정보 가져오기
   const getStoredDate = () => {
+    // 홈에서 직접 들어온 경우 세션스토리지 클리어하고 오늘 날짜 사용
+    const isFromHome = !location.state?.fromCard;
+    if (isFromHome) {
+      sessionStorage.removeItem('feedDate');
+      const today = new Date();
+      return {
+        year: today.getFullYear(),
+        month: today.getMonth() + 1,
+        day: today.getDate()
+      };
+    }
+    
     // 저장된 날짜가 있으면 사용 (브라우저 뒤로가기 포함)
     const stored = sessionStorage.getItem('feedDate');
     if (stored) {
       const [year, month, day] = stored.split('-').map(Number);
       return { year, month, day };
-    }
-    
-    // 홈에서 직접 들어온 경우에만 오늘 날짜 사용
-    const isFromHome = !location.state?.fromCard;
-    if (isFromHome) {
-      sessionStorage.removeItem('feedDate');
     }
     
     // 기본적으로는 오늘 날짜
@@ -121,10 +127,29 @@ function Feed() {
     rest = sorted.slice(3);
   }
 
-  // regionMap for dropdown (A의 코드 스타일 반영)
+  // regionMap for dropdown (전체 지역 목록)
   const regionMap = {
-    Seoul: "서울", Busan: "부산", Daegu: "대구", Incheon: "인천",
-    Gwangju: "광주", Daejeon: "대전", Ulsan: "울산", Suwon: "수원"
+    Baengnyeongdo: "백령도",
+    Incheon: "인천", 
+    Seoul: "서울",
+    Chuncheon: "춘천",
+    Gangneung: "강릉",
+    Ulleungdo: "울릉도/독도",
+    Hongseong: "홍성",
+    Suwon: "수원",
+    Cheongju: "청주",
+    Andong: "안동",
+    Jeonju: "전주",
+    Daejeon: "대전",
+    Daegu: "대구",
+    Pohang: "포항",
+    Heuksando: "흑산도",
+    Mokpo: "목포",
+    Jeju: "제주",
+    Ulsan: "울산",
+    Yeosu: "여수",
+    Changwon: "창원",
+    Busan: "부산"
   };
 
   // 연도, 월, 일 옵션 생성
@@ -161,55 +186,77 @@ function Feed() {
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex md:flex-row gap-6 h-[700px]">
         {/* 왼쪽: 지역/정렬/날씨 카드 영역 */}
-        <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded h-[700px]">
-          <h3 className="text-lg font-semibold mb-3">{regionMap[region] || region}</h3>
-          {/* 날씨 일러스트 (WeatherCard) */}
-          <div className="flex justify-center items-center" style={{ minHeight: 120 }}>
-            {weatherLoading ? (
-              <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
-            ) : weather ? (
-              <WeatherCard
-                region={regionMap[region] || region}
-                temp={weather.temp}
-                rain={weather.rain}
-                desc=""
-                icon={weather.icon}
-              />
-            ) : (
-              <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
-            )}
-          </div>
-          <div className="flex flex-col items-center gap-4 mt-6">
-            <div className="flex items-center gap-2">
-              <label htmlFor="region">지역</label>
-              <select
-                id="region"
-                value={region}
-                onChange={e => setRegion(e.target.value)}
-                className="px-3 py-2 rounded bg-blue-100 border"
-              >
-                {Object.entries(regionMap).map(([eng, kor]) => (
-                  <option key={eng} value={eng}>{kor}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2 mt-4">
-              <label htmlFor="sort">정렬</label>
-              <select
-                id="sort"
-                value={order}
-                onChange={e => setOrder(e.target.value)}
-                className="px-3 py-2 rounded bg-blue-100 border"
-              >
-                <option value="popular">인기순</option>
-                <option value="latest">최신순</option>
-              </select>
-            </div>
-          </div>
-          {/* 로고 (A의 스타일 반영) */}
-          <div className="flex justify-center items-center mt-6">
-            <h1 className="text-5xl font-lilita text-indigo-500 text-center">Fitweather</h1>
-          </div>
+                 <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded h-[700px]">
+                     <h3 className="text-lg font-semibold mb-3">{regionMap[region] || region}</h3>
+           
+           {/* 날씨 일러스트 */}
+           <div className="flex justify-center items-center mb-6" style={{ minHeight: 120 }}>
+             {weatherLoading ? (
+               <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
+             ) : weather ? (
+               <div className="flex flex-col items-center">
+                 {/* 날씨 아이콘 박스 */}
+                 <div className={`w-60 h-60 bg-gray-200 rounded mb-8 flex items-center justify-center text-6xl relative overflow-hidden`}>
+                   <div 
+                     className="absolute text-8xl"
+                     style={{
+                       animation: 'float-in-place 4s ease-in-out infinite',
+                       animationDelay: '0s'
+                     }}
+                   >
+                     {weather.icon === "rain" ? "☔️" : "☀️"}
+                   </div>
+                 </div>
+               </div>
+             ) : (
+               <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
+             )}
+           </div>
+           
+           <style jsx>{`
+             @keyframes float-in-place {
+               0%, 100% {
+                 transform: translateY(0px);
+               }
+               50% {
+                 transform: translateY(-10px);
+               }
+             }
+           `}</style>
+           <div className="flex flex-col items-center gap-4 mt-6 relative">
+             <div className="flex items-center gap-2 relative">
+               <label htmlFor="region">지역</label>
+               <select
+                 id="region"
+                 value={region}
+                 onChange={e => setRegion(e.target.value)}
+                 className="px-3 py-2 rounded bg-blue-100 border relative z-10"
+                 style={{ overflow: 'visible' }}
+               >
+                 {Object.entries(regionMap).map(([eng, kor]) => (
+                   <option key={eng} value={eng}>{kor}</option>
+                 ))}
+               </select>
+             </div>
+             <div className="flex items-center gap-2 mt-4 relative">
+               <label htmlFor="sort">정렬</label>
+               <select
+                 id="sort"
+                 value={order}
+                 onChange={e => setOrder(e.target.value)}
+                 className="px-3 py-2 rounded bg-blue-100 border relative z-10"
+                 style={{ overflow: 'visible' }}
+               >
+                 <option value="popular">인기순</option>
+                 <option value="latest">최신순</option>
+               </select>
+             </div>
+           </div>
+           
+           {/* 로고 */}
+           <div className="text-center pt-16">
+             <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
+           </div>
         </div>
 
         {/* 오른쪽: 피드 카드 영역 */}
@@ -294,10 +341,10 @@ function Feed() {
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default Feed;
+                 </div>
+       </div>
+     </div>
+   );
+ }
+ 
+ export default Feed;

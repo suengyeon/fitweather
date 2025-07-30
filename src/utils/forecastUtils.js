@@ -27,6 +27,7 @@ export function selectNextForecast(items) {
     return {
       temp: nextTmp.fcstValue,
       rainAmount: findValue("RN1") || "0",  // ✅ 1시간 강수량
+      humidity: findValue("REH") || null,   // ✅ 습도 (REH: 상대습도)
       iconCode: findValue("SKY") || "1",
       fcstTime,
     };

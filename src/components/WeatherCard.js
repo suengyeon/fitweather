@@ -1,22 +1,84 @@
-export default function WeatherCard({ region, temp, rain, desc, icon }) {
+export default function WeatherCard({ region, temp, rain, humidity, desc, icon, bgColor = "bg-gray-100", isHome = false, labelRight = false }) {
     const iconText = icon === "rain" ? "☔️" : "☀️";
   
     return (
       <div className="flex flex-col items-center">
         {/* 날씨 아이콘 박스 */}
-        <div className="w-60 h-60 bg-white border border-gray-400 rounded mb-8 flex items-center justify-center text-6xl">
-          {iconText}
+        <div className={`w-60 h-60 ${bgColor} rounded mb-8 flex items-center justify-center text-6xl relative overflow-hidden`}>
+          <div 
+            className="absolute text-8xl"
+            style={{
+              animation: 'float-in-place 4s ease-in-out infinite',
+              animationDelay: '0s'
+            }}
+          >
+            {iconText}
+          </div>
         </div>
+
+        <style jsx>{`
+          @keyframes float-in-place {
+            0%, 100% {
+              transform: translateY(0px);
+            }
+            50% {
+              transform: translateY(-10px);
+            }
+          }
+        `}</style>
   
-        {/*온도 / 강수량 박스*/}
-         {/* <div className="flex space-x-12 mb-12">
-          <div className="bg-blue-100 px-4 py-2 rounded text-center">
-            <span className="text-lg font-semibold">{temp}°C</span>
+        {/*온도 / 강수량 / 습도 박스*/}
+        {labelRight ? (
+          <div className="flex flex-col space-y-4 mb-8">
+            <div className="flex items-center justify-center">
+              <span className="mr-3 text-xs text-gray-600">온도</span>
+              <div className="bg-blue-100 px-4 py-2 rounded text-center">
+                <span className="text-lg font-semibold">{temp}°C</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center">
+              <span className="mr-3 text-xs text-gray-600">강수량</span>
+              <div className="bg-blue-100 px-4 py-2 rounded text-center">
+                <span className="text-lg font-semibold">{rain}mm</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center">
+              <span className="mr-3 text-xs text-gray-600">습도</span>
+              <div className="bg-blue-100 px-4 py-2 rounded text-center">
+                <span className="text-lg font-semibold">{humidity ? `${humidity}%` : "기록없음"}</span>
+              </div>
+            </div>
           </div>
-          <div className="bg-blue-100 px-4 py-2 rounded text-center">
-            <span className="text-lg font-semibold">{rain}mm</span>
+        ) : isHome ? (
+          // Home 페이지용 가로 정렬
+          <div className="flex space-x-4 mb-8">
+            <div className="bg-blue-100 px-4 py-2 rounded text-center">
+              <div className="text-xs text-gray-600 mb-1">온도</div>
+              <span className="text-lg font-semibold">{temp}°C</span>
+            </div>
+            <div className="bg-blue-100 px-4 py-2 rounded text-center">
+              <div className="text-xs text-gray-600 mb-1">강수량</div>
+              <span className="text-lg font-semibold">{rain}mm</span>
+            </div>
+            <div className="bg-blue-100 px-4 py-2 rounded text-center">
+              <div className="text-xs text-gray-600 mb-1">습도</div>
+              <span className="text-lg font-semibold">{humidity ? `${humidity}%` : "기록없음"}</span>
+            </div>
           </div>
-        </div>  */}
+        ) : (
+          // 다른 페이지용 세로 정렬
+          <div className="flex flex-col space-y-4 mb-8">
+            <div className="bg-blue-100 px-4 py-2 rounded text-center">
+              <span className="text-lg font-semibold">온도: {temp}°C</span>
+            </div>
+            <div className="bg-blue-100 px-4 py-2 rounded text-center">
+              <span className="text-lg font-semibold">강수량: {rain}mm</span>
+            </div>
+            <div className="bg-blue-100 px-4 py-2 rounded text-center">
+              <span className="text-lg font-semibold">습도: {humidity ? `${humidity}%` : "기록없음"}</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

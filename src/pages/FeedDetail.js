@@ -12,8 +12,7 @@ function FeedDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const today = new Date();
-    const formattedDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+    const [formattedDate, setFormattedDate] = useState("");
 
 
     const { user } = useAuth();
@@ -34,6 +33,13 @@ function FeedDetail() {
                 setData(record);
                 setLikeCount(record.likes?.length || 0);
                 setLiked(user && record.likes?.includes(user.uid));
+                
+                // 기록의 실제 날짜를 포맷팅
+                if (record.date) {
+                    const [year, month, day] = record.date.split('-').map(Number);
+                    setFormattedDate(`${year}년 ${month}월 ${day}일`);
+                }
+                
                 // 작성자 정보 fetch
                 const userRef = doc(db, "users", record.uid);
                 const userSnap = await getDoc(userRef);
@@ -83,7 +89,7 @@ function FeedDetail() {
             {/* 콘텐츠 */}
             <div className="flex-1 px-4 mt-10 flex flex-col md:items-start md:justify-center md:flex-row gap-6 overflow-y-auto">
                 {/* 왼쪽 : 날씨 카드 */}
-                <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center min-h-[705px]">
+                <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center h-[705px] overflow-hidden">
                     <h3 className="text-lg font-semibold mb-5">{regionName}</h3>
                     {weather ? (
                         <>
@@ -91,20 +97,18 @@ function FeedDetail() {
                                 region={regionName}
                                 temp={weather.temp}
                                 rain={weather.rain}
+                                humidity={weather.humidity}
+                                desc=""
                                 icon={weather.icon}
+                                bgColor="bg-gray-200"
+                                labelRight={true}
                             />
                             <div className="flex justify-center">
                                 <div className=" space-y-4 w-[220px] ">
                                     <div className="bg-blue-100 w-full h-10 px-4 py-2 rounded">
-                                        <span className="font-semibold">온도 : {weather.temp}°C</span>
-                                    </div>
-                                    <div className="bg-blue-100 w-full h-10 px-4 py-2 rounded">
-                                        <span className="font-semibold">강수량 : {weather.rain}mm</span>
-                                    </div>
-                                    <div className="bg-blue-100 w-full h-10 px-4 py-2 rounded">
                                         <span className="font-semibold">체감 : {feelingToEmoji(feeling)}</span>
                                     </div>
-                                    <div className="bg-blue-100 w-full h-10 px-4 py-2 rounded">
+                                    <div className="bg-blue-100 w-full h-12 px-4 py-2 rounded flex items-center justify-center">
                                         {weatherEmojis?.length > 0 && (
                                             <div className="flex justify-center gap-2">
                                                 {weatherEmojis.map((emoji, i) => (
@@ -116,9 +120,6 @@ function FeedDetail() {
 
                                 </div>
                             </div>
-                            <div className="text-center pt-16">
-                                <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
-                            </div>
                         </>
                     ) : (
                         <p className="text-red-500">날씨 정보를 불러오는 중...</p>
@@ -126,7 +127,7 @@ function FeedDetail() {
                 </div>
 
                 {/* 오른쪽: 이미지 & 착장 */}
-                <div className="w-full md:w-2/3 bg-white px-6 py-6 min-h-[705px]">
+                <div className="w-full md:w-2/3 bg-white px-6 py-6 h-[705px] overflow-y-auto">
 
                     {/* 닉네임 + 하트 상단 바 */}
                     <div className="relative bg-gray-200 h-12 flex items-center px-4 mb-6">
@@ -208,6 +209,11 @@ function FeedDetail() {
                         </div>
                     )}
                 </div>
+            </div>
+            
+            {/* Fitweather 로고 - 창 하단 */}
+            <div className="fixed bottom-16 left-4 pointer-events-none z-10">
+                <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
             </div>
         </div>
     );

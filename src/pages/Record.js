@@ -214,14 +214,27 @@ function Record() {
               }}
               className="w-36 px-4 py-2 border rounded bg-white"
             >
+              <option value="Baengnyeongdo">백령도</option>
+              <option value="Incheon">인천</option>
               <option value="Seoul">서울</option>
-              <option value="Busan">부산</option>
+              <option value="Chuncheon">춘천</option>
+              <option value="Gangneung">강릉</option>
+              <option value="Ulleungdo">울릉도/독도</option>
+              <option value="Hongseong">홍성</option>
+              <option value="Suwon">수원</option>
+              <option value="Cheongju">청주</option>
+              <option value="Andong">안동</option>
+              <option value="Jeonju">전주</option>
               <option value="Daejeon">대전</option>
               <option value="Daegu">대구</option>
-              <option value="Incheon">인천</option>
-              <option value="Gwangju">광주</option>
+              <option value="Pohang">포항</option>
+              <option value="Heuksando">흑산도</option>
+              <option value="Mokpo">목포</option>
+              <option value="Jeju">제주</option>
               <option value="Ulsan">울산</option>
-              <option value="Suwon">수원</option>
+              <option value="Yeosu">여수</option>
+              <option value="Changwon">창원</option>
+              <option value="Busan">부산</option>
             </select>
           </div>
           {weatherLoading ? (
@@ -232,17 +245,13 @@ function Record() {
                 region={regionName}
                 temp={weather.temp}
                 rain={weather.rain}
+                humidity={weather.humidity}
                 desc=""
                 icon={weather.icon}
+                bgColor="bg-gray-200"
+                labelRight={true}
               />
-              <div className="flex flex-col items-center space-y-4">
-                <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                  <span className="text-base font-semibold">온도 : {weather.temp}°C</span>
-                </div>
-                <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                  <span className="text-base font-semibold">강수량 : {weather.rain}mm</span>
-                </div>
-              </div>
+
               <div className="mt-4">
                 {/* 체감 선택 드롭다운 */}
                 <select
