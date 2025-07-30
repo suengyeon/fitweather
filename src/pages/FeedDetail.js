@@ -210,11 +210,6 @@ function FeedDetail() {
                     )}
                 </div>
             </div>
-            
-            {/* Fitweather 로고 - 창 하단 */}
-            <div className="fixed bottom-16 left-4 pointer-events-none z-10">
-                <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
-            </div>
         </div>
     );
 }

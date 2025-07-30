@@ -269,9 +269,11 @@ function Record() {
         date: dateStr,
         temp: weather.temp ?? null,
         rain: weather.rain ?? null,
+        humidity: weather.humidity ?? null,
         weather: {
           temp: weather.temp ?? null,
           rain: weather.rain ?? null,
+          humidity: weather.humidity ?? null,
           icon: weather.icon ?? null,
         },
         outfit,
@@ -411,7 +413,9 @@ function Record() {
 
               {/* 날씨 정보 직접 수정 영역 */}
               <div className="mt-4 space-y-3">
-                <div className="text-sm font-semibold text-gray-700">날씨 정보 입력</div>
+                <div className="text-sm font-semibold text-gray-700">
+                  {isToday(dateStr) ? "날씨 정보 (API)" : "날씨 정보 입력"}
+                </div>
                 
                 {/* 온도 입력 */}
                 <div className="flex items-center justify-between">
@@ -422,6 +426,7 @@ function Record() {
                     onChange={(e) => handleWeatherChange("temp", parseInt(e.target.value) || 0)}
                     className="w-20 px-2 py-1 border rounded text-center"
                     placeholder="0"
+                    disabled={isToday(dateStr)}
                   />
                   <span className="text-sm text-gray-600">°C</span>
                 </div>
@@ -435,6 +440,7 @@ function Record() {
                     onChange={(e) => handleWeatherChange("rain", parseInt(e.target.value) || 0)}
                     className="w-20 px-2 py-1 border rounded text-center"
                     placeholder="0"
+                    disabled={isToday(dateStr)}
                   />
                   <span className="text-sm text-gray-600">mm</span>
                 </div>
@@ -448,6 +454,7 @@ function Record() {
                     onChange={(e) => handleWeatherChange("humidity", parseInt(e.target.value) || 0)}
                     className="w-20 px-2 py-1 border rounded text-center"
                     placeholder="0"
+                    disabled={isToday(dateStr)}
                   />
                   <span className="text-sm text-gray-600">%</span>
                 </div>
