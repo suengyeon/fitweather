@@ -16,6 +16,18 @@ function Feed() {
   const [outfits, setOutfits] = useState([]);
   const [order, setOrder] = useState("popular"); // 인기순 or 최신순
   const [region, setRegion] = useState(""); // 초기값 빈 문자열
+  
+  // 날짜 선택 상태
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   // 날씨 데이터 fetch
   const { weather, loading: weatherLoading } = useWeather(region);
@@ -35,11 +47,21 @@ function Feed() {
     fetchUserRegion();
   }, [user]);
 
-  // region/order 바뀔 때마다 records fetch
+  // 날짜가 변경될 때 selectedDate 업데이트
+  useEffect(() => {
+    const date = new Date(selectedYear, selectedMonth - 1, selectedDay);
+    // 로컬 시간을 사용하여 YYYY-MM-DD 형식으로 변환
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    setSelectedDate(`${year}-${month}-${day}`);
+  }, [selectedYear, selectedMonth, selectedDay]);
+
+  // region/order/selectedDate 바뀔 때마다 records fetch
   useEffect(() => {
     if (!region) return;
-    getRecords(region, order).then(setOutfits);
-  }, [region, order]);
+    getRecords(region, order, selectedDate).then(setOutfits);
+  }, [region, order, selectedDate]);
 
   // 좋아요 토글 함수 (Firestore + UI 동기화)
   const handleToggleLike = async (recordId, liked) => {
@@ -74,6 +96,17 @@ function Feed() {
     Seoul: "서울", Busan: "부산", Daegu: "대구", Incheon: "인천",
     Gwangju: "광주", Daejeon: "대전", Ulsan: "울산", Suwon: "수원"
   };
+
+  // 연도, 월, 일 옵션 생성
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  
+  // 선택된 연도와 월에 따른 일 수 계산
+  const getDaysInMonth = (year, month) => {
+    return new Date(year, month, 0).getDate();
+  };
+  const days = Array.from({ length: getDaysInMonth(selectedYear, selectedMonth) }, (_, i) => i + 1);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -139,12 +172,57 @@ function Feed() {
             </div>
           </div>
           {/* 로고 (A의 스타일 반영) */}
-          <div className="text-center mt-6">
-            <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
+          <div className="flex justify-center items-center mt-6">
+            <h1 className="text-5xl font-lilita text-indigo-500 text-center">Fitweather</h1>
           </div>
         </div>
         {/* 오른쪽: 피드 카드 영역 */}
         <div className="w-full md:w-3/4 bg-white rounded flex flex-col h-[700px]">
+          {/* 선택된 날짜 표시 및 날짜 선택 드롭다운 */}
+          <div className="px-6 py-4 bg-gray-50 border-b">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold text-gray-700">
+                {selectedYear}년 {selectedMonth}월 {selectedDay}일 기록
+              </h3>
+              {/* 날짜 선택 드롭다운 */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(parseInt(e.target.value))}
+                  className="px-2 py-1 rounded bg-white border text-sm"
+                >
+                  {years.map(year => (
+                    <option key={year} value={year}>{year}년</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedMonth}
+                  onChange={e => {
+                    const newMonth = parseInt(e.target.value);
+                    setSelectedMonth(newMonth);
+                    setSelectedDay(1);
+                  }}
+                  className="px-2 py-1 rounded bg-white border text-sm"
+                >
+                  {months.map(month => (
+                    <option key={month} value={month}>{month}월</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedDay}
+                  onChange={e => setSelectedDay(parseInt(e.target.value))}
+                  className="px-2 py-1 rounded bg-white border text-sm"
+                >
+                  {days.map(day => (
+                    <option key={day} value={day}>{day}일</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500">
+              총 {outfits.length}개의 기록이 있습니다.
+            </p>
+          </div>
           {/* TOP3 강조 */}
           {isPopular && top3.length > 0 && (
             <div className="w-full h-[300px] bg-gray-200 rounded px-6 pb-6 pt-4">
@@ -163,16 +241,22 @@ function Feed() {
           )}
           {/* 나머지 피드 카드 목록 */}
           <div className="flex-1 overflow-y-auto px-6 pb-6 mt-6">
-            <div className="grid grid-cols-5 gap-4">
-              {(isPopular ? rest : outfits).map(outfit => (
-                <FeedCard
-                  key={outfit.id}
-                  record={outfit}
-                  currentUserUid={user?.uid}
-                  onToggleLike={handleToggleLike}
-                />
-              ))}
-            </div>
+            {outfits.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">해당 날짜에 기록이 없습니다.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-5 gap-4">
+                {(isPopular ? rest : outfits).map(outfit => (
+                  <FeedCard
+                    key={outfit.id}
+                    record={outfit}
+                    currentUserUid={user?.uid}
+                    onToggleLike={handleToggleLike}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

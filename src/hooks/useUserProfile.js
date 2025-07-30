@@ -21,10 +21,10 @@ export default function useUserProfile() {
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data();
-          const region = data.region === "서울" ? "Seoul" : data.region === "부산" ? "Busan" : "Seoul";
+          // 데이터베이스에 저장된 영문 지역명을 그대로 사용
           setProfile({
             nickname: data.nickname,
-            region,
+            region: data.region || "Seoul", // 기본값으로 Seoul 설정
           });
         }
       } catch (e) {

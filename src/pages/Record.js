@@ -19,9 +19,8 @@ function Record() {
 
   const { profile, loading: profileLoading } = useUserProfile();
   const { user } = useAuth();
-  const [region, setRegion] = useState("");
-  const [regionName, setRegionName] = useState(region);
-  const { weather, loading: weatherLoading } = useWeather(region);
+  const [regionName, setRegionName] = useState("");
+  const { weather, loading: weatherLoading } = useWeather(profile?.region);
 
   const [image, setImage] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
@@ -53,25 +52,13 @@ function Record() {
   const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef() };
 
   useEffect(() => {
-    async function fetchUserRegion() {
-      if (!user) return;
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        setRegion(userSnap.data().region || "Seoul");
-      } else {
-        setRegion("Seoul");
-      }
+    if (profile?.region) {
+      const regionMap = {
+        seoul: "서울", busan: "부산", daegu: "대구", incheon: "인천", gwangju: "광주", daejeon: "대전", ulsan: "울산", suwon: "수원"
+      };
+      setRegionName(regionMap[profile.region.toLowerCase()] || profile.region);
     }
-    fetchUserRegion();
-  }, [user]);
-
-  useEffect(() => {
-    const regionMap = {
-      seoul: "서울", busan: "부산", daegu: "대구", incheon: "인천", gwangju: "광주", daejeon: "대전", ulsan: "울산", suwon: "수원"
-    };
-    setRegionName(regionMap[region.toLowerCase()] || region);
-  }, [region]);
+  }, [profile?.region]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files).filter(f => f && f.name);
@@ -156,7 +143,7 @@ function Record() {
       // Firestore 저장 (temp/rain/weather 모두 저장)
       const recordData = {
         uid: user.uid,
-        region,
+        region: profile?.region,
         regionName,
         date: dateStr,
         temp: weather.temp ?? null,
@@ -214,8 +201,11 @@ function Record() {
           <div className="mb-4">
             <label className="block font-semibold mb-2">지역 선택</label>
             <select
-              value={region}
-              onChange={e => setRegion(e.target.value)}
+              value={profile?.region || "Seoul"}
+              onChange={e => {
+                // 지역 변경은 프로필 설정에서만 가능하도록 안내
+                alert("지역 변경은 프로필 설정에서 가능합니다.");
+              }}
               className="w-36 px-4 py-2 border rounded bg-white"
             >
               <option value="Seoul">서울</option>
