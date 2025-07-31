@@ -525,12 +525,13 @@ function Record() {
 
               <div className="mt-4 space-x-2">
                 {/* 체감 선택 드롭다운 */}
-                <span className="text-base font-semibold">체감 선택 :</span>
+                <span className="text-base font-semibold">체감 :</span>
                 <select
                   value={feeling}
                   onChange={(e) => setFeeling(e.target.value)}
                   className="w-25 px-4 py-2 border rounded text-center"
                 >
+                  <option value="" className="text-gray-500">선택</option>
                   <option value="steam">🥟 찐만두</option>
                   <option value="hot">🥵 더움</option>
                   <option value="nice">👍🏻 적당</option>
