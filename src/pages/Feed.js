@@ -149,7 +149,8 @@ function Feed() {
     Ulsan: "울산",
     Yeosu: "여수",
     Changwon: "창원",
-    Busan: "부산"
+    Busan: "부산",
+    Gwangju: "광주"
   };
 
   // 연도, 월, 일 옵션 생성
@@ -240,7 +241,7 @@ function Feed() {
           </div>
 
           {/* 로고 */}
-          <div className="text-center pt-32">
+          <div className="flex justify-center items-center pt-32">
             <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
           </div>
         </div>
@@ -304,8 +305,8 @@ function Feed() {
 
           {/* TOP3 강조 */}
           {isPopular && top3.length > 0 && (
-            <div className="w-full bg-gray-200 px-6 pb-6 pt-4">
-              <div className="flex justify-center gap-20">
+            <div className="w-full bg-gray-200 px-6 pb-6 pt-4 overflow-x-auto">
+              <div className="flex justify-center gap-20 min-w-max">
                 {top3.map((outfit, idx) => (
                   <FeedCard
                     key={outfit.id}
@@ -319,7 +320,7 @@ function Feed() {
             </div>
           )}
           {/* 나머지 피드 카드 목록 */}
-          <div className="flex-1 overflow-y-auto px-6 pb-6 mt-6">
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
             {outfits.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">해당 날짜에 기록이 없습니다.</p>

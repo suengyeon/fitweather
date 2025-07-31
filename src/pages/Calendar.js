@@ -82,7 +82,16 @@ function CalendarPage() {
     if (existingRecord) {
       navigate(`/record`, { state: { existingRecord } });
     } else {
-      navigate("/record", { state: { date: dateStr } });
+      // 오늘 날짜인 경우 Home에서 선택한 지역 정보도 전달
+      const isToday = dateStr === todayStr;
+      const state = { date: dateStr };
+      
+      if (isToday) {
+        // 오늘 날짜는 사용자 기본 지역을 selectedRegion으로 전달
+        state.selectedRegion = profile?.region;
+      }
+      
+      navigate("/record", { state });
     }
   };
 

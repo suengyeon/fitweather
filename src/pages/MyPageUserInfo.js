@@ -37,7 +37,8 @@ function MyPageUserInfo() {
       Ulsan: "울산",
       Yeosu: "여수",
       Changwon: "창원",
-      Busan: "부산"
+      Busan: "부산",
+      Gwangju: "광주"
     };
     return regionMap[englishRegion] || englishRegion;
   };

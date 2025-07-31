@@ -32,7 +32,7 @@ function Record() {
   const { profile, loading: profileLoading } = useUserProfile();
   const { user } = useAuth();
   const [regionName, setRegionName] = useState("");
-
+  
   // 오늘 날짜인지 확인하는 함수
   const isToday = (dateStr) => {
     const today = new Date();
@@ -40,21 +40,25 @@ function Record() {
     return today.toDateString() === targetDate.toDateString();
   };
 
-  // 기록이 있으면 기록된 날씨 정보 사용, 없으면 기본값 설정
-  const [weather, setWeather] = useState(() => {
-    if (existingRecord?.weather) {
-      return existingRecord.weather;
+  // 지역 정보 설정: 기록이 있으면 기록의 지역, 없으면 사용자 기본 지역 또는 Home에서 전달받은 지역
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    if (existingRecord?.region) {
+      return existingRecord.region; // 기존 기록이 있으면 기록의 지역
     }
-    // 과거 날짜이고 기록이 없으면 0으로 초기화
+    // 과거 날짜이고 기록이 없으면 사용자 기본 지역 사용
     const isTodayDate = isToday(dateStr);
     if (!isTodayDate) {
-      return {
-        temp: 0,
-        rain: 0,
-        humidity: 0,
-        icon: "sunny"
-      };
+      return profile?.region; // 과거 날짜는 사용자 기본 지역
     }
+    return location.state?.selectedRegion || profile?.region; // 오늘 날짜는 Home에서 전달받은 지역 또는 사용자 기본 지역
+  });
+
+  // 날씨 정보 설정: 기록이 있으면 기록된 날씨, 없으면 기본값 (온도/습도/강수량은 0)
+  const [weather, setWeather] = useState(() => {
+    if (existingRecord?.weather) {
+      return existingRecord.weather; // 기존 기록이 있으면 기록된 날씨 정보 사용
+    }
+    // 기록이 없으면 기본값 (온도/습도/강수량은 0)
     return {
       temp: 0,
       rain: 0,
@@ -85,26 +89,63 @@ function Record() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [recordId, setRecordId] = useState(null);
 
+
   const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef() };
 
-  // 날씨 API 연동 (오늘 날짜일 때만)
+  // 날씨 API 연동 (오늘 날짜일 때만, 선택된 지역 사용)
   const { weather: apiWeather, loading: apiWeatherLoading } = useWeather(
-    isToday(dateStr) ? profile?.region : null
+    isToday(dateStr) ? selectedRegion : null
   );
 
   // 날씨 로딩 상태 설정 (오늘 날짜일 때만 API 로딩 상태 사용)
   const weatherLoading = isToday(dateStr) ? apiWeatherLoading : false;
 
-  useEffect(() => {
-    if (profile?.region) {
-      const regionMap = {
-        seoul: "서울", busan: "부산", daegu: "대구", incheon: "인천", gwangju: "광주", daejeon: "대전", ulsan: "울산", suwon: "수원"
-      };
-      setRegionName(regionMap[profile.region.toLowerCase()] || profile.region);
+  // 지역 변경 핸들러
+  const handleRegionChange = (newRegion) => {
+    setSelectedRegion(newRegion);
+    // 지역 변경 시 날씨 정보 초기화 (오늘 날짜인 경우에만)
+    if (isToday(dateStr) && !existingRecord) {
+      setWeather(prev => ({
+        ...prev,
+        temp: 0,
+        rain: 0,
+        humidity: 0,
+        icon: "sunny"
+      }));
     }
-  }, [profile?.region]);
+  };
 
-  // 오늘 날짜이고 API 날씨 데이터가 있으면 업데이트
+  useEffect(() => {
+    if (selectedRegion) {
+      const regionMap = {
+        Baengnyeongdo: "백령도",
+        Incheon: "인천",
+        Seoul: "서울",
+        Chuncheon: "춘천",
+        Gangneung: "강릉",
+        Ulleungdo: "울릉도/독도",
+        Hongseong: "홍성",
+        Suwon: "수원",
+        Cheongju: "청주",
+        Andong: "안동",
+        Jeonju: "전주",
+        Daejeon: "대전",
+        Daegu: "대구",
+        Pohang: "포항",
+        Heuksando: "흑산도",
+        Mokpo: "목포",
+        Jeju: "제주",
+        Ulsan: "울산",
+        Yeosu: "여수",
+        Changwon: "창원",
+        Busan: "부산",
+        Gwangju: "광주"
+      };
+      setRegionName(regionMap[selectedRegion] || selectedRegion);
+    }
+  }, [selectedRegion]);
+
+  // 오늘 날짜이고 API 날씨 데이터가 있으면 업데이트 (기록이 없을 때만)
   useEffect(() => {
     if (isToday(dateStr) && apiWeather && !existingRecord) {
       setWeather(prev => ({
@@ -115,7 +156,7 @@ function Record() {
         icon: apiWeather.icon || "sunny"
       }));
     }
-  }, [apiWeather, dateStr, existingRecord]);
+  }, [apiWeather, dateStr, existingRecord, selectedRegion]);
 
   // 날씨 정보 직접 수정 함수들
   const handleWeatherChange = (field, value) => {
@@ -136,6 +177,11 @@ function Record() {
     if (existingRecord) {
       setIsEditMode(true);
       setRecordId(existingRecord.id);
+
+      // 기존 기록의 지역 정보 설정 (이미 위에서 설정했지만 확실히 하기 위해)
+      if (existingRecord.region) {
+        setSelectedRegion(existingRecord.region);
+      }
 
       setOutfit(existingRecord.outfit || {});
       setFeeling(existingRecord.feeling || "");
@@ -176,6 +222,29 @@ function Record() {
       return newList;
     });
   };
+
+  const handleImageDelete = () => {
+    if (imageFiles.length === 0) return;
+    
+    const confirmDelete = window.confirm("현재 사진을 삭제하시겠어요?");
+    if (!confirmDelete) return;
+
+    setImageFiles((prev) => {
+      const newList = prev.filter((_, index) => index !== imagePreviewIdx);
+      
+      // 삭제 후 이미지 인덱스 조정
+      if (newList.length === 0) {
+        setImage(null);
+        setImagePreviewIdx(0);
+      } else if (imagePreviewIdx >= newList.length) {
+        setImagePreviewIdx(newList.length - 1);
+      }
+      
+      return newList;
+    });
+  };
+
+
 
   const handleAddItem = (category, value) => {
     if (!value.trim()) return;
@@ -345,11 +414,8 @@ function Record() {
           {/* 지역 선택 드롭다운 */}
           <div className="mb-4">
             <select
-              value={profile?.region || "Seoul"}
-              onChange={e => {
-                // 지역 변경은 프로필 설정에서만 가능하도록 안내
-                alert("지역 변경은 프로필 설정에서 가능합니다.");
-              }}
+              value={selectedRegion || "Seoul"}
+              onChange={e => handleRegionChange(e.target.value)}
               className="w-30 px-4 py-2 border rounded bg-white text-center"
             >
               <option value="Baengnyeongdo">백령도</option>
@@ -373,6 +439,7 @@ function Record() {
               <option value="Yeosu">여수</option>
               <option value="Changwon">창원</option>
               <option value="Busan">부산</option>
+              <option value="Gwangju">광주</option>
             </select>
           </div>
           {weatherLoading ? (
@@ -591,10 +658,10 @@ function Record() {
                     </div>
                   )}
 
-                  {/* ✅ + 사진 추가 버튼 (우상단 겹쳐도 상관 없음) */}
+                  {/* ✅ + 사진 추가 버튼 (좌상단) */}
                   <label
                     htmlFor="imageUpload"
-                    className="absolute top-2 right-2 bg-white bg-opacity-70 text-sm text-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-opacity-90 z-10"
+                    className="absolute top-2 left-2 bg-white bg-opacity-70 text-sm text-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-opacity-90 z-10"
                   >
                     + 사진 추가
                     <input
@@ -606,6 +673,15 @@ function Record() {
                       className="hidden"
                     />
                   </label>
+
+                                     {/* 🗑️ 사진 삭제 버튼 (우상단) */}
+                   <button
+                     type="button"
+                     onClick={handleImageDelete}
+                     className="absolute top-2 right-2 bg-red-500 bg-opacity-80 text-white text-sm px-2 py-1 rounded cursor-pointer hover:bg-opacity-100 z-10"
+                   >
+                     🗑️ 삭제
+                   </button>
                 </div>
 
               )}
@@ -666,10 +742,12 @@ function Record() {
               className="w-full h-24 px-4 py-2 border rounded bg-white resize-none overflow-y-auto"
             />
           </div>
-        </div>
-      </div>
-    </div >
-  );
-}
+                 </div>
+       </div>
+       
+       
+     </div >
+   );
+ }
 
 export default Record;

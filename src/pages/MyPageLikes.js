@@ -186,7 +186,7 @@ export default function MyPageLikes() {
             loading={loading}
           />
           {/* 로고 */}
-          <div className="text-center pt-16">
+          <div className="flex justify-center items-center pt-16">
             <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
           </div>
         </div>

@@ -20,11 +20,12 @@ export const regionGrid = {
     Daegu: { nx: 89, ny: 90 },
     Pohang: { nx: 102, ny: 94 },
     Heuksando: { nx: 50, ny: 67 },
-    Mokpo: { nx: 50, ny: 67 },
+    Mokpo: { nx: 50, ny: 68 },
     Jeju: { nx: 52, ny: 38 },
     Ulsan: { nx: 102, ny: 84 },
     Yeosu: { nx: 73, ny: 56 },
     Changwon: { nx: 89, ny: 76 },
     Busan: { nx: 98, ny: 76 },
+    Gwangju: { nx: 58, ny: 74 },
   };
   

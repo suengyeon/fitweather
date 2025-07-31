@@ -43,16 +43,7 @@ export default function Sidebar({ isOpen, onClose }) {
           
           {/* Mypage 섹션 */}
           <div className="mb-8">
-            <button
-              onClick={() => handleMenuClick("/mypage")}
-              className={`block w-full text-left px-3 py-2 rounded transition-colors ${
-                isActive("/mypage") 
-                  ? "bg-blue-300 text-blue-800" 
-                  : "text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              <h2 className="text-2xl font-bold mb-4">Mypage</h2>
-            </button>
+            <h2 className="text-2xl font-bold mb-4">Mypage</h2>
             <div className="space-y-2">
               <button
                 onClick={() => handleMenuClick("/mypage_userinfo")}

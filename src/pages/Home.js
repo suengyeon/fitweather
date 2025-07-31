@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon } from "@heroicons/react/24/solid";
+import { getDocs, collection, query, where } from "firebase/firestore";
+import { db } from "../firebase";
 
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
 import { logout } from "../firebase";
+import { useAuth } from "../contexts/AuthContext";
 
 import Skeleton from "../components/Skeleton";
 import WeatherCard from "../components/WeatherCard";
@@ -12,6 +15,7 @@ import Sidebar from "../components/Sidebar";
 
 function Home() {
   const { profile, loading: profileLoading } = useUserProfile();
+  const { user } = useAuth();
   const nickname = profile?.nickname || "회원";
   const navigate = useNavigate();
 
@@ -91,6 +95,7 @@ function Home() {
               <option value="Yeosu">여수</option>
               <option value="Changwon">창원</option>
               <option value="Busan">부산</option>
+              <option value="Gwangju">광주</option>
             </select>
 
             {/* 날씨 카드 */}
@@ -116,10 +121,56 @@ function Home() {
             {/* 기록하기 버튼 */}
             <button
               className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded font-semibold"
-              onClick={() => {
+              onClick={async () => {
                 const today = new Date();
                 const todayStr = today.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식
-                navigate("/record", { state: { date: todayStr } });
+                
+                // 오늘 날짜에 기존 기록이 있는지 확인
+                if (user?.uid) {
+                  try {
+                    const q = query(
+                      collection(db, "records"),
+                      where("uid", "==", user.uid),
+                      where("date", "==", todayStr)
+                    );
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (!querySnapshot.empty) {
+                      // 기존 기록이 있으면 수정 모드로 이동
+                      const existingRecord = { ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id };
+                      navigate("/record", { 
+                        state: { 
+                          existingRecord
+                        } 
+                      });
+                    } else {
+                      // 기존 기록이 없으면 새 기록 모드로 이동
+                      navigate("/record", { 
+                        state: { 
+                          date: todayStr,
+                          selectedRegion: selectedRegion // 선택된 지역 정보 전달
+                        } 
+                      });
+                    }
+                  } catch (error) {
+                    console.error("기록 확인 중 오류:", error);
+                    // 오류 발생 시 기본적으로 새 기록 모드로 이동
+                    navigate("/record", { 
+                      state: { 
+                        date: todayStr,
+                        selectedRegion: selectedRegion
+                      } 
+                    });
+                  }
+                } else {
+                  // 사용자가 로그인되지 않은 경우 기본 동작
+                  navigate("/record", { 
+                    state: { 
+                      date: todayStr,
+                      selectedRegion: selectedRegion
+                    } 
+                  });
+                }
               }}
             >
               기록하기

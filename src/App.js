@@ -12,7 +12,7 @@ import ProfileEdit from "./pages/ProfileEdit";
 import Withdraw from "./pages/Withdraw";
 import Record from "./pages/Record";
 import Feed from "./pages/Feed";
-import MyPage from "./pages/MyPage";
+
 import Calendar from "./pages/Calendar";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
@@ -67,7 +67,7 @@ function App() {
           <Route path="/record" element={<Record />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/FeedDetail/:id" element={<FeedDetail />} />
-          <Route path="/mypage" element={<MyPage />} />
+
           <Route path="/mypage_likes" element={<MyPageLikes />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/calendar" element={<Calendar />} />
