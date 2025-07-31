@@ -1,42 +1,54 @@
-import { toggleLike } from "../api/toggleLike";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toggleLike } from "../api/toggleLike";
 
 function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
   const navigate = useNavigate();
-  const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
-  const liked = record.likes?.includes(currentUserUid);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [isLiked, setIsLiked] = useState(record.likes?.includes(currentUserUid));
+  const [likeCount, setLikeCount] = useState(record.likes?.length || 0);
 
-  // 1. 닉네임: Firestore record에 nickname 필드가 없다면 uid로 대체
-  const displayName = record.uid === currentUserUid ? "나의 기록" : (record.nickname || record.uid || "사용자");
+  const getWeatherEmoji = (weatherEmojis) => weatherEmojis?.[0] || "🌤️";
 
-  // 2. 메모(피드백)
-  const feedback = record.memo || record.feedback || "";
-
-  // 3. 체감 이모지(Record.js의 feeling 필드 기반)
   const feelingEmojiMap = {
-    steam: "🥟", // 찐만두
-    hot: "🥵",   // 더움
-    nice: "👍🏻", // 적당
-    cold: "💨",  // 추움
-    ice: "🥶",   // 동태
+    steam: "🥟", hot: "🥵", nice: "👍🏻", cold: "💨", ice: "🥶"
   };
   const feelingEmoji = feelingEmojiMap[record.feeling] || "";
 
-  // 4. 하트(♥️/♡) 아이콘
-  const likeIcon = liked ? "♥" : "♡";
+  const getTemp = () => record.temp || record.weather?.temp || null;
+  const getRain = () => record.rain || record.weather?.rain || null;
+  const getHumidity = () => record.humidity || record.weather?.humidity || null;
+  const getRegion = () => record.region || record.regionName || null;
 
-  // robust like click handler
-  const handleLikeClick = (e) => {
+  const handleLikeClick = async (e) => {
     e.stopPropagation();
-    if (onToggleLike) {
-      onToggleLike(record.id, liked);
+
+    setIsLiked(!isLiked); // UI 즉시 반응
+    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+
+    try {
+      await toggleLike(record.id, currentUserUid);
+    } catch (err) {
+      console.error("좋아요 토글 실패:", err);
+      // 롤백
+      setIsLiked(isLiked);
+      setLikeCount(prev => isLiked ? prev + 1 : prev - 1);
     }
   };
 
-  const handleCardClick = () => {
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    setImageIndex(prev => (prev - 1 + record.imageUrls.length) % record.imageUrls.length);
+  };
+
+  const handleNext = (e) => {
+    e.stopPropagation();
+    setImageIndex(prev => (prev + 1) % record.imageUrls.length);
+  };
+
+  const handleClick = () => {
     if (record.uid === currentUserUid) {
-      navigate(`/record`, { state: { existingRecord: record } });
+      navigate("/record", { state: { existingRecord: record } });
     } else {
       navigate(`/FeedDetail/${record.id}`, { state: { fromCard: true } });
     }
@@ -44,109 +56,136 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
 
   return (
     <div
-      className="aspect-[3/4] bg-gray-100 rounded p-2 flex flex-col justify-between cursor-pointer hover:shadow-md transition"
-      style={{ minWidth: 180, maxWidth: 220, minHeight: 240, maxHeight: 320, position: "relative" }}
-      onClick={handleCardClick}
+      className="rounded-lg cursor-pointer transition-all duration-100 hover:shadow-md"
+      style={{
+        width: "200px",
+        height: "280px",
+        backgroundColor: "#d1d5db",
+        position: "relative",
+        overflow: "hidden"
+      }}
+      onClick={handleClick}
     >
-      {/* TOP3 순위 뱃지 */}
+      {/* TOP3 뱃지 */}
       {rank && (
-        <span style={{
-          position: "absolute",
-          top: 8,
-          left: 8,
-          fontSize: 28,
-          fontWeight: 700,
-          zIndex: 2
-        }}>
-          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}위`}
+        <span style={{ position: "absolute", top: 8, left: 8, fontSize: 24, zIndex: 2 }}>
+          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
         </span>
       )}
-      {/* 사진 캐러셀 */}
-      {record.imageUrls && record.imageUrls.length > 0 ? (
-        <div style={{ position: "relative", width: "100%", height: "85%", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <img
-            src={record.imageUrls[imagePreviewIdx]}
-            alt="코디"
-            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }}
-          />
-          {record.imageUrls.length > 1 && (
-            <div style={{ position: "absolute", bottom: 2, left: 0, right: 0, display: "flex", justifyContent: "space-between", padding: "0 4px" }}>
-              <button
-                type="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  setImagePreviewIdx(prev => (prev - 1 + record.imageUrls.length) % record.imageUrls.length);
-                }}
-                style={{ background: "rgba(255,255,255,0.8)", border: "none", borderRadius: "50%", width: 24, height: 24, cursor: "pointer" }}
-              >
-                ◀
-              </button>
-              <span style={{ fontSize: 12, color: "#666", background: "rgba(255,255,255,0.8)", padding: "2px 6px", borderRadius: 8 }}>
-                {imagePreviewIdx + 1} / {record.imageUrls.length}
-              </span>
-              <button
-                type="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  setImagePreviewIdx(prev => (prev + 1) % record.imageUrls.length);
-                }}
-                style={{ background: "rgba(255,255,255,0.8)", border: "none", borderRadius: "50%", width: 24, height: 24, cursor: "pointer" }}
-              >
-                ▶
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div style={{ width: "100%", height: "70%", background: "#eee", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, marginBottom: 8, fontSize: 40 }}>
-          사진 없음
-        </div>
-      )}
 
-      {/* 닉네임/uid */}
-      {/* (닉네임/피드백은 피드 카드에서 숨김) */}
-      {/* 메모/피드백 */}
-      {/* (피드백도 피드 카드에서 숨김) */}
-
-      {/* 하트(♥️), 하트수, 체감 이모지 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
-        {/* 내 기록엔 하트 버튼 X, 하트수 O */}
-        {record.uid === currentUserUid ? (
+      {/* 이미지 영역 */}
+      <div style={{ height: "230px", position: "relative" }}>
+        {record.imageUrls?.length > 0 ? (
           <>
-            <span style={{ color: "#111", fontSize: 22 }}>
-              {"♥"}
-            </span>
-            <span style={{ fontWeight: 600 }}>{record.likes?.length || 0}</span>
-            {/* 나의 기록 텍스트 */}
-            <span style={{ margin: "0 8px", fontWeight: 700, color: "#222", fontSize: 16, letterSpacing: 1 }}>{"나의 기록"}</span>
-            {/* 체감 이모지는 여기서만 */}
-            <span style={{ fontSize: 20 }}>{feelingEmoji}</span>
+            <img
+              src={record.imageUrls[imageIndex]}
+              alt="코디"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+
+            {/* 캐러셀 버튼 */}
+            {record.imageUrls.length > 1 && (
+              <>
+                <button onClick={handlePrev} style={navBtnStyle("left")}>‹</button>
+                <button onClick={handleNext} style={navBtnStyle("right")}>›</button>
+
+                <div style={indicatorStyle}>
+                  {record.imageUrls.map((_, i) => (
+                    <div key={i} style={dotStyle(i === imageIndex)} />
+                  ))}
+                </div>
+              </>
+            )}
           </>
         ) : (
-          <button
-            onClick={handleLikeClick}
-            className="transition hover:scale-110"
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 22,
-              padding: 0
-            }}
-          >
-            <span style={{ color: liked ? "red" : "#ccc" }}>
-              {likeIcon}
-            </span>
-            <span style={{ marginLeft: 6, fontWeight: 600 }}>{record.likes?.length || 0}</span>
-          </button>
+          <div style={{
+            width: "100%", height: "100%", background: "#e5e7eb",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#9ca3af", fontSize: "24px"
+          }}>
+            사진 없음
+          </div>
         )}
-        {/* 체감 이모지 오른쪽 (남의 기록만) */}
-        {record.uid !== currentUserUid && (
-          <span style={{ fontSize: 20, marginLeft: "auto" }}>{feelingEmoji}</span>
-        )}
+      </div>
+
+      {/* 정보 영역 */}
+      <div style={{ padding: "10px", height: "80px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        {/* ♥ 하트 / 날씨 / 체감 */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {record.uid === currentUserUid ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <span style={{ fontSize: 18, color: "red" }}>♥</span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>{likeCount}</span>
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>나의 기록</span>
+              <span style={{ fontSize: 18 }}>{feelingEmoji}</span>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <button
+                  onClick={handleLikeClick}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 18,
+                    color: isLiked ? "red" : "#ccc",
+                    padding: 0
+                  }}
+                >
+                  ♥
+                </button>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>{likeCount}</span>
+              </div>
+              <span style={{ fontSize: 18 }}>{getWeatherEmoji(record.weatherEmojis)}</span>
+              <span style={{ fontSize: 18 }}>{feelingEmoji}</span>
+            </>
+          )}
+        </div>
+
+
       </div>
     </div>
   );
 }
 
-export default FeedCard; 
+// 스타일 함수
+const navBtnStyle = (side) => ({
+  position: "absolute",
+  [side]: "8px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "rgba(0,0,0,0.5)",
+  color: "white",
+  border: "none",
+  borderRadius: "50%",
+  width: "28px",
+  height: "28px",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  fontSize: "16px",
+  zIndex: 10
+});
+
+const indicatorStyle = {
+  position: "absolute",
+  bottom: "8px",
+  left: "50%",
+  transform: "translateX(-50%)",
+  display: "flex",
+  gap: "4px",
+  zIndex: 10
+};
+
+const dotStyle = (active) => ({
+  width: "6px",
+  height: "6px",
+  borderRadius: "50%",
+  backgroundColor: active ? "white" : "rgba(255,255,255,0.5)"
+});
+
+export default FeedCard;

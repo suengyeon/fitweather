@@ -96,18 +96,18 @@ export default function LikeCard({ outfit, onClick }) {
 
   return (
     <div
-      className="rounded-lg cursor-pointer transition-all duration-200 hover:shadow-lg"
+      className="rounded-lg cursor-pointer transition-all duration-100 hover:shadow"
       style={{
         width: "200px",
         height: "280px",
-        backgroundColor: "#f3f4f6",
+        backgroundColor: "#d1d5db",
         position: "relative",
         overflow: "hidden"
       }}
       onClick={onClick}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "scale(1.02)";
-        e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.15)";
+        e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.15)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "scale(1)";
