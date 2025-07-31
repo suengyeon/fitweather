@@ -39,7 +39,7 @@ function Record() {
     const targetDate = new Date(dateStr);
     return today.toDateString() === targetDate.toDateString();
   };
-  
+
   // 기록이 있으면 기록된 날씨 정보 사용, 없으면 기본값 설정
   const [weather, setWeather] = useState(() => {
     if (existingRecord?.weather) {
@@ -350,7 +350,7 @@ function Record() {
                 // 지역 변경은 프로필 설정에서만 가능하도록 안내
                 alert("지역 변경은 프로필 설정에서 가능합니다.");
               }}
-              className="w-36 px-4 py-2 border rounded bg-white"
+              className="w-30 px-4 py-2 border rounded bg-white text-center"
             >
               <option value="Baengnyeongdo">백령도</option>
               <option value="Incheon">인천</option>
@@ -383,12 +383,12 @@ function Record() {
               <div className="flex flex-col items-center">
                 {/* 날씨 아이콘 박스 */}
                 <div className="relative">
-                  <div className="w-60 h-60 bg-gray-200 rounded mb-8 flex items-center justify-center text-6xl relative overflow-hidden">
+                  <div className="w-60 h-60 bg-gray-200 rounded flex items-center justify-center text-6xl relative overflow-hidden">
                     <div className="absolute text-8xl animate-bounce">
                       {weather.icon === "rain" ? "☔️" : "☀️"}
                     </div>
                   </div>
-                  
+
                   {/* 과거 날짜에서만 화살표 버튼 표시 */}
                   {!isEditMode && !isToday(dateStr) && (
                     <>
@@ -412,62 +412,58 @@ function Record() {
               </div>
 
               {/* 날씨 정보 직접 수정 영역 */}
-              <div className="mt-4 space-y-3">
-                <div className="text-sm font-semibold text-gray-700">
-                  {isToday(dateStr) ? "날씨 정보 (API)" : "날씨 정보 입력"}
-                </div>
-                
+              <div className=" space-y-3">
                 {/* 온도 입력 */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">온도:</span>
+                <div className="flex items-center justify-center space-x-2">
+                  <span className="text-base font-semibold">온도 :</span>
                   <input
                     type="number"
                     value={weather.temp || ""}
                     onChange={(e) => handleWeatherChange("temp", parseInt(e.target.value) || 0)}
-                    className="w-20 px-2 py-1 border rounded text-center"
+                    className="w-16 px-2 py-1 border rounded text-center"
                     placeholder="0"
                     disabled={isToday(dateStr)}
                   />
-                  <span className="text-sm text-gray-600">°C</span>
+                  <span className="text-base font-semibold">°C</span>
                 </div>
 
                 {/* 강수량 입력 */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">강수량:</span>
+                <div className="flex items-center justify-center space-x-2">
+                  <span className="text-base font-semibold">강수량 :</span>
                   <input
                     type="number"
                     value={weather.rain || ""}
                     onChange={(e) => handleWeatherChange("rain", parseInt(e.target.value) || 0)}
-                    className="w-20 px-2 py-1 border rounded text-center"
+                    className="w-16 px-2 py-1 border rounded text-center"
                     placeholder="0"
                     disabled={isToday(dateStr)}
                   />
-                  <span className="text-sm text-gray-600">mm</span>
+                  <span className="text-base font-semibold">mm</span>
                 </div>
 
                 {/* 습도 입력 */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">습도:</span>
+                <div className="flex items-center justify-center space-x-2">
+                  <span className="text-base font-semibold">습도 :</span>
                   <input
                     type="number"
                     value={weather.humidity || ""}
                     onChange={(e) => handleWeatherChange("humidity", parseInt(e.target.value) || 0)}
-                    className="w-20 px-2 py-1 border rounded text-center"
+                    className="w-16 px-2 py-1 border rounded text-center"
                     placeholder="0"
                     disabled={isToday(dateStr)}
                   />
-                  <span className="text-sm text-gray-600">%</span>
+                  <span className="text-base font-semibold">%</span>
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-4 space-x-2">
                 {/* 체감 선택 드롭다운 */}
+                <span className="text-base font-semibold">체감 선택 :</span>
                 <select
                   value={feeling}
                   onChange={(e) => setFeeling(e.target.value)}
-                  className="w-36 px-4 py-2 border rounded bg-blue-100"
+                  className="w-25 px-4 py-2 border rounded text-center"
                 >
-                  <option value="">체감 선택</option>
                   <option value="steam">🥟 찐만두</option>
                   <option value="hot">🥵 더움</option>
                   <option value="nice">👍🏻 적당</option>

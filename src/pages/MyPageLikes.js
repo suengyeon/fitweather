@@ -5,6 +5,10 @@ import { fetchLikedOutfitsByDate, fetchLikedOutfitDates } from "../utils/firesto
 import LikedDatePicker from "../components/LikedDatePicker";
 import LikedList from "../components/LikedList";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import useWeather from "../hooks/useWeather";
+import Sidebar from "../components/Sidebar";
 
 export default function MyPageLikes() {
   const navigate = useNavigate();
@@ -17,6 +21,26 @@ export default function MyPageLikes() {
   const [loading, setLoading] = useState(false);
   const [availableDates, setAvailableDates] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [region, setRegion] = useState(""); // 초기값 빈 문자열
+
+  // 날씨 데이터 fetch
+  const { weather, loading: weatherLoading } = useWeather(region);
+
+  // 사용자 지역 기반 날씨 정보 불러오기
+  useEffect(() => {
+    async function fetchUserRegion() {
+      if (!user) return;
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        setRegion(userSnap.data().region || "Seoul");
+      } else {
+        setRegion("Seoul");
+      }
+    }
+    fetchUserRegion();
+  }, [user]);
+
 
   // 날짜 선택 핸들러
   const handleDateChange = ({ year, month, day }) => {
@@ -54,7 +78,7 @@ export default function MyPageLikes() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   // 날짜가 완전히 선택된 경우에만 fetch
   useEffect(() => {
@@ -110,9 +134,10 @@ export default function MyPageLikes() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
-        <button 
+        <button
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
@@ -129,8 +154,29 @@ export default function MyPageLikes() {
 
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex md:flex-row gap-6 h-[700px]">
-        {/* 왼쪽: 날짜 선택 영역 */}
+
+        {/* 왼쪽: 날씨 일러스트 + 날짜 선택 영역 */}
         <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded h-[700px]">
+          {/* 날씨 일러스트 */}
+          <div className="flex justify-center items-center" style={{ minHeight: 120 }}>
+            {weatherLoading ? (
+              <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
+            ) : weather ? (
+              <div className="flex flex-col items-center">
+                {/* 날씨 아이콘 박스 */}
+                <div className={`w-60 h-60 bg-gray-200 rounded mb-8 flex items-center justify-center text-6xl relative overflow-hidden`}>
+                  <div
+                    className="absolute text-8xl animate-bounce"
+                  >
+                    {weather.icon === "rain" ? "☔️" : "☀️"}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
+            )}
+          </div>
+          {/* 날짜 선택 */}
           <LikedDatePicker
             year={year}
             month={month}

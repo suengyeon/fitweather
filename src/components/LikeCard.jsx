@@ -224,10 +224,10 @@ export default function LikeCard({ outfit, onClick }) {
       </div>
 
       {/* 정보 영역 */}
-      <div style={{ padding: "12px", height: "80px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <div style={{ padding: "8px", height: "80px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         {/* 첫 번째 줄: 하트, 날씨 이모지, 체감 이모지 */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
             <button
               onClick={handleLikeClick}
               style={{
@@ -263,13 +263,8 @@ export default function LikeCard({ outfit, onClick }) {
         </div>
 
         {/* 두 번째 줄: 지역, 온도, 강수량, 습도 */}
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: "8px", 
-          fontSize: "11px", 
-          color: "#6b7280",
-          userSelect: "text"
+        <div style={{ display: "flex", alignItems: "center", gap: "20px", 
+          fontSize: "11px", color: "#6b7280", userSelect: "text"
         }}>
           <span style={{ userSelect: "text" }}>📍 {getRegion(outfit) || "_"}</span>
           <span style={{ userSelect: "text" }}>🌡️ {getTemp(outfit) ? `${getTemp(outfit)}°C` : "_°C"}</span>

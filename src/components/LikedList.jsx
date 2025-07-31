@@ -52,10 +52,12 @@ export default function LikedList({ outfits, loading, selectedDate, onCardClick 
 
   return (
     <div className="bg-gray-50 rounded-lg p-4 h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex-shrink-0">
-        좋아요한 코디 ({outfits.length}개)
-      </h3>
-      
+      <div className="w-full bg-gray-200 rounded px-4 py-3 mb-6 flex items-center justify-center">
+        <h3 className="text-base font-bold text-gray-800">
+          좋아요한 코디 ({outfits.length}개)
+        </h3>
+      </div>
+
       <div className="flex-1 overflow-y-auto">
         <div className="grid grid-cols-3 gap-4">
           {outfits.map((outfit) => (
