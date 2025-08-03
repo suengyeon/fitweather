@@ -32,7 +32,7 @@ function Record() {
   const { profile, loading: profileLoading } = useUserProfile();
   const { user } = useAuth();
   const [regionName, setRegionName] = useState("");
-  
+
   // 오늘 날짜인지 확인하는 함수
   const isToday = (dateStr) => {
     const today = new Date();
@@ -225,13 +225,13 @@ function Record() {
 
   const handleImageDelete = () => {
     if (imageFiles.length === 0) return;
-    
+
     const confirmDelete = window.confirm("현재 사진을 삭제하시겠어요?");
     if (!confirmDelete) return;
 
     setImageFiles((prev) => {
       const newList = prev.filter((_, index) => index !== imagePreviewIdx);
-      
+
       // 삭제 후 이미지 인덱스 조정
       if (newList.length === 0) {
         setImage(null);
@@ -239,7 +239,7 @@ function Record() {
       } else if (imagePreviewIdx >= newList.length) {
         setImagePreviewIdx(newList.length - 1);
       }
-      
+
       return newList;
     });
   };
@@ -633,36 +633,38 @@ function Record() {
 
                   {/* ◀ / ▶ 이미지 전환 버튼 */}
                   {imageFiles.length > 1 && (
-                    <div className="absolute bottom-2 left-0 right-0 flex justify-between px-2">
+                    <>
                       <button
                         type="button"
-                        className="bg-white bg-opacity-70 rounded-full px-2 py-1 text-lg"
                         onClick={() =>
                           setImagePreviewIdx((prev) => (prev - 1 + imageFiles.length) % imageFiles.length)
                         }
+                        style={navBtnStyle("left")}
                       >
-                        ◀
+                        ‹
                       </button>
-                      {/* 이미지 순서 */}
-                      <span className="text-sm bg-white bg-opacity-70 px-2 py-1 rounded">
-                        {imagePreviewIdx + 1} / {imageFiles.length}
-                      </span>
                       <button
                         type="button"
-                        className="bg-white bg-opacity-70 rounded-full px-2 py-1 text-lg"
                         onClick={() =>
                           setImagePreviewIdx((prev) => (prev + 1) % imageFiles.length)
                         }
+                        style={navBtnStyle("right")}
                       >
-                        ▶
+                        ›
                       </button>
-                    </div>
+                      {/* 이미지 인디케이터 */}
+                      <div style={indicatorStyle}>
+                        {imageFiles.map((_, i) => (
+                          <div key={i} style={dotStyle(i === imagePreviewIdx)} />
+                        ))}
+                      </div>
+                    </>
                   )}
 
                   {/* ✅ + 사진 추가 버튼 (좌상단) */}
                   <label
                     htmlFor="imageUpload"
-                    className="absolute top-2 left-2 bg-white bg-opacity-70 text-sm text-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-opacity-90 z-10"
+                    className="absolute top-3 left-3 bg-white bg-opacity-70 text-sm text-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-opacity-90 z-10"
                   >
                     + 사진 추가
                     <input
@@ -675,14 +677,14 @@ function Record() {
                     />
                   </label>
 
-                                     {/* 🗑️ 사진 삭제 버튼 (우상단) */}
-                   <button
-                     type="button"
-                     onClick={handleImageDelete}
-                     className="absolute top-2 right-2 bg-red-500 bg-opacity-80 text-white text-sm px-2 py-1 rounded cursor-pointer hover:bg-opacity-100 z-10"
-                   >
-                     🗑️ 삭제
-                   </button>
+                  {/* 🗑️ 사진 삭제 버튼 (우상단) */}
+                  <button
+                    type="button"
+                    onClick={handleImageDelete}
+                    className="absolute top-3 right-3 bg-red-500 bg-opacity-80 text-white text-sm px-2 py-1 rounded cursor-pointer hover:bg-opacity-100 z-10"
+                  >
+                    🗑️ 삭제
+                  </button>
                 </div>
 
               )}
@@ -743,12 +745,50 @@ function Record() {
               className="w-full h-24 px-4 py-2 border rounded bg-white resize-none overflow-y-auto"
             />
           </div>
-                 </div>
-       </div>
-       
-       
-     </div >
-   );
- }
+        </div>
+      </div>
+
+
+    </div >
+  );
+}
+
+// 스타일 함수
+// --- 캐러셀 스타일 함수들 (FeedCard.js 스타일과 동일) ---
+const navBtnStyle = (side) => ({
+  position: "absolute",
+  [side]: "12px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "rgba(0,0,0,0.5)",
+  color: "white",
+  border: "none",
+  borderRadius: "50%",
+  width: "28px",
+  height: "28px",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  fontSize: "16px",
+  zIndex: 10
+});
+
+const indicatorStyle = {
+  position: "absolute",
+  bottom: "14px",
+  left: "50%",
+  transform: "translateX(-50%)",
+  display: "flex",
+  gap: "4px",
+  zIndex: 10
+};
+
+const dotStyle = (active) => ({
+  width: "6px",
+  height: "6px",
+  borderRadius: "50%",
+  backgroundColor: active ? "white" : "rgba(255,255,255,0.5)"
+});
+
 
 export default Record;
