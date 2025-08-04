@@ -12,6 +12,9 @@ import ProfileEdit from "./pages/ProfileEdit";
 import Withdraw from "./pages/Withdraw";
 import Record from "./pages/Record";
 import Feed from "./pages/Feed";
+import Recommend from "./pages/Recommend";
+import RecommendView from "./pages/RecommendView";
+import RecommendFilterSettings from "./pages/RecommendFilterSettings";
 
 import Calendar from "./pages/Calendar";
 import "react-toastify/dist/ReactToastify.css";
@@ -65,8 +68,11 @@ function App() {
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/login" element={<Login />} />
           <Route path="/record" element={<Record />} />
-          <Route path="/feed" element={<Feed />} />
-          <Route path="/FeedDetail/:id" element={<FeedDetail />} />
+                  <Route path="/feed" element={<Feed />} />
+        <Route path="/recommend" element={<Recommend />} />
+        <Route path="/recommend-view" element={<RecommendView />} />
+        <Route path="/recommend-filter-settings" element={<RecommendFilterSettings />} />
+        <Route path="/FeedDetail/:id" element={<FeedDetail />} />
 
           <Route path="/mypage_likes" element={<MyPageLikes />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />

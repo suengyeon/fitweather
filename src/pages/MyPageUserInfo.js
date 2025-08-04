@@ -12,6 +12,7 @@ function MyPageUserInfo() {
   const [region, setRegion] = useState("");
   const [email, setEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const navigate = useNavigate();
 
   // 지역 이름을 한글로 변환하는 함수
@@ -49,9 +50,12 @@ function MyPageUserInfo() {
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
-        setNickname(userSnap.data().nickname);
-        setRegion(userSnap.data().region);
-        setEmail(userSnap.data().email);
+        const data = userSnap.data();
+        setNickname(data.nickname);
+        setRegion(data.region);
+        setEmail(data.email);
+        
+
       }
     };
     fetchProfile();
@@ -103,6 +107,8 @@ function MyPageUserInfo() {
           </div>
         ))}
       </div>
+
+
 
         {/* 버튼 (카드 외부) */}
         <div className="flex gap-4">

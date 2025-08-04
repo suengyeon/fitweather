@@ -25,6 +25,8 @@ function FeedDetail() {
 
     // 뒤로가기 핸들러
     const handleGoBack = () => {
+        console.log("FeedDetail - handleGoBack, location.state:", location.state);
+        
         if (location.state?.fromLikes) {
             // 좋아요한 코디에서 온 경우, 선택된 날짜 정보와 함께 이동
             navigate("/mypage_likes", {
@@ -33,8 +35,16 @@ function FeedDetail() {
                     availableDates: location.state.availableDates
                 }
             });
+        } else if (location.state?.fromFeed) {
+            // 피드에서 온 경우, 지역 정보 유지
+            console.log("FeedDetail - navigating back to feed with fromDetail flag");
+            navigate("/feed", {
+                state: {
+                    fromDetail: true
+                }
+            });
         } else {
-            // 피드에서 온 경우
+            // 기본적으로 피드로
             navigate("/feed");
         }
     };

@@ -20,12 +20,20 @@ function Feed() {
   const [region, setRegion] = useState(""); // 초기값 빈 문자열
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // 세션스토리지에서 저장된 지역 정보 가져오기
+  const getStoredRegion = () => {
+    const stored = sessionStorage.getItem('feedRegion');
+    console.log("Feed - getStoredRegion called, result:", stored);
+    return stored || "";
+  };
+
   // 세션스토리지에서 저장된 날짜 정보 가져오기
   const getStoredDate = () => {
-    // 홈에서 직접 들어온 경우 세션스토리지 클리어하고 오늘 날짜 사용
-    const isFromHome = !location.state?.fromCard;
+    // 홈에서 직접 들어온 경우에만 세션스토리지 클리어하고 오늘 날짜 사용
+    const isFromHome = !location.state?.fromCard && !location.state?.fromDetail;
     if (isFromHome) {
       sessionStorage.removeItem('feedDate');
+      sessionStorage.removeItem('feedRegion'); // 지역 정보도 클리어
       const today = new Date();
       return {
         year: today.getFullYear(),
@@ -68,16 +76,42 @@ function Feed() {
   useEffect(() => {
     async function fetchUserRegion() {
       if (!user) return;
+      
+      console.log("Feed - location.state:", location.state);
+      console.log("Feed - stored region:", getStoredRegion());
+      
+      // FeedDetail에서 뒤로가기로 돌아온 경우 세션스토리지 지역 유지
+      if (location.state?.fromDetail) {
+        const storedRegion = getStoredRegion();
+        console.log("Feed - fromDetail, using stored region:", storedRegion);
+        if (storedRegion) {
+          setRegion(storedRegion);
+          return;
+        }
+      }
+      
+      // 세션스토리지에서 저장된 지역이 있으면 사용
+      const storedRegion = getStoredRegion();
+      if (storedRegion) {
+        console.log("Feed - using stored region:", storedRegion);
+        setRegion(storedRegion);
+        return;
+      }
+      
+      // 저장된 지역이 없으면 사용자 기본 지역 사용
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
-        setRegion(userSnap.data().region || "Seoul");
+        const userRegion = userSnap.data().region || "Seoul";
+        console.log("Feed - using user default region:", userRegion);
+        setRegion(userRegion);
       } else {
+        console.log("Feed - using default region: Seoul");
         setRegion("Seoul");
       }
     }
     fetchUserRegion();
-  }, [user]);
+  }, [user, location.state]);
 
   // 날짜가 변경될 때 selectedDate 업데이트 및 세션스토리지에 저장
   useEffect(() => {
@@ -90,6 +124,7 @@ function Feed() {
     setSelectedDate(newSelectedDate);
 
     // 세션스토리지에 날짜 정보 저장 (카드 상세보기 후 뒤로가기 시 사용)
+    console.log("Feed - saving date to sessionStorage:", `${selectedYear}-${selectedMonth}-${selectedDay}`);
     sessionStorage.setItem('feedDate', `${selectedYear}-${selectedMonth}-${selectedDay}`);
   }, [selectedYear, selectedMonth, selectedDay]);
 
@@ -98,6 +133,17 @@ function Feed() {
     if (!region) return;
     getRecords(region, order, selectedDate).then(setOutfits);
   }, [region, order, selectedDate]);
+
+  // 지역 변경 시 세션스토리지에 저장
+  useEffect(() => {
+    if (region) {
+      console.log("Feed - saving region to sessionStorage:", region);
+      sessionStorage.setItem('feedRegion', region);
+      // 저장 후 즉시 확인
+      const saved = sessionStorage.getItem('feedRegion');
+      console.log("Feed - immediately after saving, sessionStorage contains:", saved);
+    }
+  }, [region]);
 
   // 좋아요 토글 함수 (Firestore + UI 동기화)
   const handleToggleLike = async (recordId, liked) => {
@@ -216,7 +262,11 @@ function Feed() {
               <select
                 id="region"
                 value={region}
-                onChange={e => setRegion(e.target.value)}
+                onChange={e => {
+                  const newRegion = e.target.value;
+                  console.log("Feed - region changed to:", newRegion);
+                  setRegion(newRegion);
+                }}
                 className="w-[120px] px-3 py-2 rounded border text-center relative z-10"
                 style={{ overflow: 'visible' }}
               >

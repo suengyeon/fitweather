@@ -79,17 +79,30 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
 
           {/* 우리동네 섹션 */}
-          <div>
-            <button
-              onClick={() => handleMenuClick("/feed")}
-              className={`block w-full text-left px-3 py-2 rounded transition-colors ${
-                isActive("/feed") 
-                  ? "bg-blue-300 text-blue-800" 
-                  : "text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              <h2 className="text-2xl font-bold">우리 동네</h2>
-            </button>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">우리 동네</h2>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleMenuClick("/feed")}
+                className={`block w-full text-left px-3 py-2 rounded transition-colors ${
+                  isActive("/feed") 
+                    ? "bg-blue-300 text-blue-800" 
+                    : "text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                지역 피드
+              </button>
+              <button
+                onClick={() => handleMenuClick("/recommend")}
+                className={`block w-full text-left px-3 py-2 rounded transition-colors ${
+                  isActive("/recommend") 
+                    ? "bg-blue-300 text-blue-800" 
+                    : "text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                추천 코디
+              </button>
+            </div>
           </div>
         </div>
       </div>

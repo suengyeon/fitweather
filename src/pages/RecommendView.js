@@ -1,0 +1,270 @@
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import Sidebar from "../components/Sidebar";
+import FeedCard from "../components/FeedCard";
+import { getAllRecords } from "../api/getAllRecords";
+import { toggleLike } from "../api/toggleLike";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+
+function RecommendView() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [outfits, setOutfits] = useState([]);
+  const [filteredOutfits, setFilteredOutfits] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userFilters, setUserFilters] = useState(null);
+  const [userRegion, setUserRegion] = useState("");
+  const [excludeMyRecords, setExcludeMyRecords] = useState(false);
+  const [onlyMyRecords, setOnlyMyRecords] = useState(false);
+
+  // 사용자 필터 가져오기
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchUserFilters = async () => {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          console.log("User data:", data);
+          if (data.filters && data.region) {
+            console.log("Setting user filters:", data.filters);
+            console.log("Setting user region:", data.region);
+            setUserFilters(data.filters);
+            setUserRegion(data.region);
+          } else {
+            console.log("No filters or region found in user data");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user filters:", error);
+      }
+    };
+
+    fetchUserFilters();
+  }, [user]);
+
+  // 모든 기록 가져오기
+  useEffect(() => {
+    const fetchAllRecords = async () => {
+      try {
+        const records = await getAllRecords(30);
+        setOutfits(records);
+      } catch (error) {
+        console.error("Error fetching records:", error);
+      }
+    };
+
+    fetchAllRecords();
+  }, []);
+
+  // 필터 적용
+  useEffect(() => {
+    console.log("Filtering with:", { userFilters, userRegion, outfitsCount: outfits.length, excludeMyRecords });
+    
+    if (!userFilters || !userRegion || outfits.length === 0) {
+      console.log("Missing data for filtering:", { userFilters: !!userFilters, userRegion: !!userRegion, outfitsCount: outfits.length });
+      return;
+    }
+
+    const filtered = outfits.filter(record => {
+      // 나의 기록만 체크박스가 체크되어 있으면 나의 기록만 표시
+      if (onlyMyRecords && record.uid !== user?.uid) {
+        console.log(`Record ${record.id} filtered out by onlyMyRecords`);
+        return false;
+      }
+
+      // 나의 기록 제외 체크박스가 체크되어 있으면 나의 기록 제외
+      if (excludeMyRecords && record.uid === user?.uid) {
+        console.log(`Record ${record.id} filtered out by excludeMyRecords`);
+        return false;
+      }
+
+      // 지역 필터 (AND 조건)
+      if (record.region !== userRegion) {
+        console.log(`Record ${record.id} filtered out by region: ${record.region} !== ${userRegion}`);
+        return false;
+      }
+
+      // 온도 필터
+      const temp = record.temp || record.weather?.temp;
+      const tempMatch = temp !== null && temp !== undefined &&
+                       temp >= userFilters.tempRange.min && temp <= userFilters.tempRange.max;
+
+      // 강수량 필터
+      const rain = record.rain || record.weather?.rain;
+      const rainMatch = rain !== null && rain !== undefined &&
+                       rain >= userFilters.rainRange.min && rain <= userFilters.rainRange.max;
+
+      // 습도 필터
+      const humidity = record.humidity || record.weather?.humidity;
+      const humidityMatch = humidity !== null && humidity !== undefined &&
+                           humidity >= userFilters.humidityRange.min && humidity <= userFilters.humidityRange.max;
+
+      console.log(`Record ${record.id}:`, {
+        region: record.region,
+        temp: temp,
+        rain: rain,
+        humidity: humidity,
+        tempMatch,
+        rainMatch,
+        humidityMatch,
+        filters: {
+          tempRange: userFilters.tempRange,
+          rainRange: userFilters.rainRange,
+          humidityRange: userFilters.humidityRange
+        }
+      });
+
+      // 모든 조건을 만족해야 함 (AND 조건)
+      return tempMatch && rainMatch && humidityMatch;
+    });
+
+    console.log("Filtered results:", filtered.length);
+    console.log("Sample filtered record:", filtered[0]);
+
+    // 좋아요 순으로 정렬
+    filtered.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+    setFilteredOutfits(filtered);
+  }, [outfits, userFilters, userRegion, excludeMyRecords, onlyMyRecords, user]);
+
+  // 좋아요 토글
+  const handleToggleLike = async (recordId, liked) => {
+    if (!user) return;
+
+    try {
+      await toggleLike(recordId, user.uid, liked);
+      setFilteredOutfits(prev =>
+        prev.map(record =>
+          record.id === recordId
+            ? {
+                ...record,
+                likes: liked
+                  ? record.likes.filter(id => id !== user.uid)
+                  : [...record.likes, user.uid],
+              }
+            : record
+        )
+      );
+    } catch (error) {
+      console.error("Error toggling like:", error);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col relative">
+      {/* 사이드바 */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      
+      {/* 상단 네비게이션 */}
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
+        <button
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          <Bars3Icon className="w-5 h-5" />
+        </button>
+        <h2 className="font-bold text-lg">추천 코디</h2>
+        <button
+          onClick={() => navigate("/")}
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+        >
+          <HomeIcon className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* 상단 버튼들 */}
+      <div className="flex justify-between items-center px-4 py-3 bg-white shadow-sm">
+        <button
+          onClick={() => navigate("/recommend")}
+          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm"
+        >
+          상세필터
+        </button>
+        <button
+          onClick={() => navigate("/recommend-filter-settings")}
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm"
+        >
+          추천필터 설정
+        </button>
+      </div>
+
+      {/* 콘텐츠 */}
+      <div className="flex-1 px-4 py-6">
+        {!userFilters ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 mb-2">추천필터 설정이 필요합니다</p>
+            <p className="text-sm text-gray-400">추천필터 설정에서 온도, 강수량, 습도 범위를 설정해주세요</p>
+            <button
+              onClick={() => navigate("/recommend-filter-settings")}
+              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md"
+            >
+              필터 설정하기
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* 체크박스들 */}
+            <div className="mb-4 space-y-2">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="excludeMyRecords"
+                  checked={excludeMyRecords}
+                  onChange={(e) => {
+                    setExcludeMyRecords(e.target.checked);
+                    if (e.target.checked) setOnlyMyRecords(false);
+                  }}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="excludeMyRecords" className="ml-2 text-sm text-gray-700">
+                  나의 기록 제외
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="onlyMyRecords"
+                  checked={onlyMyRecords}
+                  onChange={(e) => {
+                    setOnlyMyRecords(e.target.checked);
+                    if (e.target.checked) setExcludeMyRecords(false);
+                  }}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="onlyMyRecords" className="ml-2 text-sm text-gray-700">
+                  나의 기록만
+                </label>
+              </div>
+            </div>
+
+            {filteredOutfits.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 mb-2">조건에 맞는 코디가 없습니다</p>
+                <p className="text-sm text-gray-400">필터를 조정해보세요</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredOutfits.map((record) => (
+                  <FeedCard
+                    key={record.id}
+                    record={record}
+                    currentUserUid={user?.uid}
+                    onToggleLike={handleToggleLike}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default RecommendView; 

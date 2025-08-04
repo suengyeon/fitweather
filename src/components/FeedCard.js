@@ -50,7 +50,12 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
     if (record.uid === currentUserUid) {
       navigate("/record", { state: { existingRecord: record } });
     } else {
-      navigate(`/FeedDetail/${record.id}`, { state: { fromCard: true } });
+      navigate(`/FeedDetail/${record.id}`, { 
+        state: { 
+          fromCard: true,
+          fromFeed: true
+        } 
+      });
     }
   };
 

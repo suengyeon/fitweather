@@ -118,43 +118,53 @@ function Home() {
               <p>날씨 정보를 불러올 수 없습니다.</p>
             )}
 
-            {/* 기록하기 버튼 */}
-            <button
-              className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded font-semibold"
-              onClick={async () => {
-                const today = new Date();
-                const todayStr = today.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식
-                
-                // 오늘 날짜에 기존 기록이 있는지 확인
-                if (user?.uid) {
-                  try {
-                    const q = query(
-                      collection(db, "records"),
-                      where("uid", "==", user.uid),
-                      where("date", "==", todayStr)
-                    );
-                    const querySnapshot = await getDocs(q);
-                    
-                    if (!querySnapshot.empty) {
-                      // 기존 기록이 있으면 수정 모드로 이동
-                      const existingRecord = { ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id };
-                      navigate("/record", { 
-                        state: { 
-                          existingRecord
-                        } 
-                      });
-                    } else {
-                      // 기존 기록이 없으면 새 기록 모드로 이동
+            {/* 버튼들 */}
+            <div className="flex gap-4 mt-6">
+              <button
+                className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded font-semibold"
+                onClick={async () => {
+                  const today = new Date();
+                  const todayStr = today.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식
+                  
+                  // 오늘 날짜에 기존 기록이 있는지 확인
+                  if (user?.uid) {
+                    try {
+                      const q = query(
+                        collection(db, "records"),
+                        where("uid", "==", user.uid),
+                        where("date", "==", todayStr)
+                      );
+                      const querySnapshot = await getDocs(q);
+                      
+                      if (!querySnapshot.empty) {
+                        // 기존 기록이 있으면 수정 모드로 이동
+                        const existingRecord = { ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id };
+                        navigate("/record", { 
+                          state: { 
+                            existingRecord
+                          } 
+                        });
+                      } else {
+                        // 기존 기록이 없으면 새 기록 모드로 이동
+                        navigate("/record", { 
+                          state: { 
+                            date: todayStr,
+                            selectedRegion: selectedRegion // 선택된 지역 정보 전달
+                          } 
+                        });
+                      }
+                    } catch (error) {
+                      console.error("기록 확인 중 오류:", error);
+                      // 오류 발생 시 기본적으로 새 기록 모드로 이동
                       navigate("/record", { 
                         state: { 
                           date: todayStr,
-                          selectedRegion: selectedRegion // 선택된 지역 정보 전달
+                          selectedRegion: selectedRegion
                         } 
                       });
                     }
-                  } catch (error) {
-                    console.error("기록 확인 중 오류:", error);
-                    // 오류 발생 시 기본적으로 새 기록 모드로 이동
+                  } else {
+                    // 사용자가 로그인되지 않은 경우 기본 동작
                     navigate("/record", { 
                       state: { 
                         date: todayStr,
@@ -162,19 +172,21 @@ function Home() {
                       } 
                     });
                   }
-                } else {
-                  // 사용자가 로그인되지 않은 경우 기본 동작
-                  navigate("/record", { 
-                    state: { 
-                      date: todayStr,
-                      selectedRegion: selectedRegion
-                    } 
-                  });
-                }
-              }}
-            >
-              기록하기
-            </button>
+                }}
+              >
+                기록하기
+              </button>
+              
+              <button
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-semibold"
+                onClick={() => {
+                  // 추천보기 페이지로 이동 (사용자 필터 기반)
+                  navigate("/recommend-view");
+                }}
+              >
+                추천보기
+              </button>
+            </div>
           </div>
         </div>
       ) : (
