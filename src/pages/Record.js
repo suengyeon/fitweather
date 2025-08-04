@@ -392,7 +392,7 @@ function Record() {
       {/* 사이드바 */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
-      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 ">
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -410,7 +410,7 @@ function Record() {
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row md:items-start md:justify-center gap-6 overflow-y-auto">
         {/* 왼쪽: 날씨 카드 */}
-        <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center min-h-[705px]">
+        <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center min-h-[705px] rounded-lg">
           {/* 지역 선택 드롭다운 */}
           <div className="mb-4">
             <select
@@ -481,13 +481,13 @@ function Record() {
               {/* 날씨 정보 직접 수정 영역 */}
               <div className=" space-y-3">
                 {/* 온도 입력 */}
-                <div className="flex items-center justify-center space-x-2">
-                  <span className="text-base font-semibold">온도 :</span>
+                <div className="flex items-center justify-center space-x-4">
+                  <span className="text-base font-semibold">온도 </span>
                   <input
                     type="number"
                     value={weather.temp || ""}
                     onChange={(e) => handleWeatherChange("temp", parseInt(e.target.value) || 0)}
-                    className="w-16 px-2 py-1 border rounded text-center"
+                    className="w-20 px-2 py-1 border rounded text-center"
                     placeholder="0"
                     disabled={isToday(dateStr)}
                   />
@@ -495,13 +495,13 @@ function Record() {
                 </div>
 
                 {/* 강수량 입력 */}
-                <div className="flex items-center justify-center space-x-2">
-                  <span className="text-base font-semibold">강수량 :</span>
+                <div className="flex items-center justify-center space-x-4">
+                  <span className="text-base font-semibold">강수량 </span>
                   <input
                     type="number"
                     value={weather.rain || ""}
                     onChange={(e) => handleWeatherChange("rain", parseInt(e.target.value) || 0)}
-                    className="w-16 px-2 py-1 border rounded text-center"
+                    className="w-20 px-2 py-1 border rounded text-center"
                     placeholder="0"
                     disabled={isToday(dateStr)}
                   />
@@ -509,13 +509,13 @@ function Record() {
                 </div>
 
                 {/* 습도 입력 */}
-                <div className="flex items-center justify-center space-x-2">
-                  <span className="text-base font-semibold">습도 :</span>
+                <div className="flex items-center justify-center space-x-4">
+                  <span className="text-base font-semibold">습도 </span>
                   <input
                     type="number"
                     value={weather.humidity || ""}
                     onChange={(e) => handleWeatherChange("humidity", parseInt(e.target.value) || 0)}
-                    className="w-16 px-2 py-1 border rounded text-center"
+                    className="w-20 px-2 py-1 border rounded text-center"
                     placeholder="0"
                     disabled={isToday(dateStr)}
                   />
@@ -523,9 +523,9 @@ function Record() {
                 </div>
               </div>
 
-              <div className="mt-4 space-x-2">
+              <div className="mt-4 space-x-4">
                 {/* 체감 선택 드롭다운 */}
-                <span className="text-base font-semibold">체감 :</span>
+                <span className="text-base font-semibold">체감</span>
                 <select
                   value={feeling}
                   onChange={(e) => setFeeling(e.target.value)}
@@ -578,9 +578,9 @@ function Record() {
         </div>
 
         {/* 오른쪽 입력 폼 */}
-        <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center min-h-[705px]">
+        <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center min-h-[705px] rounded-lg">
           {/* 입력폼 상단 바 */}
-          <div className="flex justify-end bg-gray-200 items-center mb-4">
+          <div className="flex justify-end bg-gray-200 items-center mb-4 ">
             <button
               onClick={handleSubmit}
               className="px-4 py-2 rounded text-gray-600 font-normal hover:font-bold transition"

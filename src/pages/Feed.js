@@ -234,7 +234,7 @@ function Feed() {
       {/* 사이드바 */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
-      <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -252,7 +252,7 @@ function Feed() {
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex md:flex-row gap-6 h-[700px]">
         {/* 왼쪽: 지역/정렬/날씨 카드 영역 */}
-        <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded h-[700px]">
+        <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded-lg h-[700px]">
           <h3 className="text-lg font-semibold mb-3">{regionMap[region] || region}</h3>
 
           {/* 날씨 일러스트 */}
@@ -276,8 +276,8 @@ function Feed() {
           </div>
 
           <div className="flex flex-col items-center gap-4 mt-6 relative">
-            <div className="flex items-center gap-2 relative">
-              <label htmlFor="region" className="font-bold">지역 : </label>
+            <div className="flex items-center gap-5 relative">
+              <label htmlFor="region" className="font-bold">지역</label>
               <select
                 id="region"
                 value={region}
@@ -294,8 +294,8 @@ function Feed() {
                 ))}
               </select>
             </div>
-            <div className="flex items-center gap-2 mt-4 relative">
-              <label htmlFor="sort" className="font-bold">정렬 : </label>
+            <div className="flex items-center gap-5 mt-4 relative">
+              <label htmlFor="sort" className="font-bold">정렬</label>
               <select
                 id="sort"
                 value={order}
@@ -316,9 +316,9 @@ function Feed() {
         </div>
 
         {/* 오른쪽: 피드 카드 영역 */}
-        <div className="w-full md:w-3/4 bg-white rounded flex flex-col h-[700px]">
+        <div className="w-full md:w-3/4 bg-white rounded-lg flex flex-col h-[700px]">
           {/* 선택된 날짜 드롭다운 */}
-          <div className="px-6 py-4 bg-gray-50 border-b">
+          <div className="px-6 py-4 bg-gray-50 border-b rounded-t-lg">
             <div className="flex justify-center items-center gap-3 mb-2">
               {/* 연도 드롭다운 */}
               <div className="flex items-center gap-1">

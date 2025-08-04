@@ -162,7 +162,7 @@ function RecommendView() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       {/* 상단 네비게이션 */}
-      <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -178,19 +178,13 @@ function RecommendView() {
         </button>
       </div>
 
-      {/* 상단 버튼들 */}
-      <div className="flex justify-between items-center px-4 py-3 bg-white shadow-sm">
+      {/* 상단 버튼(상세 필터) */}
+      <div className="flex justify-end items-center px-4 py-3 bg-white shadow-sm">
         <button
           onClick={() => navigate("/recommend")}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm"
+          className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md text-sm font-medium"
         >
-          상세필터
-        </button>
-        <button
-          onClick={() => navigate("/recommend-filter-settings")}
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm"
-        >
-          추천필터 설정
+          상세 필터
         </button>
       </div>
 
@@ -202,7 +196,7 @@ function RecommendView() {
             <p className="text-sm text-gray-400">추천필터 설정에서 온도, 강수량, 습도 범위를 설정해주세요</p>
             <button
               onClick={() => navigate("/recommend-filter-settings")}
-              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md"
+              className="mt-4 bg-blue-400 hover:bg-blue-500 text-white px-6 py-2 rounded-md font-medium"
             >
               필터 설정하기
             </button>

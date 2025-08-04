@@ -447,7 +447,7 @@ function Recommend() {
           >
             {/* 선택된 범위 표시 */}
             <div
-              className="absolute h-3 bg-blue-400 rounded-full transition-all duration-150 ease-out"
+              className="absolute h-3 bg-blue-300 rounded-full transition-all duration-150 ease-out"
               style={{
                 left: `${minPosition}%`,
                 width: `${maxPosition - minPosition}%`
@@ -456,7 +456,7 @@ function Recommend() {
             
             {/* 최소값 핸들 */}
             <div
-              className={`absolute w-7 h-7 bg-blue-600 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 border-2 border-white shadow-lg transition-all duration-150 ease-out ${
+              className={`absolute w-5 h-5 bg-blue-600 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all duration-150 ease-out ${
                 isDragging && dragType === 'min' ? 'scale-110 shadow-xl' : ''
               }`}
               style={{ 
@@ -472,7 +472,7 @@ function Recommend() {
             
             {/* 최대값 핸들 */}
             <div
-              className={`absolute w-7 h-7 bg-blue-600 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 border-2 border-white shadow-lg transition-all duration-150 ease-out ${
+              className={`absolute w-5 h-5 bg-blue-600 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all duration-150 ease-out ${
                 isDragging && dragType === 'max' ? 'scale-110 shadow-xl' : ''
               }`}
               style={{ 
@@ -490,8 +490,8 @@ function Recommend() {
         
         {/* 온도 값 표시 */}
         <div className="flex justify-between text-sm text-gray-600 font-medium">
-          <span className="bg-blue-100 px-2 py-1 rounded">{min}°C</span>
-          <span className="bg-blue-100 px-2 py-1 rounded">{max}°C</span>
+          <span className="bg-blue-100 px-2 py-1 rounded">{min}</span>
+          <span className="bg-blue-100 px-2 py-1 rounded">{max}</span>
         </div>
       </div>
     );
@@ -503,7 +503,7 @@ function Recommend() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       {/* 상단 네비게이션 */}
-      <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -523,18 +523,18 @@ function Recommend() {
       <div className="flex justify-start items-center px-4 py-3 bg-white shadow-sm">
         <button
           onClick={() => navigate("/recommend-view")}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2"
+          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm flex items-center gap-2"
         >
           ← 뒤로가기
         </button>
       </div>
 
       {/* 콘텐츠 */}
-      <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row gap-6">
+      <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row gap-6 mb-10">
         {/* 왼쪽: 필터 패널 */}
         <div className="w-full md:w-1/4 bg-white p-6 rounded-lg shadow">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">필터</h3>
+            <h3 className="text-xl font-semibold">필터</h3>
             <button
               onClick={clearFilters}
               className="text-sm text-blue-600 hover:text-blue-800"
@@ -579,11 +579,11 @@ function Recommend() {
 
           {/* 지역 필터 */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">지역</label>
+            <label className="block text-base font-semibold mb-2">지역</label>
             <select
               value={filters.region}
               onChange={(e) => handleRegionChange(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md"
+              className="w-full px-3 py-2 border rounded-md text-center"
             >
               <option value="">전체 지역</option>
               {Object.entries(regionMap).map(([eng, kor]) => (
@@ -594,7 +594,7 @@ function Recommend() {
 
           {/* 온도 범위 필터 */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">온도 범위 (°C)</label>
+            <label className="block text-base font-semibold mb-2">온도 범위 (°C)</label>
             <TemperatureSlider
               min={filters.tempRange.min}
               max={filters.tempRange.max}
@@ -607,7 +607,7 @@ function Recommend() {
 
           {/* 강수량 범위 필터 */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">강수량 범위 (mm)</label>
+            <label className="block text-base font-semibold mb-2">강수량 범위 (mm)</label>
             <TemperatureSlider
               min={filters.rainRange.min}
               max={filters.rainRange.max}
@@ -620,7 +620,7 @@ function Recommend() {
 
           {/* 습도 범위 필터 */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">습도 범위 (%)</label>
+            <label className="block text-base font-semibold mb-2">습도 범위 (%)</label>
             <TemperatureSlider
               min={filters.humidityRange.min}
               max={filters.humidityRange.max}
@@ -633,11 +633,11 @@ function Recommend() {
 
           {/* 체감 필터 */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">체감</label>
+            <label className="block text-base font-semibold mb-3">체감</label>
             <select
               value={filters.feeling}
               onChange={(e) => handleFeelingChange(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md"
+              className="w-full px-3 py-2 border rounded-md text-center"
             >
               <option value="">전체</option>
               {feelingOptions.map(option => (
@@ -650,13 +650,13 @@ function Recommend() {
 
           {/* 날씨 이모지 필터 */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">날씨 이모지</label>
+            <label className="block text-base font-semibold mb-3">날씨 이모지</label>
             <div className="grid grid-cols-3 gap-2">
               {weatherEmojiOptions.map(emoji => (
                 <button
                   key={emoji}
                   onClick={() => handleWeatherEmojiToggle(emoji)}
-                  className={`p-2 text-lg rounded-md transition-colors ${
+                  className={`p-3 text-lg rounded-md transition-colors ${
                     filters.weatherEmojis.includes(emoji)
                       ? "bg-blue-200 border-2 border-blue-400"
                       : "bg-gray-100 hover:bg-gray-200"
@@ -667,18 +667,13 @@ function Recommend() {
               ))}
             </div>
           </div>
-
-          {/* 결과 개수 */}
-          <div className="text-sm text-gray-600">
-            총 {filteredOutfits.length}개의 코디
-          </div>
         </div>
 
         {/* 오른쪽: 코디 목록 */}
         <div className="w-full md:w-3/4 bg-white rounded-lg shadow p-6">
           <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-2">추천 코디</h3>
-            <p className="text-sm text-gray-600">하트순으로 정렬된 추천 코디입니다</p>
+            <h3 className="text-lg font-semibold mb-2"> 총 {filteredOutfits.length}개의 코디</h3>
+            <p className="text-sm text-gray-600">좋아요 순으로 정렬된 추천 코디입니다.</p>
           </div>
 
           {filteredOutfits.length === 0 ? (

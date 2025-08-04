@@ -28,7 +28,7 @@ function RecommendFilterSettings() {
       if (userSnap.exists()) {
         const data = userSnap.data();
         setUserRegion(data.region);
-        
+
         // 필터 설정이 있으면 로드
         if (data.filters) {
           setFilters(data.filters);
@@ -40,7 +40,7 @@ function RecommendFilterSettings() {
 
   // 오늘 날씨 가져오기
   const { weather, loading: weatherLoading } = useWeather(userRegion);
-  
+
   useEffect(() => {
     if (weather) {
       setTodayWeather(weather);
@@ -58,7 +58,7 @@ function RecommendFilterSettings() {
         // 기존 필터에서 현재 값과의 차이를 계산
         const currentMinusRange = Math.abs(currentValue - filters[filterKey].min);
         const currentPlusRange = Math.abs(filters[filterKey].max - currentValue);
-        
+
         // 기존 설정이 있으면 그 값을 사용, 없으면 기본값 5 사용
         setMinusRange(currentMinusRange > 0 ? currentMinusRange : 5);
         setPlusRange(currentPlusRange > 0 ? currentPlusRange : 5);
@@ -84,52 +84,54 @@ function RecommendFilterSettings() {
     };
 
     return (
-      <div className="w-full mb-6">
-        <label className="block text-sm font-medium mb-2">{label}</label>
-        <div className="bg-gray-50 p-4 rounded-lg mb-3">
-          <div className="text-center mb-2">
-            <span className="text-lg font-semibold text-blue-600">{currentValue || 0}{unit}</span>
-            <span className="text-sm text-gray-500 ml-2">(오늘 날씨)</span>
+      <div className="flex justify-center">
+        <div className="w-[270px] mb-6">
+          <label className="block text-lg font-bold mb-4 text-center">{label}</label>
+          <div className="bg-gray-100 p-2 rounded-lg mb-4">
+            <div className="text-center mb-2">
+              <span className="text-lg font-semibold text-blue-600">{currentValue || 0}{unit}</span>
+              <span className="text-sm text-gray-500 ml-2">(today)</span>
+            </div>
           </div>
-        </div>
-        
-        <div className="space-y-3">
-          {/* - 범위 설정 */}
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-600 min-w-[2rem]">-</label>
-            <input
-              type="number"
-              min={0}
-              max={max}
-              value={minusRange}
-              onChange={(e) => handleMinusChange(parseInt(e.target.value) || 0)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
-              placeholder="0"
-            />
-            <span className="text-sm font-medium text-gray-700 min-w-[2rem]">{unit}</span>
+
+          <div className="space-y-4">
+            {/* - 범위 설정 */}
+            <div className="flex justify-center items-center gap-3">
+              <label className="text-sm text-gray-600">-</label>
+              <input
+                type="number"
+                min={0}
+                max={max}
+                value={minusRange}
+                onChange={(e) => handleMinusChange(parseInt(e.target.value) || 0)}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center"
+                placeholder="0"
+              />
+              <span className="text-sm font-medium text-gray-700">{unit}</span>
+            </div>
+
+            {/* + 범위 설정 */}
+            <div className="flex justify-center items-center gap-3">
+              <label className="text-sm text-gray-600">+</label>
+              <input
+                type="number"
+                min={0}
+                max={max}
+                value={plusRange}
+                onChange={(e) => handlePlusChange(parseInt(e.target.value) || 0)}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center"
+                placeholder="0"
+              />
+              <span className="text-sm font-medium text-gray-700">{unit}</span>
+            </div>
           </div>
-          
-          {/* + 범위 설정 */}
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-600 min-w-[2rem]">+</label>
-            <input
-              type="number"
-              min={0}
-              max={max}
-              value={plusRange}
-              onChange={(e) => handlePlusChange(parseInt(e.target.value) || 0)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
-              placeholder="0"
-            />
-            <span className="text-sm font-medium text-gray-700 min-w-[2rem]">{unit}</span>
+
+          <div className="mt-4 text-xs text-gray-500 bg-blue-50 p-3 rounded text-center">
+            {currentValue !== null && currentValue !== undefined ?
+              `필터링 범위 : ${Math.max(0, currentValue - minusRange)}${unit} ~ ${Math.min(100, currentValue + plusRange)}${unit}` :
+              '날씨 정보를 불러오는 중...'
+            }
           </div>
-        </div>
-        
-        <div className="mt-3 text-xs text-gray-500 bg-blue-50 p-2 rounded">
-          {currentValue !== null && currentValue !== undefined ? 
-            `필터링 범위: ${Math.max(0, currentValue - minusRange)}${unit} ~ ${Math.min(100, currentValue + plusRange)}${unit}` : 
-            '날씨 정보를 불러오는 중...'
-          }
         </div>
       </div>
     );
@@ -138,7 +140,7 @@ function RecommendFilterSettings() {
   // 필터 저장 함수
   const saveFilters = async () => {
     if (!user) return;
-    
+
     try {
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
@@ -159,7 +161,7 @@ function RecommendFilterSettings() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
-        <button 
+        <button
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
@@ -179,76 +181,81 @@ function RecommendFilterSettings() {
       </div>
 
       {/* 중앙 콘텐츠 */}
-      <div className="flex flex-col items-center justify-start flex-1 px-4 mt-12">
-        
+      <div className="flex flex-col items-center justify-start flex-1 px-4 mt-8">
+
         {/* 필터 설정 카드 */}
-        <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
-          <h3 className="text-lg font-semibold mb-6 text-center">추천 필터 설정</h3>
-          
+        <div className="bg-white rounded-lg px-8 py-8 w-full max-w-6xl mb-8">
+
           {isWeatherLoading ? (
             <div className="text-center py-8">
               <p className="text-gray-500">날씨 정보를 불러오는 중...</p>
             </div>
           ) : (
             <>
-              <RangeInput
-                currentValue={todayWeather?.temp ? parseInt(todayWeather.temp) : null}
-                onChange={(newRange) => setFilters(prev => ({
-                  ...prev,
-                  tempRange: newRange
-                }))}
-                label="온도 범위"
-                unit="°C"
-                min={0}
-                max={20}
-                filterKey="tempRange"
-              />
-              
-              <RangeInput
-                currentValue={todayWeather?.rain ? parseInt(todayWeather.rain) : null}
-                onChange={(newRange) => setFilters(prev => ({
-                  ...prev,
-                  rainRange: newRange
-                }))}
-                label="강수량 범위"
-                unit="mm"
-                min={0}
-                max={30}
-                filterKey="rainRange"
-              />
-              
-              <RangeInput
-                currentValue={todayWeather?.humidity ? parseInt(todayWeather.humidity) : null}
-                onChange={(newRange) => setFilters(prev => ({
-                  ...prev,
-                  humidityRange: newRange
-                }))}
-                label="습도 범위"
-                unit="%"
-                min={0}
-                max={30}
-                filterKey="humidityRange"
-              />
+              <div className="flex flex-wrap justify-between gap-6">
+                <div className="w-full md:w-[30%]">
+                  <RangeInput
+                    currentValue={todayWeather?.temp ? parseInt(todayWeather.temp) : null}
+                    onChange={(newRange) => setFilters(prev => ({
+                      ...prev,
+                      tempRange: newRange
+                    }))}
+                    label="온도"
+                    unit="°C"
+                    min={0}
+                    max={20}
+                    filterKey="tempRange"
+                  />
+                </div>
+                <div className="w-full md:w-[30%]">
+                  <RangeInput
+                    currentValue={todayWeather?.rain ? parseInt(todayWeather.rain) : null}
+                    onChange={(newRange) => setFilters(prev => ({
+                      ...prev,
+                      rainRange: newRange
+                    }))}
+                    label="강수량"
+                    unit="mm"
+                    min={0}
+                    max={30}
+                    filterKey="rainRange"
+                  />
+                </div>
+                <div className="w-full md:w-[30%]">
+                  <RangeInput
+                    currentValue={todayWeather?.humidity ? parseInt(todayWeather.humidity) : null}
+                    onChange={(newRange) => setFilters(prev => ({
+                      ...prev,
+                      humidityRange: newRange
+                    }))}
+                    label="습도"
+                    unit="%"
+                    min={0}
+                    max={30}
+                    filterKey="humidityRange"
+                  />
+                </div>
+              </div>
             </>
           )}
-          
-          <div className="flex gap-4 mt-6">
+
+          <div className="flex justify-center gap-6 mt-6 mb-2">
             <button
               onClick={saveFilters}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"
+              className="px-4 py-2 bg-blue-400 hover:bg-blue-500 text-white text-base rounded font-medium"
             >
               필터 저장
             </button>
             <button
               onClick={() => navigate("/recommend-view")}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+              className="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white text-base rounded font-medium"
             >
               추천 보기
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 

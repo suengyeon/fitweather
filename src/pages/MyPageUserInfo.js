@@ -96,7 +96,7 @@ function MyPageUserInfo() {
           { label: "닉네임", value: nickname },
           { label: "아이디", value: email },
         ].map((item, idx) => (
-          <div key={idx} className="mb-12 flex items-center">
+          <div key={idx} className="mb-10 flex items-center">
             <label className="w-28 font-semibold text-base">{item.label}</label>
             <input
               type="text"
@@ -108,19 +108,17 @@ function MyPageUserInfo() {
         ))}
       </div>
 
-
-
         {/* 버튼 (카드 외부) */}
         <div className="flex gap-4">
           <button
             onClick={() => navigate("/profile-edit")}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md"
+            className="bg-blue-400 hover:bg-blue-500 text-white px-6 py-2 rounded-md font-medium"
           >
             수정
           </button>
           <button
             onClick={() => navigate("/withdraw")}
-            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md"
+            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md font-medium"
           >
             탈퇴
           </button>

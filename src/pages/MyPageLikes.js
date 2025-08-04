@@ -136,7 +136,7 @@ export default function MyPageLikes() {
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
-      <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
+      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -156,7 +156,7 @@ export default function MyPageLikes() {
       <div className="flex-1 px-4 mt-10 flex md:flex-row gap-6 h-[700px]">
 
         {/* 왼쪽: 날씨 일러스트 + 날짜 선택 영역 */}
-        <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded h-[700px]">
+        <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded-lg h-[700px]">
           {/* 날씨 일러스트 */}
           <div className="flex justify-center items-center" style={{ minHeight: 120 }}>
             {weatherLoading ? (
@@ -192,7 +192,7 @@ export default function MyPageLikes() {
         </div>
 
         {/* 오른쪽: 좋아요한 코디 리스트 영역 */}
-        <div className="w-full md:w-3/4 bg-white rounded flex flex-col h-[700px]">
+        <div className="w-full md:w-3/4 bg-white rounded-lg flex flex-col h-[700px]">
           <LikedList
             outfits={likedOutfits}
             loading={loading}

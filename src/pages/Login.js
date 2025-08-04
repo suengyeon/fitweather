@@ -60,15 +60,15 @@ function Login() {
       </div>
 
       {/* 중앙 로그인 섹션 */}
-      <div className="flex flex-col items-center justify-center flex-1">
-        <h1 className="text-5xl font-lilita text-indigo-500 mb-8">
+      <div className="flex flex-col items-center justify-start mt-10">
+        <h1 className="text-5xl font-lilita text-indigo-500 mb-10">
           Fitweather
         </h1>
 
-        <div className="space-y-4 w-80">
+        <div className="space-y-6 w-80">
           <button
             onClick={handleGoogleLogin}
-            className="w-full bg-white px-6 py-3 rounded-xl shadow-md border font-semibold hover:bg-gray-100 flex items-center justify-center gap-2"
+            className="w-full bg-white px-6 py-3 rounded-xl shadow-md font-semibold hover:bg-gray-100 flex items-center justify-center gap-2"
           >
             <span className="text-xl">🔍</span>
             Google 로그인
@@ -76,7 +76,7 @@ function Login() {
 
           <button
             onClick={handleKakaoLogin}
-            className="w-full bg-yellow-400 px-6 py-3 rounded-xl shadow-md border font-semibold hover:bg-yellow-500 flex items-center justify-center gap-2"
+            className="w-full bg-yellow-400 px-6 py-3 rounded-xl shadow-md font-semibold hover:bg-yellow-500 flex items-center justify-center gap-2"
           >
             <span className="text-xl">💛</span>
             카카오 로그인
@@ -84,7 +84,7 @@ function Login() {
 
           <button
             onClick={handleNaverLogin}
-            className="w-full bg-green-500 text-white px-6 py-3 rounded-xl shadow-md border font-semibold hover:bg-green-600 flex items-center justify-center gap-2"
+            className="w-full bg-green-500 text-white px-6 py-3 rounded-xl shadow-md font-semibold hover:bg-green-600 flex items-center justify-center gap-2"
           >
             <span className="text-xl">🟢</span>
             네이버 로그인

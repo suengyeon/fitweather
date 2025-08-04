@@ -19,23 +19,23 @@ export default function WeatherCard({ region, temp, rain, humidity, desc, icon, 
         {!isRecord && (
           <>
             {labelRight ? (
-              <div className="flex flex-col space-y-4 mb-8">
+              <div className="flex flex-col space-y-5 mb-6">
                 <div className="flex items-center justify-center">
-                  <span className="mr-3 text-xs text-gray-600">온도</span>
-                  <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                    <span className="text-lg font-semibold">{temp}°C</span>
+                  <span className="mr-4 text-base font-medium">온도</span>
+                  <div className="bg-white px-4 py-2 rounded text-center">
+                    <span className="text-base font-semibold">{temp}°C</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-center">
-                  <span className="mr-3 text-xs text-gray-600">강수량</span>
-                  <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                    <span className="text-lg font-semibold">{rain}mm</span>
+                  <span className="mr-4 text-base font-medium">강수량</span>
+                  <div className="bg-white px-4 py-2 rounded text-center">
+                    <span className="text-base font-semibold">{rain}mm</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-center">
-                  <span className="mr-3 text-xs text-gray-600">습도</span>
-                  <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                    <span className="text-lg font-semibold">{humidity ? `${humidity}%` : "기록없음"}</span>
+                  <span className="mr-4 text-base font-medium">습도</span>
+                  <div className="bg-white px-4 py-2 rounded text-center">
+                    <span className="text-base font-semibold">{humidity ? `${humidity}%` : "기록 없음"}</span>
                   </div>
                 </div>
               </div>
@@ -52,7 +52,7 @@ export default function WeatherCard({ region, temp, rain, humidity, desc, icon, 
                 </div>
                 <div className="bg-blue-100 px-4 py-2 rounded text-center">
                   <div className="text-xs text-gray-600 mb-1">습도</div>
-                  <span className="text-lg font-semibold">{humidity ? `${humidity}%` : "기록없음"}</span>
+                  <span className="text-lg font-semibold">{humidity ? `${humidity}%` : "기록 없음"}</span>
                 </div>
               </div>
             ) : (
@@ -65,7 +65,7 @@ export default function WeatherCard({ region, temp, rain, humidity, desc, icon, 
                   <span className="text-lg font-semibold">강수량: {rain}mm</span>
                 </div>
                 <div className="bg-blue-100 px-4 py-2 rounded text-center">
-                  <span className="text-lg font-semibold">습도: {humidity ? `${humidity}%` : "기록없음"}</span>
+                  <span className="text-lg font-semibold">습도: {humidity ? `${humidity}%` : "기록 없음"}</span>
                 </div>
               </div>
             )}

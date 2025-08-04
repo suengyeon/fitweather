@@ -12,7 +12,7 @@ function FeedDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     // 이전 페이지 경로 확인
     const getPreviousPath = () => {
         // location.state에서 이전 경로 확인
@@ -26,7 +26,7 @@ function FeedDetail() {
     // 뒤로가기 핸들러
     const handleGoBack = () => {
         console.log("FeedDetail - handleGoBack, location.state:", location.state);
-        
+
         if (location.state?.fromLikes) {
             // 좋아요한 코디에서 온 경우, 선택된 날짜 정보와 함께 이동
             navigate("/mypage_likes", {
@@ -86,13 +86,13 @@ function FeedDetail() {
                 setData(record);
                 setLikeCount(record.likes?.length || 0);
                 setLiked(user && record.likes?.includes(user.uid));
-                
+
                 // 기록의 실제 날짜를 포맷팅
                 if (record.date) {
                     const [year, month, day] = record.date.split('-').map(Number);
                     setFormattedDate(`${year}년 ${month}월 ${day}일`);
                 }
-                
+
                 // 작성자 정보 fetch
                 const userRef = doc(db, "users", record.uid);
                 const userSnap = await getDoc(userRef);
@@ -123,7 +123,7 @@ function FeedDetail() {
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col">
             {/* 상단 네비게이션 */}
-            <div className="flex justify-between items-center px-4 py-3 bg-blue-100">
+            <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
                 <button
                     onClick={handleGoBack}
                     className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
@@ -142,8 +142,8 @@ function FeedDetail() {
             {/* 콘텐츠 */}
             <div className="flex-1 px-4 mt-10 flex flex-col md:items-start md:justify-center md:flex-row gap-6 overflow-y-auto">
                 {/* 왼쪽 : 날씨 카드 */}
-                <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center h-[705px] overflow-hidden">
-                    <h3 className="text-lg font-semibold mb-5">{regionName}</h3>
+                <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center h-[705px] overflow-hidden rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4">{regionName}</h3>
                     {weather ? (
                         <>
                             <WeatherCard
@@ -156,12 +156,18 @@ function FeedDetail() {
                                 bgColor="bg-gray-200"
                                 labelRight={true}
                             />
-                            <div className="flex justify-center">
-                                <div className=" space-y-4 w-[220px] ">
-                                    <div className="bg-blue-100 w-full h-10 px-4 py-2 rounded">
-                                        <span className="font-semibold">체감 : {feelingToEmoji(feeling)}</span>
+                            <div className="flex flex-col gap-6 items-center">
+                                {/* 체감 */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-base font-medium w-12">체감</span>
+                                    <div className="bg-white px-4 py-2 rounded w-[120px] text-center">
+                                        <span className="text-base font-semibold">{feelingToEmoji(feeling)}</span>
                                     </div>
-                                    <div className="bg-blue-100 w-full h-12 px-4 py-2 rounded flex items-center justify-center">
+                                </div>
+                                {/* 날씨 */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-base font-medium w-12">날씨</span>
+                                    <div className="bg-white px-4 py-2 rounded w-[120px] text-center">
                                         {weatherEmojis?.length > 0 && (
                                             <div className="flex justify-center gap-2">
                                                 {weatherEmojis.map((emoji, i) => (
@@ -170,9 +176,9 @@ function FeedDetail() {
                                             </div>
                                         )}
                                     </div>
-
                                 </div>
                             </div>
+
                         </>
                     ) : (
                         <p className="text-red-500">날씨 정보를 불러오는 중...</p>
@@ -180,7 +186,7 @@ function FeedDetail() {
                 </div>
 
                 {/* 오른쪽: 이미지 & 착장 */}
-                <div className="w-full md:w-2/3 bg-white px-6 py-6 h-[705px] overflow-y-auto">
+                <div className="w-full md:w-2/3 bg-white px-6 py-6 h-[705px] overflow-y-auto rounded-lg">
 
                     {/* 닉네임 + 하트 상단 바 */}
                     <div className="relative bg-gray-200 h-12 flex items-center px-4 mb-6">

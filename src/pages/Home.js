@@ -46,16 +46,16 @@ function Home() {
               <Bars3Icon className="w-5 h-5" />
             </button>
             <div className="flex items-center space-x-4">
-              <button onClick={logout} className="text-sm font-bold hover:underline">
+              <button onClick={logout} className="text-sm font-medium hover:underline">
                 logout
               </button>
               <button
                 onClick={() => navigate("/mypage_userinfo")}
-                className="text-sm font-semibold hover:underline"
+                className="text-sm font-medium hover:underline"
               >
                 회원정보
               </button>
-              <div className="bg-blue-200 px-2 py-1 rounded text-sm font-medium">
+              <div className="bg-blue-200 px-2 py-1 rounded text-sm font-semibold">
                 {nickname}님
               </div>
             </div>
@@ -121,7 +121,7 @@ function Home() {
             {/* 버튼들 */}
             <div className="flex gap-4 mt-6">
               <button
-                className="bg-blue-300 hover:bg-blue-400 px-6 py-2 rounded font-semibold"
+                className="bg-blue-400 hover:bg-blue-500 px-6 py-2 rounded text-white font-semibold"
                 onClick={async () => {
                   const today = new Date();
                   const todayStr = today.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식
@@ -178,7 +178,7 @@ function Home() {
               </button>
               
               <button
-                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-semibold"
+                className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded font-semibold"
                 onClick={() => {
                   // 추천보기 페이지로 이동 (사용자 필터 기반)
                   navigate("/recommend-view");

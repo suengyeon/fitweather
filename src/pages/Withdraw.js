@@ -58,7 +58,7 @@ function Withdraw() {
         {/* 안내 메시지 카드 */}
         <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
           <div className="text-center text-black text-base leading-relaxed">
-            <p>회원탈퇴 시 모든 정보가 삭제되며, 복구할 수 없습니다.</p>
+            <p className="font-semibold">회원탈퇴 시 모든 정보가 삭제되며, 복구할 수 없습니다.</p>
             <p className="mt-2">정말 탈퇴하시겠습니까?</p>
           </div>
         </div>
