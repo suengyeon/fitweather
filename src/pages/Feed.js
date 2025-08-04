@@ -86,8 +86,27 @@ function Feed() {
         console.log("Feed - fromDetail, using stored region:", storedRegion);
         if (storedRegion) {
           setRegion(storedRegion);
-          return;
         }
+        
+        // 세션스토리지에 없으면 전달받은 지역 정보 사용
+        if (location.state?.region) {
+          console.log("Feed - fromDetail, using passed region:", location.state.region);
+          setRegion(location.state.region);
+          // 세션스토리지에도 저장
+          sessionStorage.setItem('feedRegion', location.state.region);
+        }
+        
+        // 전달받은 날짜 정보가 있으면 적용
+        if (location.state?.year && location.state?.month && location.state?.day) {
+          console.log("Feed - fromDetail, using passed date:", location.state.year, location.state.month, location.state.day);
+          setSelectedYear(location.state.year);
+          setSelectedMonth(location.state.month);
+          setSelectedDay(location.state.day);
+          // 세션스토리지에도 저장
+          sessionStorage.setItem('feedDate', `${location.state.year}-${location.state.month}-${location.state.day}`);
+        }
+        
+        return;
       }
       
       // 세션스토리지에서 저장된 지역이 있으면 사용
@@ -364,6 +383,10 @@ function Feed() {
                     currentUserUid={user?.uid}
                     onToggleLike={handleToggleLike}
                     rank={idx + 1}
+                    selectedDate={selectedDate}
+                    selectedYear={selectedYear}
+                    selectedMonth={selectedMonth}
+                    selectedDay={selectedDay}
                   />
                 ))}
               </div>
@@ -383,6 +406,10 @@ function Feed() {
                     record={outfit}
                     currentUserUid={user?.uid}
                     onToggleLike={handleToggleLike}
+                    selectedDate={selectedDate}
+                    selectedYear={selectedYear}
+                    selectedMonth={selectedMonth}
+                    selectedDay={selectedDay}
                   />
                 ))}
               </div>

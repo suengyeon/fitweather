@@ -3,6 +3,7 @@ import { loginWithGoogle, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { HomeIcon, Bars3Icon } from "@heroicons/react/24/solid";
+import { OAUTH_CONFIG } from "../config/oauth";
 
 function Login() {
   const navigate = useNavigate();
@@ -29,6 +30,17 @@ function Login() {
     }
   };
 
+  const handleKakaoLogin = () => {
+    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${OAUTH_CONFIG.KAKAO.CLIENT_ID}&redirect_uri=${encodeURIComponent(OAUTH_CONFIG.KAKAO.REDIRECT_URI)}&response_type=code`;
+    window.location.href = kakaoAuthUrl;
+  };
+
+  const handleNaverLogin = () => {
+    const state = Math.random().toString(36).substring(2, 15);
+    const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${OAUTH_CONFIG.NAVER.CLIENT_ID}&redirect_uri=${encodeURIComponent(OAUTH_CONFIG.NAVER.REDIRECT_URI)}&state=${state}`;
+    window.location.href = naverAuthUrl;
+  };
+
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
       {/* 상단 네비게이션 */}
@@ -53,16 +65,31 @@ function Login() {
           Fitweather
         </h1>
 
-        <button
-          onClick={handleGoogleLogin}
-          className="bg-white px-6 py-3 rounded-xl shadow-md border font-semibold hover:bg-gray-100"
-        >
-          Google 로그인
-        </button>
+        <div className="space-y-4 w-80">
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full bg-white px-6 py-3 rounded-xl shadow-md border font-semibold hover:bg-gray-100 flex items-center justify-center gap-2"
+          >
+            <span className="text-xl">🔍</span>
+            Google 로그인
+          </button>
 
-        <p className="text-xs text-gray-500 mt-4 hover:underline cursor-pointer">
-          회원가입
-        </p>
+          <button
+            onClick={handleKakaoLogin}
+            className="w-full bg-yellow-400 px-6 py-3 rounded-xl shadow-md border font-semibold hover:bg-yellow-500 flex items-center justify-center gap-2"
+          >
+            <span className="text-xl">💛</span>
+            카카오 로그인
+          </button>
+
+          <button
+            onClick={handleNaverLogin}
+            className="w-full bg-green-500 text-white px-6 py-3 rounded-xl shadow-md border font-semibold hover:bg-green-600 flex items-center justify-center gap-2"
+          >
+            <span className="text-xl">🟢</span>
+            네이버 로그인
+          </button>
+        </div>
       </div>
     </div>
   );

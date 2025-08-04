@@ -35,12 +35,29 @@ function FeedDetail() {
                     availableDates: location.state.availableDates
                 }
             });
+        } else if (location.state?.fromRecommend) {
+            // 상세필터에서 온 경우, 상세필터로 돌아가기
+            console.log("FeedDetail - navigating back to recommend");
+            navigate("/recommend", {
+                state: {
+                    fromDetail: true,
+                    // 현재 필터 상태 유지
+                    currentFilters: location.state?.currentFilters
+                }
+            });
         } else if (location.state?.fromFeed) {
             // 피드에서 온 경우, 지역 정보 유지
             console.log("FeedDetail - navigating back to feed with fromDetail flag");
             navigate("/feed", {
                 state: {
-                    fromDetail: true
+                    fromDetail: true,
+                    // 현재 기록의 지역 정보도 함께 전달
+                    region: data?.region,
+                    // 날짜 정보도 함께 전달
+                    date: location.state?.date,
+                    year: location.state?.year,
+                    month: location.state?.month,
+                    day: location.state?.day
                 }
             });
         } else {

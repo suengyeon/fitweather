@@ -16,8 +16,13 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
+  // 소셜 로그인 사용자 설정 함수
+  const setSocialUser = (socialUser) => {
+    setUser(socialUser);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, setSocialUser }}>
       {children}
     </AuthContext.Provider>
   );

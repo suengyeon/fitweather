@@ -19,13 +19,26 @@ function Recommend() {
   const [onlyMyRecords, setOnlyMyRecords] = useState(false);
   
   // 필터 상태
-  const [filters, setFilters] = useState({
-    region: "",
-    tempRange: { min: 0, max: 100 },
-    rainRange: { min: 0, max: 100 },
-    humidityRange: { min: 0, max: 100 },
-    feeling: "",
-    weatherEmojis: []
+  const [filters, setFilters] = useState(() => {
+    // 세션스토리지에서 저장된 필터 상태 복원
+    const savedFilters = sessionStorage.getItem('recommendFilters');
+    if (savedFilters) {
+      try {
+        return JSON.parse(savedFilters);
+      } catch (e) {
+        console.error('Failed to parse saved filters:', e);
+      }
+    }
+    
+    // 기본 필터 상태
+    return {
+      region: "",
+      tempRange: { min: 0, max: 100 },
+      rainRange: { min: 0, max: 100 },
+      humidityRange: { min: 0, max: 100 },
+      feeling: "",
+      weatherEmojis: []
+    };
   });
 
   // 지역 목록
@@ -123,6 +136,10 @@ function Recommend() {
         feeling: "",
         weatherEmojis: []
       });
+    } else if (location.state?.fromDetail && location.state?.currentFilters) {
+      // FeedDetail에서 돌아온 경우, 전달받은 필터 상태 복원
+      console.log("Restoring filters from FeedDetail:", location.state.currentFilters);
+      setFilters(location.state.currentFilters);
     }
   }, [location.state]);
 
@@ -200,11 +217,83 @@ function Recommend() {
 
         // 지역이 선택되지 않았으면 다른 조건들 중 하나라도 만족하면 포함
         if (!filters.region) {
-          return tempMatch || rainMatch || humidityMatch || feelingMatch || emojiMatch;
+          // 선택된 필터만 확인
+          const conditions = [];
+          
+          // 온도 범위가 기본값이 아니면 온도 조건 확인
+          if (filters.tempRange.min !== 0 || filters.tempRange.max !== 100) {
+            conditions.push(tempMatch);
+          }
+          
+          // 강수량 범위가 기본값이 아니면 강수량 조건 확인
+          if (filters.rainRange.min !== 0 || filters.rainRange.max !== 100) {
+            conditions.push(rainMatch);
+          }
+          
+          // 습도 범위가 기본값이 아니면 습도 조건 확인
+          if (filters.humidityRange.min !== 0 || filters.humidityRange.max !== 100) {
+            conditions.push(humidityMatch);
+          }
+          
+          // 체감이 선택되었으면 체감 조건 확인
+          if (filters.feeling) {
+            conditions.push(feelingMatch);
+          }
+          
+          // 날씨 이모지가 선택되었으면 이모지 조건 확인
+          if (filters.weatherEmojis.length > 0) {
+            conditions.push(emojiMatch);
+          }
+          
+          // 조건이 없으면 모든 기록 표시
+          if (conditions.length === 0) {
+            return true;
+          }
+          
+          // 모든 조건을 만족해야 함
+          return conditions.every(condition => condition);
         }
         
-        // 지역이 선택되었으면 해당 지역이면서 다른 조건들 중 하나라도 만족하면 포함
-        return regionMatch && (tempMatch || rainMatch || humidityMatch || feelingMatch || emojiMatch);
+        // 지역이 선택되었으면 해당 지역이면서 다른 조건들도 만족해야 함
+        if (!regionMatch) {
+          return false;
+        }
+        
+        // 선택된 필터만 확인
+        const conditions = [];
+        
+        // 온도 범위가 기본값이 아니면 온도 조건 확인
+        if (filters.tempRange.min !== 0 || filters.tempRange.max !== 100) {
+          conditions.push(tempMatch);
+        }
+        
+        // 강수량 범위가 기본값이 아니면 강수량 조건 확인
+        if (filters.rainRange.min !== 0 || filters.rainRange.max !== 100) {
+          conditions.push(rainMatch);
+        }
+        
+        // 습도 범위가 기본값이 아니면 습도 조건 확인
+        if (filters.humidityRange.min !== 0 || filters.humidityRange.max !== 100) {
+          conditions.push(humidityMatch);
+        }
+        
+        // 체감이 선택되었으면 체감 조건 확인
+        if (filters.feeling) {
+          conditions.push(feelingMatch);
+        }
+        
+        // 날씨 이모지가 선택되었으면 이모지 조건 확인
+        if (filters.weatherEmojis.length > 0) {
+          conditions.push(emojiMatch);
+        }
+        
+        // 조건이 없으면 지역만 일치하면 표시
+        if (conditions.length === 0) {
+          return true;
+        }
+        
+        // 모든 조건을 만족해야 함
+        return conditions.every(condition => condition);
       });
 
       // 하트순으로 정렬
@@ -216,6 +305,11 @@ function Recommend() {
 
     return () => clearTimeout(timeoutId);
   }, [outfits, filters, excludeMyRecords, onlyMyRecords, user]);
+
+  // 필터 상태를 세션스토리지에 저장
+  useEffect(() => {
+    sessionStorage.setItem('recommendFilters', JSON.stringify(filters));
+  }, [filters]);
 
   // 좋아요 토글 함수
   const handleToggleLike = async (recordId, liked) => {
@@ -604,6 +698,7 @@ function Recommend() {
                   record={outfit}
                   currentUserUid={user?.uid}
                   onToggleLike={handleToggleLike}
+                  currentFilters={filters}
                 />
               ))}
             </div>

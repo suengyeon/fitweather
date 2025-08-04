@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toggleLike } from "../api/toggleLike";
 
-function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
+function FeedCard({ record, currentUserUid, onToggleLike, rank, selectedDate, selectedYear, selectedMonth, selectedDay, currentFilters }) {
   const navigate = useNavigate();
   const [imageIndex, setImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(record.likes?.includes(currentUserUid));
@@ -50,10 +50,22 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank }) {
     if (record.uid === currentUserUid) {
       navigate("/record", { state: { existingRecord: record } });
     } else {
+      // 현재 페이지가 상세필터인지 확인
+      const isFromRecommend = window.location.pathname.includes('/recommend');
+      
       navigate(`/FeedDetail/${record.id}`, { 
         state: { 
           fromCard: true,
-          fromFeed: true
+          fromFeed: !isFromRecommend,
+          fromRecommend: isFromRecommend,
+          // 지역 정보 전달
+          region: record.region,
+          date: selectedDate,
+          year: selectedYear,
+          month: selectedMonth,
+          day: selectedDay,
+          // 상세필터에서 온 경우 현재 필터 상태 전달
+          currentFilters: isFromRecommend ? currentFilters : undefined
         } 
       });
     }
