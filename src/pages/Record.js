@@ -5,7 +5,7 @@ import { auth, db, storage } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
 import WeatherCard from "../components/WeatherCard";
-import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import { Bars3Icon, HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-toastify";
 import { collection, query, where, getDocs, addDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -394,10 +394,10 @@ function Record() {
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
+          onClick={() => navigate(-1)}
           className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
         >
-          <Bars3Icon className="w-5 h-5" />
+          <ArrowLeftIcon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">{formattedDate}</h2>
         <button

@@ -79,6 +79,17 @@ function CalendarPage() {
     const dateStr = formatDateLocal(date);
     const existingRecord = outfitMap[dateStr];
 
+    // 미래 날짜 체크
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 시간을 00:00:00으로 설정
+    const clickedDate = new Date(date);
+    clickedDate.setHours(0, 0, 0, 0); // 시간을 00:00:00으로 설정
+
+    if (clickedDate > today) {
+      alert("미래 날짜는 기록할 수 없습니다.");
+      return;
+    }
+
     if (existingRecord) {
       navigate(`/record`, { state: { existingRecord } });
     } else {

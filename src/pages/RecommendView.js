@@ -203,6 +203,16 @@ function RecommendView() {
           </div>
         ) : (
           <>
+            {/* 기본필터 설정 버튼 - 항상 표시 */}
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={() => navigate("/recommend-filter-settings")}
+                className="bg-blue-400 hover:bg-blue-500 text-white px-6 py-2 rounded-md font-medium"
+              >
+                기본필터 설정
+              </button>
+            </div>
+
             {/* 체크박스들 */}
             <div className="mb-4 space-y-2">
               <div className="flex items-center">
