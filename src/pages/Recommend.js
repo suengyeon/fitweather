@@ -523,7 +523,7 @@ function Recommend() {
       <div className="flex justify-start items-center px-4 py-3 bg-white shadow-sm">
         <button
           onClick={() => navigate("/recommend-view")}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm flex items-center gap-2"
+          className="bg-gray-400 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm flex items-center gap-2"
         >
           ← 뒤로가기
         </button>
