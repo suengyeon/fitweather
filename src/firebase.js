@@ -42,3 +42,30 @@ export async function logout() {
     window.location.href = "/";
   }
 }
+
+// 카카오 로그아웃
+export async function logoutKakao() {
+  try {
+    // 로컬 스토리지에서 카카오 토큰 제거
+    localStorage.removeItem('kakao_access_token');
+    localStorage.removeItem('kakao_refresh_token');
+    
+    // 카카오 로그아웃 (선택사항 - 실패해도 무방)
+    const accessToken = localStorage.getItem('kakao_access_token');
+    if (accessToken) {
+      await fetch('https://kapi.kakao.com/v1/user/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('카카오 로그아웃 오류:', error);
+  } finally {
+    // 페이지 새로고침으로 상태 초기화
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
+    }
+  }
+}

@@ -31,14 +31,55 @@ function Login() {
   };
 
   const handleKakaoLogin = () => {
-    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${OAUTH_CONFIG.KAKAO.CLIENT_ID}&redirect_uri=${encodeURIComponent(OAUTH_CONFIG.KAKAO.REDIRECT_URI)}&response_type=code`;
-    window.location.href = kakaoAuthUrl;
-  };
-
-  const handleNaverLogin = () => {
-    const state = Math.random().toString(36).substring(2, 15);
-    const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${OAUTH_CONFIG.NAVER.CLIENT_ID}&redirect_uri=${encodeURIComponent(OAUTH_CONFIG.NAVER.REDIRECT_URI)}&state=${state}`;
-    window.location.href = naverAuthUrl;
+    try {
+      console.log('카카오 로그인 버튼 클릭됨');
+      
+      // 설정 확인
+      console.log('카카오 설정:', {
+        CLIENT_ID: OAUTH_CONFIG.KAKAO.CLIENT_ID,
+        REDIRECT_URI: OAUTH_CONFIG.KAKAO.REDIRECT_URI,
+        origin: window.location.origin
+      });
+      
+      // URL이 올바른지 확인
+      if (!OAUTH_CONFIG.KAKAO.CLIENT_ID) {
+        alert('카카오 앱 키가 설정되지 않았습니다.');
+        return;
+      }
+      
+      // 가장 기본적인 권한만 요청
+      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${OAUTH_CONFIG.KAKAO.CLIENT_ID}&redirect_uri=${encodeURIComponent(OAUTH_CONFIG.KAKAO.REDIRECT_URI)}&response_type=code`;
+      console.log('카카오 로그인 URL:', kakaoAuthUrl);
+      
+      // URL 길이 확인 (너무 길면 문제가 될 수 있음)
+      if (kakaoAuthUrl.length > 2000) {
+        alert('카카오 로그인 URL이 너무 깁니다.');
+        return;
+      }
+      
+      console.log('카카오 인증 페이지로 이동 시작...');
+      
+      // 카카오 서버 혼잡 시 안내
+      const showBusyAlert = () => {
+        setTimeout(() => {
+          if (window.location.pathname.includes('/auth/kakao/callback')) {
+            // 콜백 페이지에 있으면 이미 처리 중
+            return;
+          }
+          // 10초 후에도 콜백 페이지에 없으면 서버 혼잡 가능성
+          if (!window.location.pathname.includes('/auth/kakao/callback')) {
+            alert('카카오 서버가 혼잡할 수 있습니다. 잠시 기다려주세요.');
+          }
+        }, 10000);
+      };
+      
+      showBusyAlert();
+      window.location.href = kakaoAuthUrl;
+      
+    } catch (error) {
+      console.error('카카오 로그인 URL 생성 오류:', error);
+      alert('카카오 로그인 설정에 문제가 있습니다.');
+    }
   };
 
   return (
@@ -61,7 +102,7 @@ function Login() {
 
       {/* 중앙 로그인 섹션 */}
       <div className="flex flex-col items-center justify-start mt-10">
-        <h1 className="text-5xl font-lilita text-indigo-500 mb-10">
+        <h1 className="text-5xl font-bold text-indigo-500 mb-10">
           Fitweather
         </h1>
 
@@ -80,14 +121,6 @@ function Login() {
           >
             <span className="text-xl">💛</span>
             카카오 로그인
-          </button>
-
-          <button
-            onClick={handleNaverLogin}
-            className="w-full bg-green-500 text-white px-6 py-3 rounded-xl shadow-md font-semibold hover:bg-green-600 flex items-center justify-center gap-2"
-          >
-            <span className="text-xl">🟢</span>
-            네이버 로그인
           </button>
         </div>
       </div>

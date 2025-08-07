@@ -16,7 +16,6 @@ import Recommend from "./pages/Recommend";
 import RecommendView from "./pages/RecommendView";
 import RecommendFilterSettings from "./pages/RecommendFilterSettings";
 import KakaoCallback from "./pages/KakaoCallback";
-import NaverCallback from "./pages/NaverCallback";
 
 import Calendar from "./pages/Calendar";
 import "react-toastify/dist/ReactToastify.css";
@@ -76,7 +75,6 @@ function App() {
         <Route path="/recommend-filter-settings" element={<RecommendFilterSettings />} />
         <Route path="/FeedDetail/:id" element={<FeedDetail />} />
         <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
-        <Route path="/auth/naver/callback" element={<NaverCallback />} />
 
           <Route path="/mypage_likes" element={<MyPageLikes />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />

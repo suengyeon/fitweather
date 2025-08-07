@@ -3,18 +3,31 @@ import { db } from "../firebase";
 import { doc, setDoc, query, collection, where, getDocs } from "firebase/firestore";
 import { useState } from "react";
 import { HomeIcon, Bars3Icon } from "@heroicons/react/24/solid";
+import { useAuth } from "../contexts/AuthContext";
 
 function ProfileSetup() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { setSocialUser } = useAuth();
 
   const uid = location.state?.uid;
   const email = location.state?.email || "";
   const displayName = location.state?.displayName || "";
+  const provider = location.state?.provider || "google";
 
   const [nickname, setNickname] = useState(displayName);
+  const [userEmail, setUserEmail] = useState(email);
   const [region, setRegion] = useState("");
   const [error, setError] = useState("");
+
+  // 디버깅을 위한 로그
+  console.log('ProfileSetup 상태:', {
+    uid,
+    email,
+    displayName,
+    provider,
+    emailExists: !!email
+  });
 
   function capitalizeRegion(region) {
     if (!region) return "";
@@ -51,28 +64,69 @@ function ProfileSetup() {
       setError("닉네임과 지역을 모두 입력해주세요!");
       return;
     }
+
+    // 카카오 사용자이고 이메일이 없는 경우 이메일 입력 필수
+    if (provider === 'kakao' && !email && !userEmail) {
+      setError("이메일을 입력해주세요!");
+      return;
+    }
+
+    // 이메일 형식 검증
+    if (userEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
+      setError("올바른 이메일 형식을 입력해주세요!");
+      return;
+    }
+
     try {
-      const q = query(
+      // 닉네임 중복 검사
+      const nicknameQuery = query(
         collection(db, "users"),
         where("nickname", "==", nickname)
       );
-      const querySnapshot = await getDocs(q);
+      const nicknameSnapshot = await getDocs(nicknameQuery);
 
-      let duplicated = false;
-      querySnapshot.forEach((docSnap) => {
-        if (docSnap.id !== uid) duplicated = true;
+      let nicknameDuplicated = false;
+      nicknameSnapshot.forEach((docSnap) => {
+        if (docSnap.id !== uid) nicknameDuplicated = true;
       });
 
-      if (duplicated) {
+      if (nicknameDuplicated) {
         setError("이미 사용 중인 닉네임입니다!");
         return;
       }
 
-      await setDoc(doc(db, "users", uid), {
+      // 이메일 중복 검사 (사용자가 입력한 이메일이 있는 경우)
+      if (userEmail && userEmail !== email) {
+        const emailQuery = query(
+          collection(db, "users"),
+          where("email", "==", userEmail)
+        );
+        const emailSnapshot = await getDocs(emailQuery);
+
+        let emailDuplicated = false;
+        emailSnapshot.forEach((docSnap) => {
+          if (docSnap.id !== uid) emailDuplicated = true;
+        });
+
+        if (emailDuplicated) {
+          setError("이미 사용 중인 이메일입니다!");
+          return;
+        }
+      }
+
+      const userData = {
         nickname,
         region: capitalizeRegion(region),
-        email,
-      });
+        email: userEmail || email, // 사용자가 입력한 이메일 또는 기존 이메일
+        provider,
+        createdAt: new Date()
+      };
+
+      await setDoc(doc(db, "users", uid), userData);
+      
+      // 로그인 상태 설정
+      setSocialUser({ uid, ...userData });
+      
       navigate("/");
     } catch (err) {
       setError("저장 중 에러: " + err.message);
@@ -113,6 +167,37 @@ function ProfileSetup() {
             />
           </div>
 
+          {/* 카카오 사용자이고 이메일이 없는 경우 이메일 입력 필드 표시 */}
+          {provider === 'kakao' && !email && (
+            <div className="mb-6">
+              <label className="block font-semibold mb-2">
+                이메일 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={userEmail}
+                onChange={e => setUserEmail(e.target.value)}
+                placeholder="이메일을 입력해주세요 (예: user@example.com)"
+                className="w-full border border-gray-300 px-4 py-2 rounded focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+          )}
+
+          {/* 기존 이메일이 있는 경우 표시 (수정 불가) */}
+          {email && (
+            <div className="mb-6">
+              <label className="block font-semibold mb-2">이메일</label>
+              <input
+                value={email}
+                disabled
+                className="w-full border border-gray-300 px-4 py-2 rounded bg-gray-100"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {provider === 'kakao' ? '카카오에서 제공한 이메일입니다.' : '소셜 로그인에서 제공한 이메일입니다.'}
+              </p>
+            </div>
+          )}
+
           <div className="mb-6">
             <label className="block font-semibold mb-2">지역</label>
             <select
@@ -120,6 +205,7 @@ function ProfileSetup() {
               onChange={e => setRegion(e.target.value)}
               className="w-full border border-gray-300 px-4 py-2 rounded bg-white"
             >
+              <option value="">지역을 선택하세요</option>
               <option value="Seoul">서울</option>
               <option value="Busan">부산</option>
               <option value="Daegu">대구</option>
