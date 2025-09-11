@@ -78,12 +78,16 @@ function ProfileSetup() {
     }
 
     try {
+      console.log('프로필 저장 시작...', { uid, nickname, region });
+      
       // 닉네임 중복 검사
+      console.log('닉네임 중복 검사 시작...');
       const nicknameQuery = query(
         collection(db, "users"),
         where("nickname", "==", nickname)
       );
       const nicknameSnapshot = await getDocs(nicknameQuery);
+      console.log('닉네임 중복 검사 완료:', nicknameSnapshot.size);
 
       let nicknameDuplicated = false;
       nicknameSnapshot.forEach((docSnap) => {
@@ -97,11 +101,13 @@ function ProfileSetup() {
 
       // 이메일 중복 검사 (사용자가 입력한 이메일이 있는 경우)
       if (userEmail && userEmail !== email) {
+        console.log('이메일 중복 검사 시작...');
         const emailQuery = query(
           collection(db, "users"),
           where("email", "==", userEmail)
         );
         const emailSnapshot = await getDocs(emailQuery);
+        console.log('이메일 중복 검사 완료:', emailSnapshot.size);
 
         let emailDuplicated = false;
         emailSnapshot.forEach((docSnap) => {
@@ -122,13 +128,21 @@ function ProfileSetup() {
         createdAt: new Date()
       };
 
+      console.log('사용자 데이터 저장 시작...', userData);
       await setDoc(doc(db, "users", uid), userData);
+      console.log('사용자 데이터 저장 완료');
       
       // 로그인 상태 설정
       setSocialUser({ uid, ...userData });
       
       navigate("/");
     } catch (err) {
+      console.error('프로필 저장 오류:', err);
+      console.error('오류 상세 정보:', {
+        code: err.code,
+        message: err.message,
+        stack: err.stack
+      });
       setError("저장 중 에러: " + err.message);
     }
   };

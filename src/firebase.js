@@ -1,7 +1,7 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 
@@ -32,6 +32,30 @@ export const storage = getStorage(app, "gs://fitweather-638a3.firebasestorage.ap
 console.log('Firebase 앱 초기화 완료:', app);
 console.log('Firebase Auth 초기화 완료:', auth);
 console.log('Firebase Firestore 초기화 완료:', db);
+
+// Firebase 설정 검증
+console.log('Firebase 설정 검증:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  apiKey: firebaseConfig.apiKey ? '설정됨' : '누락됨'
+});
+
+// Firestore 연결 테스트 함수
+export const testFirestoreConnection = async () => {
+  try {
+    console.log('Firestore 연결 테스트 시작...');
+    const testDoc = doc(db, 'test', 'connection');
+    await setDoc(testDoc, { test: true, timestamp: new Date() });
+    console.log('✅ Firestore 연결 성공');
+    return true;
+  } catch (error) {
+    console.error('❌ Firestore 연결 실패:', error);
+    return false;
+  }
+};
+
+// 전역 테스트 함수로 등록
+window.testFirestoreConnection = testFirestoreConnection;
 
 // Google login
 export async function loginWithGoogle() {

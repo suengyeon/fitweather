@@ -58,6 +58,28 @@ window.testSaveOutfitRecord = async () => {
 };
 
 function App() {
+  // 전역 오류 핸들러 추가
+  React.useEffect(() => {
+    const handleError = (error) => {
+      console.error('전역 오류 발생:', error);
+      if (error.message && error.message.includes('permission')) {
+        console.error('Firestore 권한 오류 감지:', error);
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('처리되지 않은 Promise 거부:', event.reason);
+      if (event.reason && event.reason.message && event.reason.message.includes('permission')) {
+        console.error('Firestore 권한 오류 감지 (Promise):', event.reason);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
+
   return (
     <AuthProvider>
       {/* ToastContainer를 최상단에 추가 */}
