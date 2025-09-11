@@ -28,11 +28,34 @@ export const db = getFirestore(app);
 // Storage
 export const storage = getStorage(app, "gs://fitweather-638a3.firebasestorage.app");
 
+// Firebase 초기화 확인
+console.log('Firebase 앱 초기화 완료:', app);
+console.log('Firebase Auth 초기화 완료:', auth);
+console.log('Firebase Firestore 초기화 완료:', db);
+
 // Google login
 export async function loginWithGoogle() {
-  const provider = new GoogleAuthProvider();
-  const result = await signInWithPopup(auth, provider);
-  return result;
+  try {
+    console.log('Firebase Auth 초기화 확인...');
+    console.log('Auth 객체:', auth);
+    
+    const provider = new GoogleAuthProvider();
+    
+    // 추가 스코프 설정 (필요한 경우)
+    provider.addScope('email');
+    provider.addScope('profile');
+    
+    console.log('Google Auth Provider 설정 완료');
+    console.log('팝업 로그인 시작...');
+    
+    const result = await signInWithPopup(auth, provider);
+    console.log('로그인 결과:', result);
+    
+    return result;
+  } catch (error) {
+    console.error('Firebase Google 로그인 오류:', error);
+    throw error;
+  }
 }
 
 // Logout

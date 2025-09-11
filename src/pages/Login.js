@@ -1,5 +1,5 @@
 // src/pages/Login.js
-import { loginWithGoogle, db } from "../firebase";
+import { loginWithGoogle, db, auth } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { HomeIcon, Bars3Icon } from "@heroicons/react/24/solid";
@@ -10,23 +10,67 @@ function Login() {
 
   const handleGoogleLogin = async () => {
     try {
+      console.log('구글 로그인 시작...');
+      
+      // Firebase 설정 확인
+      console.log('Firebase Auth 객체:', auth);
+      console.log('Firebase Auth 상태:', auth?.currentUser);
+      
       const result = await loginWithGoogle();
+      console.log('구글 로그인 성공:', result);
+      
       const uid = result.user.uid;
       const email = result.user.email;
       const displayName = result.user.displayName;
 
+      console.log('사용자 정보:', { uid, email, displayName });
+
+      console.log('Firestore 연결 테스트 시작...');
       const userRef = doc(db, "users", uid);
+      console.log('사용자 문서 참조 생성:', userRef);
+      
       const userSnap = await getDoc(userRef);
+      console.log('사용자 문서 조회 결과:', userSnap.exists(), userSnap.data());
 
       if (userSnap.exists()) {
+        console.log('기존 사용자, 홈으로 이동');
         navigate("/");
       } else {
+        console.log('신규 사용자, 프로필 설정으로 이동');
         navigate("/profile-setup", {
           state: { uid, email, displayName }
         });
       }
     } catch (err) {
-      alert("로그인 실패: " + err.message);
+      console.error('구글 로그인 오류:', err);
+      console.error('오류 상세 정보:', {
+        code: err.code,
+        message: err.message,
+        stack: err.stack
+      });
+      
+      // 구체적인 오류 메시지 제공
+      let errorMessage = "로그인 실패: ";
+      
+      if (err.code === 'auth/popup-closed-by-user') {
+        errorMessage += "로그인 창이 닫혔습니다. 다시 시도해주세요.";
+      } else if (err.code === 'auth/popup-blocked') {
+        errorMessage += "팝업이 차단되었습니다. 팝업을 허용해주세요.";
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage += "네트워크 연결을 확인해주세요.";
+      } else if (err.code === 'auth/unauthorized-domain') {
+        errorMessage += "도메인이 허용되지 않았습니다. 관리자에게 문의하세요.";
+      } else if (err.code === 'auth/operation-not-allowed') {
+        errorMessage += "구글 로그인이 비활성화되었습니다. 관리자에게 문의하세요.";
+      } else if (err.code === 'firestore/permission-denied') {
+        errorMessage += "Firestore 접근 권한이 없습니다. 관리자에게 문의하세요.";
+      } else if (err.code === 'firestore/unavailable') {
+        errorMessage += "Firestore 서비스를 사용할 수 없습니다. 잠시 후 다시 시도해주세요.";
+      } else {
+        errorMessage += err.message || '알 수 없는 오류가 발생했습니다.';
+      }
+      
+      alert(errorMessage);
     }
   };
 
