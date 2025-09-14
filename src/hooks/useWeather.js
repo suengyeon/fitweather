@@ -22,9 +22,11 @@ export default function useWeather(region) {
           console.log("✅ selected forecast:", selected);
           setWeather({
             temp: selected.temp,
-            rain: selected.rainAmount,  // ✅ 이렇게 받아오도록!
-            humidity: selected.humidity, // ✅ 습도 추가
-            icon: selected.iconCode,
+            rain: selected.rainAmount,
+            humidity: selected.humidity,
+            sky: selected.sky,           // 하늘 상태 추가
+            pty: selected.pty,           // 강수 형태 추가
+            icon: selected.iconCode,     // SKY와 PTY 조합된 아이콘
           });
         } else {
           setWeather(null);

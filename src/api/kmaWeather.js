@@ -72,6 +72,11 @@ export const fetchKmaForecast = async (region) => {
             category: "SKY",
             fcstValue: "1",
             fcstTime: fcstTime
+          },
+          {
+            category: "PTY",
+            fcstValue: "0",
+            fcstTime: fcstTime
           }
         ];
       }

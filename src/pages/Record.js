@@ -17,6 +17,20 @@ function formatDateLocal(date) {
   return date.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식 (KST 기준)
 }
 
+// 날씨 아이콘 코드에 따른 이모지 반환 함수
+function getWeatherEmoji(iconCode) {
+  switch (iconCode) {
+    case "sunny": return "☀️";        // 맑음
+    case "cloudy": return "☁️";       // 구름많음
+    case "overcast": return "🌥️";     // 흐림
+    case "rain": return "🌧️";        // 비
+    case "snow": return "❄️";        // 눈
+    case "snow_rain": return "🌨️";   // 비/눈
+    case "shower": return "🌦️";      // 소나기
+    default: return "☁️";            // 기본값: 구름
+  }
+}
+
 
 function Record() {
   const today = new Date();
@@ -508,7 +522,7 @@ function Record() {
           <div className="mb-4 flex justify-center">
             <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
               <span className="text-6xl animate-bounce">
-                {weather?.icon === "rain" ? "🌧️" : "☀️"}
+                {getWeatherEmoji(weather?.icon)}
               </span>
             </div>
           </div>
