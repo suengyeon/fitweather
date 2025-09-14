@@ -748,11 +748,15 @@ function Record() {
                     onChange={(e) => handleSelectChange("outer", e.target.value)}
                   >
                     <option value="">선택하세요</option>
-                    <option value="jacket">자켓</option>
+                    <option value="jacket">재킷</option>
+                    <option value="blazer">점퍼</option>
                     <option value="coat">코트</option>
                     <option value="cardigan">가디건</option>
-                    <option value="hoodie">후드티</option>
+                    <option value="hoodzipup">후드집업</option>
                     <option value="blazer">블레이저</option>
+                    <option value="windbreak">바람막이</option>
+                    <option value="jersey">저지</option>
+                    <option value="padding">패딩</option>
                   </select>
                   <button
                     type="button"
