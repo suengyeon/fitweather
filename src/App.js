@@ -101,6 +101,7 @@ function App() {
           <Route path="/mypage_likes" element={<MyPageLikes />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/calendar/:uid" element={<Calendar />} />
           <Route path="/" element={<Home />} />
           
         </Routes>

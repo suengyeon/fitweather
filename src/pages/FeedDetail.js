@@ -144,6 +144,13 @@ function FeedDetail() {
                 {/* 왼쪽 : 날씨 카드 */}
                 <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center h-[705px] overflow-hidden rounded-lg">
                     <h3 className="text-lg font-semibold mb-4">{regionName}</h3>
+                    
+                    {/* 댓글 보기 버튼 */}
+                    <div className="mb-4">
+                        <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                            + 댓글 보기
+                        </button>
+                    </div>
                     {weather ? (
                         <>
                             <WeatherCard
@@ -190,9 +197,12 @@ function FeedDetail() {
 
                     {/* 닉네임 + 하트 상단 바 */}
                     <div className="relative bg-gray-200 h-12 flex items-center px-4 mb-6">
-                        <span className="absolute left-1/2 transform -translate-x-1/2 text-normal font-semibold">
+                        <button 
+                            onClick={() => navigate(`/calendar/${data.uid}`)}
+                            className="absolute left-1/2 transform -translate-x-1/2 text-normal font-semibold hover:text-blue-600 hover:underline transition-colors"
+                        >
                             {author ? `${author.nickname || author.uid}님의 기록` : ""}
-                        </span>
+                        </button>
                         <button
                             onClick={handleLike}
                             className="ml-auto px-2 py-1 rounded text-xl transition hover:scale-110"

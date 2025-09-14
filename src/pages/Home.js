@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bars3Icon } from "@heroicons/react/24/solid";
+import { Bars3Icon, ArrowPathIcon } from "@heroicons/react/24/solid";
+import { BellIcon } from "@heroicons/react/24/outline";
 import { getDocs, collection, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -45,20 +46,23 @@ function Home() {
             >
               <Bars3Icon className="w-5 h-5" />
             </button>
-            <div className="flex items-center space-x-4">
-              <button onClick={logout} className="text-sm font-medium hover:underline">
-                logout
-              </button>
-              <button
-                onClick={() => navigate("/mypage_userinfo")}
-                className="text-sm font-medium hover:underline"
-              >
-                회원정보
-              </button>
-              <div className="bg-blue-200 px-2 py-1 rounded text-sm font-semibold">
-                {nickname}님
-              </div>
-            </div>
+             <div className="flex items-center space-x-4">
+               <button onClick={logout} className="text-sm font-medium hover:underline">
+                 logout
+               </button>
+               <button
+                 onClick={() => navigate("/mypage_userinfo")}
+                 className="text-sm font-medium hover:underline"
+               >
+                 회원정보
+               </button>
+               <div className="bg-blue-200 px-2 py-1 rounded text-sm font-semibold">
+                 {nickname}님
+               </div>
+               <button className="p-1 text-gray-600 hover:text-gray-800 transition-colors">
+                 <BellIcon className="w-5 h-5" />
+               </button>
+             </div>
           </div>
 
           {/* 타이틀 */}
@@ -98,25 +102,132 @@ function Home() {
               <option value="Gwangju">광주</option>
             </select>
 
-            {/* 날씨 카드 */}
-            {loading ? (
-              <Skeleton />
-            ) : weather ? (
-              <>
-                <WeatherCard
-                  region={selectedRegion}
-                  temp={weather.temp}
-                  rain={weather.rain}
-                  humidity={weather.humidity}
-                  icon={weather.icon}
-                  isHome={true}
-                />
-
-
-              </>
-            ) : (
-              <p>날씨 정보를 불러올 수 없습니다.</p>
+            {/* 오늘의 날씨 섹션 */}
+            {weather && (
+              <div className="w-full max-w-md mt-6 flex flex-col items-center">
+                {/* 날씨 요약 */}
+                <div className="flex items-center gap-4 mb-4">
+                  {/* 날씨 아이콘 */}
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <span className="text-2xl animate-bounce">
+                      {weather.icon === "rain" ? "🌧️" : "☀️"}
+                    </span>
+                  </div>
+                  
+                  {/* 온도 */}
+                  <div className="text-3xl font-bold text-gray-800">
+                    {weather.temp}°C
+                  </div>
+                </div>
+                
+                {/* 날씨 메시지 */}
+                <div className="text-center text-gray-600">
+                  <p className="text-lg">
+                    오늘의 날씨는 <span className="font-semibold text-orange-500">초가을</span> <span className="font-semibold text-blue-600">
+                      {weather.temp < 10 ? "추워요" : "시원해요"}
+                    </span>! 이런 아이템 어때요?
+                  </p>
+                </div>
+              </div>
             )}
+
+            {/* 옷 추천 카드 */}
+            <div className="w-full max-w-md mt-6">
+              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+                {/* 카드 헤더 */}
+                <div className="flex items-center justify-between mb-4">
+                  <select className="text-sm font-medium text-gray-700 bg-transparent border-none focus:outline-none">
+                    <option value="casual">캐주얼</option>
+                    <option value="formal">포멀</option>
+                    <option value="sporty">스포티</option>
+                    <option value="street">스트릿</option>
+                  </select>
+                  <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                    <ArrowPathIcon className="w-4 h-4" />
+                  </button>
+                </div>
+
+                 {/* 추천 아이템 그리드 */}
+                 <div 
+                   style={{
+                     display: 'grid',
+                     gridTemplateColumns: '1fr 1fr',
+                     gap: '16px'
+                   }}
+                 >
+                   {/* 아우터 */}
+                   <div 
+                     style={{
+                       backgroundColor: '#f3f4f6',
+                       borderRadius: '8px',
+                       padding: '12px'
+                     }}
+                   >
+                     <div className="text-sm font-medium text-gray-800 mb-1">아우터</div>
+                     <div className="text-xs text-gray-600">가디건</div>
+                   </div>
+
+                   {/* 하의 */}
+                   <div 
+                     style={{
+                       backgroundColor: '#f3f4f6',
+                       borderRadius: '8px',
+                       padding: '12px'
+                     }}
+                   >
+                     <div className="text-sm font-medium text-gray-800 mb-1">하의</div>
+                     <div className="text-xs text-gray-600">바지</div>
+                   </div>
+
+                   {/* 상의 */}
+                   <div 
+                     style={{
+                       backgroundColor: '#f3f4f6',
+                       borderRadius: '8px',
+                       padding: '12px'
+                     }}
+                   >
+                     <div className="text-sm font-medium text-gray-800 mb-1">상의</div>
+                     <div className="text-xs text-gray-600">긴팔티</div>
+                   </div>
+
+                   {/* 신발 */}
+                   <div 
+                     style={{
+                       backgroundColor: '#f3f4f6',
+                       borderRadius: '8px',
+                       padding: '12px'
+                     }}
+                   >
+                     <div className="text-sm font-medium text-gray-800 mb-1">신발</div>
+                     <div className="text-xs text-gray-600">스니커즈</div>
+                   </div>
+
+                   {/* 악세서리 - 두 열을 모두 차지 */}
+                   <div 
+                     style={{
+                       backgroundColor: '#f3f4f6',
+                       borderRadius: '8px',
+                       padding: '12px',
+                       gridColumn: '1 / -1'
+                     }}
+                   >
+                     <div className="text-sm font-medium text-gray-800 mb-1">악세서리</div>
+                     <div className="text-xs text-gray-600">우산</div>
+                   </div>
+                 </div>
+
+                 {/* 착장 보기 링크 */}
+                 <div className="flex justify-end mt-4">
+                   <a 
+                     href="#" 
+                     className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                   >
+                     착장 보기
+                   </a>
+                 </div>
+              </div>
+            </div>
 
             {/* 버튼들 */}
             <div className="flex gap-4 mt-6">

@@ -69,6 +69,7 @@ function Record() {
   const [image, setImage] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
   const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] });
+  const [selectedItems, setSelectedItems] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" });
   const [feeling, setFeeling] = useState("");
   const [memo, setMemo] = useState("");
   const [isPublic, setIsPublic] = useState(false);
@@ -258,6 +259,30 @@ function Record() {
     }));
   };
 
+  // 드롭다운 선택 핸들러
+  const handleSelectChange = (category, value) => {
+    setSelectedItems((prev) => ({ ...prev, [category]: value }));
+  };
+
+  // + 버튼 클릭 핸들러
+  const handleAddSelectedItem = (category) => {
+    const selectedValue = selectedItems[category];
+    if (!selectedValue) return;
+    
+    // 선택된 옵션의 텍스트를 가져오기 위해 옵션 목록에서 찾기
+    const optionTexts = {
+      outer: { jacket: "자켓", coat: "코트", cardigan: "가디건", hoodie: "후드티", blazer: "블레이저" },
+      top: { tshirt: "티셔츠", shirt: "셔츠", blouse: "블라우스", tank: "탱크톱", sweater: "스웨터" },
+      bottom: { jeans: "청바지", pants: "바지", shorts: "반바지", skirt: "치마", leggings: "레깅스" },
+      shoes: { sneakers: "스니커즈", boots: "부츠", sandals: "샌들", heels: "힐", loafers: "로퍼" },
+      acc: { bag: "가방", hat: "모자", scarf: "스카프", watch: "시계", jewelry: "액세서리" }
+    };
+    
+    const itemText = optionTexts[category][selectedValue] || selectedValue;
+    setOutfit((prev) => ({ ...prev, [category]: [...prev[category], itemText] }));
+    setSelectedItems((prev) => ({ ...prev, [category]: "" }));
+  };
+
   const handleDelete = async () => {
     if (!recordId) return;
     const confirmDelete = window.confirm("정말 삭제하시겠어요?");
@@ -275,38 +300,53 @@ function Record() {
 
 
   const handleSubmit = async () => {
+    console.log("저장 시작 - 사용자:", user?.uid);
+    
     if (!user) {
+      console.log("저장 실패: 로그인 필요");
       toast.error("로그인이 필요합니다.");
       return;
     }
 
+    console.log("이미지 파일 확인:", imageFiles);
     if (!imageFiles.length || imageFiles.some(f => !f || (!f.name && !f.isUrl))) {
+      console.log("저장 실패: 이미지 없음");
       toast.error("사진을 업로드해주세요.");
       return;
     }
 
+    console.log("체감 확인:", feeling);
     if (!feeling) {
+      console.log("저장 실패: 체감 선택 안됨");
       toast.error("체감을 선택해주세요.");
       return;
     }
 
+    console.log("날씨 정보 확인:", weather);
     if (typeof weather?.temp === "undefined" || typeof weather?.rain === "undefined") {
+      console.log("저장 실패: 날씨 정보 없음");
       toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
       return;
     }
 
+    console.log("스토리지 확인:", storage);
     if (!storage) {
+      console.log("저장 실패: 스토리지 없음");
       toast.error("스토리지 인스턴스가 올바르지 않습니다. 새로고침 후 다시 시도해 주세요.");
       return;
     }
 
+    console.log("저장 진행 중...");
     setLoading(true);
 
     try {
-      // 이미 위에서 계산된 dateStr 사용
+      console.log("저장 데이터 준비 중...");
+      console.log("수정 모드:", isEditMode);
+      console.log("날짜:", dateStr);
 
       // ✅ (수정 모드가 아닐 때만) 중복 기록 체크
       if (!isEditMode) {
+        console.log("중복 기록 체크 중...");
         const q = query(
           collection(db, "records"),
           where("uid", "==", user.uid),
@@ -314,13 +354,16 @@ function Record() {
         );
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
+          console.log("저장 실패: 중복 기록");
           toast.error("이미 기록하셨습니다.");
           setLoading(false);
           return;
         }
+        console.log("중복 기록 없음, 계속 진행");
       }
 
       // ✅ 이미지 업로드: 새로 추가된 이미지만 업로드, 기존은 그대로 사용
+      console.log("이미지 업로드 시작...");
       const imageUrls = await Promise.all(
         imageFiles.map(async (file) => {
           if (file.isUrl) return file.name; // 기존 URL
@@ -330,6 +373,7 @@ function Record() {
           return await getDownloadURL(imageRef);
         })
       );
+      console.log("이미지 업로드 완료:", imageUrls);
 
       const recordData = {
         uid: user.uid,
@@ -353,19 +397,33 @@ function Record() {
         weatherEmojis,
         updatedAt: new Date(),
         nickname: profile?.nickname || user.uid,
+        // 기록한 날짜와 시간 추가
+        recordedDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD 형식
+        recordedTime: new Date().toLocaleTimeString('ko-KR', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }), // HH:MM 형식
+        recordedAt: new Date(), // 전체 날짜시간 (ISO 형식)
       };
+
+      console.log("저장할 데이터:", recordData);
 
       if (isEditMode && recordId) {
         // ✅ 기존 기록 수정 - date 필드는 변경하지 않음
+        console.log("기록 수정 중...");
         const updateData = { ...recordData };
         delete updateData.createdAt; // createdAt 필드만 제거
         await updateDoc(doc(db, "records", recordId), updateData);
+        console.log("기록 수정 완료");
         toast.success("기록이 수정되었어요!", { position: "top-center", autoClose: 1200 });
       } else {
         // ✅ 새 기록 저장
+        console.log("새 기록 저장 중...");
         recordData.createdAt = new Date();
         recordData.likes = [];
-        await addDoc(collection(db, "records"), recordData);
+        const docRef = await addDoc(collection(db, "records"), recordData);
+        console.log("새 기록 저장 완료, ID:", docRef.id);
         toast.success("기록이 저장되었어요!", { position: "top-center", autoClose: 1200 });
       }
 
@@ -376,9 +434,12 @@ function Record() {
         setTimeout(() => navigate("/calendar"), 1300);
       }
     } catch (err) {
-      console.error("저장 오류:", err);
-      toast.error("저장에 실패했습니다.");
+      console.error("저장 오류 발생:", err);
+      console.error("오류 상세:", err.message);
+      console.error("오류 스택:", err.stack);
+      toast.error(`저장에 실패했습니다: ${err.message}`);
     } finally {
+      console.log("저장 프로세스 종료");
       setLoading(false);
     }
   };
@@ -442,94 +503,62 @@ function Record() {
               <option value="Gwangju">광주</option>
             </select>
           </div>
+
+          {/* 날씨 일러스트 */}
+          <div className="mb-4 flex justify-center">
+            <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+              <span className="text-6xl animate-bounce">
+                {weather?.icon === "rain" ? "🌧️" : "☀️"}
+              </span>
+            </div>
+          </div>
           {weatherLoading ? (
             <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
           ) : weather ? (
             <>
-              {/* 커스텀 날씨 일러스트 카드 (화살표 선택 가능) */}
-              <div className="flex flex-col items-center">
-                {/* 날씨 아이콘 박스 */}
-                <div className="relative">
-                  <div className="w-60 h-60 bg-gray-200 rounded flex items-center justify-center text-6xl relative overflow-hidden">
-                    <div className="absolute text-8xl animate-bounce">
-                      {weather.icon === "rain" ? "☔️" : "☀️"}
-                    </div>
+              {/* 새로운 날씨 정보 필드들 */}
+              <div className="mt-4 space-y-3">
+                {/* 계절 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-base font-semibold">계절</span>
+                  <button className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition-colors">
+                    자동
+                  </button>
                   </div>
 
-                  {/* 과거 날짜에서만 화살표 버튼 표시 */}
-                  {!isEditMode && !isToday(dateStr) && (
-                    <>
-                      {/* 왼쪽 화살표 */}
-                      <button
-                        onClick={() => handleWeatherIconChange("sunny")}
-                        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 rounded-full px-2 py-1 text-lg hover:bg-opacity-90 transition-colors"
-                      >
-                        ◀
-                      </button>
-                      {/* 오른쪽 화살표 */}
-                      <button
-                        onClick={() => handleWeatherIconChange("rain")}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 rounded-full px-2 py-1 text-lg hover:bg-opacity-90 transition-colors"
-                      >
-                        ▶
-                      </button>
-                    </>
-                  )}
+                {/* 온도 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-base font-semibold">온도</span>
+                  <div className="px-3 py-1 bg-blue-100 rounded text-sm text-blue-800 font-medium">
+                    {weather?.temp || 0}°C
                 </div>
               </div>
 
-              {/* 날씨 정보 직접 수정 영역 */}
-              <div className=" space-y-3">
-                {/* 온도 입력 */}
-                <div className="flex items-center justify-center space-x-4">
-                  <span className="text-base font-semibold">온도 </span>
-                  <input
-                    type="number"
-                    value={weather.temp || ""}
-                    onChange={(e) => handleWeatherChange("temp", parseInt(e.target.value) || 0)}
-                    className="w-20 px-2 py-1 border rounded text-center"
-                    placeholder="0"
-                    disabled={isToday(dateStr)}
-                  />
-                  <span className="text-base font-semibold">°C</span>
+                {/* 강수량 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-base font-semibold">강수량</span>
+                  <div className="px-3 py-1 bg-blue-100 rounded text-sm text-blue-800 font-medium">
+                    {weather?.rain || 0}mm
+                </div>
                 </div>
 
-                {/* 강수량 입력 */}
-                <div className="flex items-center justify-center space-x-4">
-                  <span className="text-base font-semibold">강수량 </span>
-                  <input
-                    type="number"
-                    value={weather.rain || ""}
-                    onChange={(e) => handleWeatherChange("rain", parseInt(e.target.value) || 0)}
-                    className="w-20 px-2 py-1 border rounded text-center"
-                    placeholder="0"
-                    disabled={isToday(dateStr)}
-                  />
-                  <span className="text-base font-semibold">mm</span>
-                </div>
-
-                {/* 습도 입력 */}
-                <div className="flex items-center justify-center space-x-4">
-                  <span className="text-base font-semibold">습도 </span>
-                  <input
-                    type="number"
-                    value={weather.humidity || ""}
-                    onChange={(e) => handleWeatherChange("humidity", parseInt(e.target.value) || 0)}
-                    className="w-20 px-2 py-1 border rounded text-center"
-                    placeholder="0"
-                    disabled={isToday(dateStr)}
-                  />
-                  <span className="text-base font-semibold">%</span>
+                {/* 습도 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-base font-semibold">습도</span>
+                  <div className="px-3 py-1 bg-blue-100 rounded text-sm text-blue-800 font-medium">
+                    {weather?.humidity || 0}%
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-4 space-x-4">
-                {/* 체감 선택 드롭다운 */}
+              <div className="mt-4 space-y-3">
+                {/* 체감 선택 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="text-base font-semibold">체감</span>
                 <select
                   value={feeling}
                   onChange={(e) => setFeeling(e.target.value)}
-                  className="w-25 px-4 py-2 border rounded text-center"
+                    className="w-32 px-2 py-1 border rounded text-center text-sm"
                 >
                   <option value="" className="text-gray-500">선택</option>
                   <option value="steam">🥟 찐만두</option>
@@ -538,49 +567,46 @@ function Record() {
                   <option value="cold">💨 추움</option>
                   <option value="ice">🥶 동태</option>
                 </select>
-                {/* 날씨 이모지 선택 UI */}
-                <div className="mt-4">
-                  <label className="block font-semibold mb-2">날씨 이모지 (최대 2개)</label>
-                  <div className="flex justify-center">
-                    <div className="grid grid-cols-3 gap-2 w-48">
-                      {emojiList.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          className={`text-2xl px-2 py-1 rounded ${weatherEmojis.includes(emoji) ? "bg-blue-200" : "bg-gray-100"}`}
-                          onClick={() => toggleEmoji(emoji)}
-                          disabled={weatherEmojis.length >= 2 && !weatherEmojis.includes(emoji)}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                </div>
+
+                {/* 스타일 선택 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-base font-semibold">스타일</span>
+                  <select
+                    className="w-32 px-2 py-1 border rounded text-center text-sm"
+                  >
+                    <option value="" className="text-gray-500">선택</option>
+                    <option value="casual">캐주얼</option>
+                    <option value="formal">포멀</option>
+                    <option value="sporty">스포티</option>
+                    <option value="street">스트릿</option>
+                  </select>
                     </div>
                   </div>
-                </div>
-                {/* 지역 피드 업로드 체크박스 */}
-                <div className="mt-4 flex items-center justify-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="isPublic"
-                    checked={isPublic}
-                    onChange={(e) => setIsPublic(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="isPublic" className="text-sm text-gray-700">
-                    지역 피드에 업로드
-                  </label>
-                </div>
-              </div>
             </>
           ) : (
             <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
           )}
-        </div>
+                </div>
 
         {/* 오른쪽 입력 폼 */}
         <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center min-h-[705px] rounded-lg">
           {/* 입력폼 상단 바 */}
-          <div className="flex justify-end bg-gray-200 items-center mb-4 ">
+          <div className="flex justify-end bg-gray-200 items-center mb-4 gap-4">
+            {/* 피드 체크박스 */}
+            <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                id="feedCheckbox"
+                    checked={isPublic}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+              <label htmlFor="feedCheckbox" className="text-sm text-gray-700">
+                피드
+                  </label>
+        </div>
+
             <button
               onClick={handleSubmit}
               className="px-4 py-2 rounded text-gray-600 font-normal hover:font-bold transition"
@@ -690,39 +716,41 @@ function Record() {
               )}
             </div>
 
-            {/* 착장 입력 필드 (outer, top, bottom 등) */}
+            {/* 착장 선택 드롭다운 (outer, top, bottom 등) */}
             <div className="w-full md:w-1/2 space-y-4 max-h-96 overflow-y-auto pr-6">
-              {Object.keys(inputRefs).map((category) => {
-                const inputRef = inputRefs[category];
-                return (
-                  <div key={category}>
+              {/* Outer 드롭다운 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Outer</label>
                     <div className="flex gap-2 items-center">
-                      <input
-                        ref={inputRef}
-                        placeholder={category.toUpperCase()}
-                        className="flex-1 px-4 py-2 border rounded bg-white"
-                      />
+                  <select 
+                    className="flex-1 px-3 py-2 border rounded bg-white"
+                    value={selectedItems.outer}
+                    onChange={(e) => handleSelectChange("outer", e.target.value)}
+                  >
+                    <option value="">선택하세요</option>
+                    <option value="jacket">자켓</option>
+                    <option value="coat">코트</option>
+                    <option value="cardigan">가디건</option>
+                    <option value="hoodie">후드티</option>
+                    <option value="blazer">블레이저</option>
+                  </select>
                       <button
                         type="button"
-                        onClick={() => {
-                          const value = inputRef.current.value;
-                          handleAddItem(category, value);
-                          inputRef.current.value = "";
-                        }}
+                    onClick={() => handleAddSelectedItem("outer")}
                         className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
                       >
                         +
                       </button>
                     </div>
-                    {outfit[category].length > 0 && (
+                {outfit.outer.length > 0 && (
                       <ul className="ml-2 mt-1 text-sm text-gray-600">
-                        {outfit[category].map((item, idx) => (
+                    {outfit.outer.map((item, idx) => (
                           <li key={idx} className="flex items-center gap-1">
                             • {item}
                             <button
                               type="button"
                               className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
-                              onClick={() => handleRemoveItem(category, idx)}
+                          onClick={() => handleRemoveItem("outer", idx)}
                             >
                               -
                             </button>
@@ -731,8 +759,174 @@ function Record() {
                       </ul>
                     )}
                   </div>
-                );
-              })}
+
+              {/* Top 드롭다운 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Top</label>
+                <div className="flex gap-2 items-center">
+                  <select 
+                    className="flex-1 px-3 py-2 border rounded bg-white"
+                    value={selectedItems.top}
+                    onChange={(e) => handleSelectChange("top", e.target.value)}
+                  >
+                    <option value="">선택하세요</option>
+                    <option value="tshirt">티셔츠</option>
+                    <option value="shirt">셔츠</option>
+                    <option value="blouse">블라우스</option>
+                    <option value="tank">탱크톱</option>
+                    <option value="sweater">스웨터</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleAddSelectedItem("top")}
+                    className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  >
+                    +
+                  </button>
+                </div>
+                {outfit.top.length > 0 && (
+                  <ul className="ml-2 mt-1 text-sm text-gray-600">
+                    {outfit.top.map((item, idx) => (
+                      <li key={idx} className="flex items-center gap-1">
+                        • {item}
+                        <button
+                          type="button"
+                          className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                          onClick={() => handleRemoveItem("top", idx)}
+                        >
+                          -
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Bottom 드롭다운 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bottom</label>
+                <div className="flex gap-2 items-center">
+                  <select 
+                    className="flex-1 px-3 py-2 border rounded bg-white"
+                    value={selectedItems.bottom}
+                    onChange={(e) => handleSelectChange("bottom", e.target.value)}
+                  >
+                    <option value="">선택하세요</option>
+                    <option value="jeans">청바지</option>
+                    <option value="pants">바지</option>
+                    <option value="shorts">반바지</option>
+                    <option value="skirt">치마</option>
+                    <option value="leggings">레깅스</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleAddSelectedItem("bottom")}
+                    className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  >
+                    +
+                  </button>
+                </div>
+                {outfit.bottom.length > 0 && (
+                  <ul className="ml-2 mt-1 text-sm text-gray-600">
+                    {outfit.bottom.map((item, idx) => (
+                      <li key={idx} className="flex items-center gap-1">
+                        • {item}
+                        <button
+                          type="button"
+                          className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                          onClick={() => handleRemoveItem("bottom", idx)}
+                        >
+                          -
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Shoes 드롭다운 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Shoes</label>
+                <div className="flex gap-2 items-center">
+                  <select 
+                    className="flex-1 px-3 py-2 border rounded bg-white"
+                    value={selectedItems.shoes}
+                    onChange={(e) => handleSelectChange("shoes", e.target.value)}
+                  >
+                    <option value="">선택하세요</option>
+                    <option value="sneakers">스니커즈</option>
+                    <option value="boots">부츠</option>
+                    <option value="sandals">샌들</option>
+                    <option value="heels">힐</option>
+                    <option value="loafers">로퍼</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleAddSelectedItem("shoes")}
+                    className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  >
+                    +
+                  </button>
+                </div>
+                {outfit.shoes.length > 0 && (
+                  <ul className="ml-2 mt-1 text-sm text-gray-600">
+                    {outfit.shoes.map((item, idx) => (
+                      <li key={idx} className="flex items-center gap-1">
+                        • {item}
+                        <button
+                          type="button"
+                          className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                          onClick={() => handleRemoveItem("shoes", idx)}
+                        >
+                          -
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Acc 드롭다운 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Acc</label>
+                <div className="flex gap-2 items-center">
+                  <select 
+                    className="flex-1 px-3 py-2 border rounded bg-white"
+                    value={selectedItems.acc}
+                    onChange={(e) => handleSelectChange("acc", e.target.value)}
+                  >
+                    <option value="">선택하세요</option>
+                    <option value="bag">가방</option>
+                    <option value="hat">모자</option>
+                    <option value="scarf">스카프</option>
+                    <option value="watch">시계</option>
+                    <option value="jewelry">액세서리</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleAddSelectedItem("acc")}
+                    className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  >
+                    +
+                  </button>
+                </div>
+                {outfit.acc.length > 0 && (
+                  <ul className="ml-2 mt-1 text-sm text-gray-600">
+                    {outfit.acc.map((item, idx) => (
+                      <li key={idx} className="flex items-center gap-1">
+                        • {item}
+                        <button
+                          type="button"
+                          className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                          onClick={() => handleRemoveItem("acc", idx)}
+                        >
+                          -
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
           {/* 피드백 입력 영역 */}
