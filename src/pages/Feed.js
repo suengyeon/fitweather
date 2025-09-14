@@ -236,7 +236,7 @@ function Feed() {
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           <Bars3Icon className="w-5 h-5" />
@@ -244,7 +244,7 @@ function Feed() {
         <h2 className="font-bold text-lg">우리 동네</h2>
         <button
           onClick={() => navigate("/")}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
         >
           <HomeIcon className="w-5 h-5" />
         </button>

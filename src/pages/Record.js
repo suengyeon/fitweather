@@ -133,26 +133,21 @@ function Record() {
   useEffect(() => {
     if (selectedRegion) {
       const regionMap = {
-        Baengnyeongdo: "백령도",
         Incheon: "인천",
         Seoul: "서울",
         Chuncheon: "춘천",
         Gangneung: "강릉",
         Ulleungdo: "울릉도/독도",
-        Hongseong: "홍성",
         Suwon: "수원",
         Cheongju: "청주",
-        Andong: "안동",
         Jeonju: "전주",
         Daejeon: "대전",
         Daegu: "대구",
         Pohang: "포항",
-        Heuksando: "흑산도",
         Mokpo: "목포",
         Jeju: "제주",
         Ulsan: "울산",
         Yeosu: "여수",
-        Changwon: "창원",
         Busan: "부산",
         Gwangju: "광주"
       };
@@ -282,7 +277,7 @@ function Record() {
   const handleAddSelectedItem = (category) => {
     const selectedValue = selectedItems[category];
     if (!selectedValue) return;
-    
+
     // 선택된 옵션의 텍스트를 가져오기 위해 옵션 목록에서 찾기
     const optionTexts = {
       outer: { jacket: "자켓", coat: "코트", cardigan: "가디건", hoodie: "후드티", blazer: "블레이저" },
@@ -291,7 +286,7 @@ function Record() {
       shoes: { sneakers: "스니커즈", boots: "부츠", sandals: "샌들", heels: "힐", loafers: "로퍼" },
       acc: { bag: "가방", hat: "모자", scarf: "스카프", watch: "시계", jewelry: "액세서리" }
     };
-    
+
     const itemText = optionTexts[category][selectedValue] || selectedValue;
     setOutfit((prev) => ({ ...prev, [category]: [...prev[category], itemText] }));
     setSelectedItems((prev) => ({ ...prev, [category]: "" }));
@@ -315,7 +310,7 @@ function Record() {
 
   const handleSubmit = async () => {
     console.log("저장 시작 - 사용자:", user?.uid);
-    
+
     if (!user) {
       console.log("저장 실패: 로그인 필요");
       toast.error("로그인이 필요합니다.");
@@ -413,10 +408,10 @@ function Record() {
         nickname: profile?.nickname || user.uid,
         // 기록한 날짜와 시간 추가
         recordedDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD 형식
-        recordedTime: new Date().toLocaleTimeString('ko-KR', { 
-          hour12: false, 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        recordedTime: new Date().toLocaleTimeString('ko-KR', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit'
         }), // HH:MM 형식
         recordedAt: new Date(), // 전체 날짜시간 (ISO 형식)
       };
@@ -470,14 +465,14 @@ function Record() {
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
           onClick={() => navigate(-1)}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-400"
         >
           <ArrowLeftIcon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">{formattedDate}</h2>
         <button
           onClick={() => navigate("/")}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-400"
         >
           <HomeIcon className="w-5 h-5" />
         </button>
@@ -485,34 +480,35 @@ function Record() {
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row md:items-start md:justify-center gap-6 overflow-y-auto">
         {/* 왼쪽: 날씨 카드 */}
-        <div className="w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center min-h-[705px] rounded-lg">
+        <div className="relative w-full md:w-1/3 bg-gray-200 px-6 py-6 text-center min-h-[705px] rounded-lg">
+          {/* +댓글 보기 버튼 */}
+          <div className="absolute top-5 left-6">
+            <button className="px-3 py-1 bg-white rounded text-sm font-medium hover:bg-gray-100 transition-colors">
+              +댓글 보기
+            </button>
+          </div>
           {/* 지역 선택 드롭다운 */}
-          <div className="mb-4">
+          <div className="mt-10 mb-8">
             <select
               value={selectedRegion || "Seoul"}
               onChange={e => handleRegionChange(e.target.value)}
               className="w-30 px-4 py-2 border rounded bg-white text-center"
             >
-              <option value="Baengnyeongdo">백령도</option>
               <option value="Incheon">인천</option>
               <option value="Seoul">서울</option>
               <option value="Chuncheon">춘천</option>
               <option value="Gangneung">강릉</option>
               <option value="Ulleungdo">울릉도/독도</option>
-              <option value="Hongseong">홍성</option>
               <option value="Suwon">수원</option>
               <option value="Cheongju">청주</option>
-              <option value="Andong">안동</option>
               <option value="Jeonju">전주</option>
               <option value="Daejeon">대전</option>
               <option value="Daegu">대구</option>
               <option value="Pohang">포항</option>
-              <option value="Heuksando">흑산도</option>
               <option value="Mokpo">목포</option>
               <option value="Jeju">제주</option>
               <option value="Ulsan">울산</option>
               <option value="Yeosu">여수</option>
-              <option value="Changwon">창원</option>
               <option value="Busan">부산</option>
               <option value="Gwangju">광주</option>
             </select>
@@ -530,100 +526,110 @@ function Record() {
             <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
           ) : weather ? (
             <>
-              {/* 새로운 날씨 정보 필드들 */}
-              <div className="mt-4 space-y-3">
+              {/* 날씨 정보 필드들 */}
+              <div className="mt-8 space-y-6">
                 {/* 계절 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="text-base font-semibold">계절</span>
-                  <button className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition-colors">
-                    자동
-                  </button>
+                <div className="flex justify-center">
+                  <div className="flex items-center w-60">
+                    <span className="w-28 text-base font-semibold text-left">계절</span>
+                    <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm flex items-center justify-center">
+                      자동
+                    </div>
                   </div>
+                </div>
 
                 {/* 온도 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="text-base font-semibold">온도</span>
-                  <div className="px-3 py-1 bg-blue-100 rounded text-sm text-blue-800 font-medium">
-                    {weather?.temp || 0}°C
+                <div className="flex justify-center">
+                  <div className="flex items-center w-60">
+                    <span className="w-28 text-base font-semibold text-left">온도</span>
+                    <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
+                      {weather?.temp || 0}°C
+                    </div>
+                  </div>
                 </div>
-              </div>
 
                 {/* 강수량 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="text-base font-semibold">강수량</span>
-                  <div className="px-3 py-1 bg-blue-100 rounded text-sm text-blue-800 font-medium">
-                    {weather?.rain || 0}mm
-                </div>
+                <div className="flex justify-center">
+                  <div className="flex items-center w-60">
+                    <span className="w-28 text-base font-semibold text-left">강수량</span>
+                    <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
+                      {weather?.rain || 0}mm
+                    </div>
+                  </div>
                 </div>
 
                 {/* 습도 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="text-base font-semibold">습도</span>
-                  <div className="px-3 py-1 bg-blue-100 rounded text-sm text-blue-800 font-medium">
-                    {weather?.humidity || 0}%
+                <div className="flex justify-center">
+                  <div className="flex items-center w-60">
+                    <span className="w-28 text-base font-semibold text-left">습도</span>
+                    <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
+                      {weather?.humidity || 0}%
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-4 space-y-3">
                 {/* 체감 선택 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="text-base font-semibold">체감</span>
-                <select
-                  value={feeling}
-                  onChange={(e) => setFeeling(e.target.value)}
-                    className="w-32 px-2 py-1 border rounded text-center text-sm"
-                >
-                  <option value="" className="text-gray-500">선택</option>
-                  <option value="steam">🥟 찐만두</option>
-                  <option value="hot">🥵 더움</option>
-                  <option value="nice">👍🏻 적당</option>
-                  <option value="cold">💨 추움</option>
-                  <option value="ice">🥶 동태</option>
-                </select>
+                <div className="flex justify-center">
+                  <div className="flex items-center w-60">
+                    <span className="w-28 text-base font-semibold text-left">체감</span>
+                    <select
+                      value={feeling}
+                      onChange={(e) => setFeeling(e.target.value)}
+                      className="ml-auto w-32 h-9 px-3 py-1 border rounded text-sm text-center flex items-center justify-center"
+                    >
+                      <option value="" className="text-gray-500">선택</option>
+                      <option value="steam">🥟 (찐만두)</option>
+                      <option value="hot">🥵 (더움)</option>
+                      <option value="nice">👍🏻 (적당)</option>
+                      <option value="cold">💨 (추움)</option>
+                      <option value="ice">🥶 (동태)</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* 스타일 선택 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="text-base font-semibold">스타일</span>
-                  <select
-                    className="w-32 px-2 py-1 border rounded text-center text-sm"
-                  >
-                    <option value="" className="text-gray-500">선택</option>
-                    <option value="casual">캐주얼</option>
-                    <option value="formal">포멀</option>
-                    <option value="sporty">스포티</option>
-                    <option value="street">스트릿</option>
-                  </select>
-                    </div>
+                <div className="flex justify-center">
+                  <div className="flex items-center w-60">
+                    <span className="w-28 text-base font-semibold text-left">스타일</span>
+                    <select className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center">
+                      <option value="" className="text-gray-500">선택</option>
+                      <option value="casual">캐주얼</option>
+                      <option value="minimal">미니멀</option>
+                      <option value="formal">포멀</option>
+                      <option value="sporty">스포티/액티브</option>
+                      <option value="street">시크/스트릿</option>
+                      <option value="feminine">러블리/페미닌</option>
+                    </select>
                   </div>
+                </div>
+              </div>
             </>
           ) : (
             <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
           )}
-                </div>
+        </div>
 
         {/* 오른쪽 입력 폼 */}
         <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center min-h-[705px] rounded-lg">
           {/* 입력폼 상단 바 */}
-          <div className="flex justify-end bg-gray-200 items-center mb-4 gap-4">
+          <div className="flex justify-between bg-gray-200 items-center mb-4 px-4 py-1">
             {/* 피드 체크박스 */}
-            <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
+            <div className="flex items-center gap-2 ml-2">
+              <input
+                type="checkbox"
                 id="feedCheckbox"
-                    checked={isPublic}
-                    onChange={(e) => setIsPublic(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-              <label htmlFor="feedCheckbox" className="text-sm text-gray-700">
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="feedCheckbox" className="font-medium text-gray-600">
                 피드
-                  </label>
-        </div>
+              </label>
+            </div>
 
             <button
               onClick={handleSubmit}
-              className="px-4 py-2 rounded text-gray-600 font-normal hover:font-bold transition"
+              className="px-4 py-2 rounded text-gray-600 font-medium hover:font-bold transition"
               disabled={loading}
             >
               {loading ? "저장 중..." : "저장"}
@@ -731,13 +737,13 @@ function Record() {
             </div>
 
             {/* 착장 선택 드롭다운 (outer, top, bottom 등) */}
-            <div className="w-full md:w-1/2 space-y-4 max-h-96 overflow-y-auto pr-6">
+            <div className="w-full md:w-1/2 space-y-4 max-h-96 overflow-y-auto pr-10">
               {/* Outer 드롭다운 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Outer</label>
-                    <div className="flex gap-2 items-center">
-                  <select 
-                    className="flex-1 px-3 py-2 border rounded bg-white"
+                <div className="flex gap-2 items-center">
+                  <select
+                    className="w-80 px-3 py-2 border rounded bg-white"
                     value={selectedItems.outer}
                     onChange={(e) => handleSelectChange("outer", e.target.value)}
                   >
@@ -748,38 +754,38 @@ function Record() {
                     <option value="hoodie">후드티</option>
                     <option value="blazer">블레이저</option>
                   </select>
-                      <button
-                        type="button"
+                  <button
+                    type="button"
                     onClick={() => handleAddSelectedItem("outer")}
-                        className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
-                      >
-                        +
-                      </button>
-                    </div>
+                    className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  >
+                    +
+                  </button>
+                </div>
                 {outfit.outer.length > 0 && (
-                      <ul className="ml-2 mt-1 text-sm text-gray-600">
+                  <ul className="ml-2 mt-1 text-sm text-gray-600">
                     {outfit.outer.map((item, idx) => (
-                          <li key={idx} className="flex items-center gap-1">
-                            • {item}
-                            <button
-                              type="button"
-                              className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                      <li key={idx} className="flex items-center gap-1">
+                        • {item}
+                        <button
+                          type="button"
+                          className="ml-1 mb-1 px-2 py-0.5 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
                           onClick={() => handleRemoveItem("outer", idx)}
-                            >
-                              -
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                        >
+                          -
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
               {/* Top 드롭다운 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Top</label>
                 <div className="flex gap-2 items-center">
-                  <select 
-                    className="flex-1 px-3 py-2 border rounded bg-white"
+                  <select
+                    className="w-80 px-3 py-2 border rounded bg-white"
                     value={selectedItems.top}
                     onChange={(e) => handleSelectChange("top", e.target.value)}
                   >
@@ -805,7 +811,7 @@ function Record() {
                         • {item}
                         <button
                           type="button"
-                          className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                          className="ml-1 mb-1 px-2 py-0.5 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
                           onClick={() => handleRemoveItem("top", idx)}
                         >
                           -
@@ -820,8 +826,8 @@ function Record() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Bottom</label>
                 <div className="flex gap-2 items-center">
-                  <select 
-                    className="flex-1 px-3 py-2 border rounded bg-white"
+                  <select
+                    className="w-80 px-3 py-2 border rounded bg-white"
                     value={selectedItems.bottom}
                     onChange={(e) => handleSelectChange("bottom", e.target.value)}
                   >
@@ -847,7 +853,7 @@ function Record() {
                         • {item}
                         <button
                           type="button"
-                          className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                          className="ml-1 mb-1 px-2 py-0.5 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
                           onClick={() => handleRemoveItem("bottom", idx)}
                         >
                           -
@@ -862,8 +868,8 @@ function Record() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Shoes</label>
                 <div className="flex gap-2 items-center">
-                  <select 
-                    className="flex-1 px-3 py-2 border rounded bg-white"
+                  <select
+                    className="w-80 px-3 py-2 border rounded bg-white"
                     value={selectedItems.shoes}
                     onChange={(e) => handleSelectChange("shoes", e.target.value)}
                   >
@@ -889,7 +895,7 @@ function Record() {
                         • {item}
                         <button
                           type="button"
-                          className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                          className="ml-1 mb-1 px-2 py-0.5 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
                           onClick={() => handleRemoveItem("shoes", idx)}
                         >
                           -
@@ -904,8 +910,8 @@ function Record() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Acc</label>
                 <div className="flex gap-2 items-center">
-                  <select 
-                    className="flex-1 px-3 py-2 border rounded bg-white"
+                  <select
+                    className="w-80 px-3 py-2 border rounded bg-white"
                     value={selectedItems.acc}
                     onChange={(e) => handleSelectChange("acc", e.target.value)}
                   >
@@ -931,7 +937,7 @@ function Record() {
                         • {item}
                         <button
                           type="button"
-                          className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
+                          className="ml-1 mb-1 px-2 py-0.5 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
                           onClick={() => handleRemoveItem("acc", idx)}
                         >
                           -

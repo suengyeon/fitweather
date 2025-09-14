@@ -43,37 +43,32 @@ function Recommend() {
 
   // 지역 목록
   const regionMap = {
-    Baengnyeongdo: "백령도",
     Incheon: "인천",
     Seoul: "서울",
     Chuncheon: "춘천",
     Gangneung: "강릉",
     Ulleungdo: "울릉도/독도",
-    Hongseong: "홍성",
     Suwon: "수원",
     Cheongju: "청주",
-    Andong: "안동",
     Jeonju: "전주",
     Daejeon: "대전",
     Daegu: "대구",
     Pohang: "포항",
-    Heuksando: "흑산도",
     Mokpo: "목포",
     Jeju: "제주",
     Ulsan: "울산",
     Yeosu: "여수",
-    Changwon: "창원",
     Busan: "부산",
     Gwangju: "광주"
   };
 
   // 체감 이모지 목록
   const feelingOptions = [
-    { value: "steam", label: "🥟 찐만두", emoji: "🥟" },
-    { value: "hot", label: "🥵 더움", emoji: "🥵" },
-    { value: "nice", label: "👍🏻 적당", emoji: "👍🏻" },
-    { value: "cold", label: "💨 추움", emoji: "💨" },
-    { value: "ice", label: "🥶 동태", emoji: "🥶" }
+    { value: "steam", label: "🥟 (찐만두)", emoji: "🥟" },
+    { value: "hot", label: "🥵 (더움)", emoji: "🥵" },
+    { value: "nice", label: "👍🏻 (적당)", emoji: "👍🏻" },
+    { value: "cold", label: "💨 (추움)", emoji: "💨" },
+    { value: "ice", label: "🥶 (동태)", emoji: "🥶" }
   ];
 
   // 날씨 이모지 목록
@@ -505,7 +500,7 @@ function Recommend() {
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           <Bars3Icon className="w-5 h-5" />
@@ -513,7 +508,7 @@ function Recommend() {
         <h2 className="font-bold text-lg">추천 코디</h2>
         <button
           onClick={() => navigate("/")}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
         >
           <HomeIcon className="w-5 h-5" />
         </button>

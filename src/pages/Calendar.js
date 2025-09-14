@@ -63,12 +63,12 @@ function CalendarPage() {
       if (!isOwnCalendar) {
         const userRef = doc(db, "users", currentUserId);
         const userSnap = await getDoc(userRef);
-        
+
         if (userSnap.exists()) {
           const userData = userSnap.data();
           setTargetUser(userData);
           setIsPublic(userData.isPublic || false);
-          
+
           // 공개되지 않은 캘린더인 경우 접근 거부
           if (!userData.isPublic) {
             alert("이 사용자의 캘린더는 비공개입니다.");
@@ -141,22 +141,22 @@ function CalendarPage() {
         navigate(`/record`, { state: { existingRecord } });
       } else {
         // 다른 사용자의 기록: FeedDetail 페이지로 이동
-        navigate(`/feed/${existingRecord.id}`, { 
-          state: { 
+        navigate(`/feed/${existingRecord.id}`, {
+          state: {
             fromCalendar: true,
             targetUserId: currentUserId
-          } 
+          }
         });
       }
     } else if (isOwnCalendar) {
       // 자신의 캘린더에서만 새 기록 생성 가능
       const isToday = dateStr === todayStr;
       const state = { date: dateStr };
-      
+
       if (isToday) {
         state.selectedRegion = profile?.region;
       }
-      
+
       navigate("/record", { state });
     }
   };
@@ -178,48 +178,53 @@ function CalendarPage() {
   };
 
   // 📌 날짜 타일에 이모지 + 날짜 표시
-const tileContent = ({ date, view }) => {
-  if (view !== "month") return null;
+  const tileContent = ({ date, view }) => {
+    if (view !== "month") return null;
 
-  const dateStr = formatDateLocal(date);
-  const record = outfitMap[dateStr];
-  const weather = record?.weatherEmojis?.slice(0, 2).join(" ");
-  const feelingEmoji =
-    {
-      steam: "🥟",
-      hot: "🥵",
-      nice: "👍🏻",
-      cold: "💨",
-      ice: "🥶",
-    }[record?.feeling] || "";
+    const dateStr = formatDateLocal(date);
+    const record = outfitMap[dateStr];
+    const weather = record?.weatherEmojis?.slice(0, 2).join(" ");
+    const feelingEmoji =
+      {
+        steam: "🥟",
+        hot: "🥵",
+        nice: "👍🏻",
+        cold: "💨",
+        ice: "🥶",
+      }[record?.feeling] || "";
 
-  return (
-    <div className="calendar-tile-content">
-      {/* 상단: 날짜와 날씨 이모지 */}
-      <div className="calendar-tile-top">
-        <span className="calendar-date">{date.getDate()}</span>
-        <span className="calendar-weather">{weather}</span>
+    return (
+      <div className="calendar-tile-content">
+        {/* 상단: 날짜와 날씨 이모지 */}
+        <div className="calendar-tile-top">
+          <span className="calendar-date">{date.getDate()}</span>
+          <span className="calendar-weather">{weather}</span>
+        </div>
+        {/* 하단: 체감 이모지 */}
+        {feelingEmoji && <div className="calendar-feeling">{feelingEmoji}</div>}
       </div>
-      {/* 하단: 체감 이모지 */}
-      {feelingEmoji && <div className="calendar-feeling">{feelingEmoji}</div>}
-    </div>
-  );
-};
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
-      <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+      <div className="relative flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+        {/* 왼쪽: 햄버거 버튼 */}
         <button
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           <Bars3Icon className="w-5 h-5" />
         </button>
-        <h2 className="font-bold text-lg">
+
+        {/* 가운데: 제목 (항상 중앙 고정) */}
+        <h2 className="absolute left-1/2 -translate-x-1/2 font-bold text-lg">
           {isOwnCalendar ? "My Calendar" : `${targetUser?.nickname || "사용자"}님의 Calendar`}
         </h2>
+
+        {/* 오른쪽: 체크박스 + 홈버튼 */}
         <div className="flex items-center gap-3">
           {isOwnCalendar && (
             <div className="flex items-center gap-2">
@@ -237,12 +242,13 @@ const tileContent = ({ date, view }) => {
           )}
           <button
             onClick={() => navigate("/")}
-            className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+            className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
           >
             <HomeIcon className="w-5 h-5" />
           </button>
         </div>
       </div>
+
 
       {/* 캘린더 */}
       <div className="flex justify-center py-6 px-4">
