@@ -84,6 +84,7 @@ function CalendarPage() {
         // 자신의 캘린더인 경우
         setTargetUser(profile);
         setIsPublic(profile?.isPublic || false);
+        console.log("자신의 캘린더 - isPublic 상태:", profile?.isPublic);
       }
     };
 
@@ -165,12 +166,21 @@ function CalendarPage() {
   const handlePublicToggle = async () => {
     if (!isOwnCalendar || !user?.uid) return;
 
+    const newPublicState = !isPublic;
+    
     try {
+      console.log("공개 여부 변경 중:", newPublicState);
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
-        isPublic: !isPublic
+        isPublic: newPublicState
       });
-      setIsPublic(!isPublic);
+      
+      // 상태 업데이트
+      setIsPublic(newPublicState);
+      console.log("공개 여부 변경 완료:", newPublicState);
+      
+      // 성공 메시지
+      alert(newPublicState ? "캘린더가 공개되었습니다." : "캘린더가 비공개로 설정되었습니다.");
     } catch (error) {
       console.error("공개 여부 업데이트 실패:", error);
       alert("공개 여부 변경에 실패했습니다.");

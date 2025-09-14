@@ -29,6 +29,7 @@ export default function useUserProfile() {
           setProfile({
             nickname: data.nickname,
             region: data.region || "Seoul", // 기본값으로 Seoul 설정
+            isPublic: data.isPublic || false, // 캘린더 공개 여부
           });
         } else {
           console.log('useUserProfile: 사용자 데이터가 존재하지 않음');

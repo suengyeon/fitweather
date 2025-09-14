@@ -1,5 +1,22 @@
+// 날씨 아이콘 코드에 따른 이모지 반환 함수
+function getWeatherEmoji(iconCode) {
+  switch (iconCode) {
+    case "sunny": return "☀️";        // 맑음
+    case "cloudy": return "☁️";       // 구름많음
+    case "overcast": return "🌥️";     // 흐림
+    case "rain": return "🌧️";        // 비
+    case "snow": return "❄️";        // 눈
+    case "snow_rain": return "🌨️";   // 비/눈
+    case "shower": return "🌦️";      // 소나기
+    default: return "☁️";            // 기본값: 구름
+  }
+}
+
 export default function WeatherCard({ region, temp, rain, humidity, desc, icon, bgColor = "bg-gray-100", isHome = false, labelRight = false, isRecord = false, onIconClick = null }) {
-    const iconText = icon === "rain" ? "☔️" : "☀️";
+    // 디버깅: 전달받은 icon 값 확인
+    console.log("WeatherCard - icon 값:", icon, "타입:", typeof icon);
+    const iconText = getWeatherEmoji(icon);
+    console.log("WeatherCard - 변환된 이모지:", iconText);
   
     return (
       <div className="flex flex-col items-center">

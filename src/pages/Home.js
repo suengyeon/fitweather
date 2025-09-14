@@ -134,14 +134,22 @@ function Home() {
                   </div>
                 </div>
                 
-                {/* 날씨 메시지 */}
-                <div className="text-center text-gray-600">
-                  <p className="text-lg">
-                    오늘의 날씨는 <span className="font-semibold text-orange-500">초가을</span> <span className="font-semibold text-blue-600">
-                      {weather.temp < 10 ? "추워요" : "시원해요"}
-                    </span>! 이런 아이템 어때요?
-                  </p>
-                </div>
+                    {/* 날씨 메시지 */}
+                    <div className="text-center text-gray-600">
+                      <p className="text-lg">
+                        오늘의 날씨는 <span 
+                          className="font-semibold" 
+                          style={{ color: weather.seasonColor || "#795548" }}
+                        >
+                          {weather.season || "초가을"}
+                        </span> <span 
+                          className="font-semibold"
+                          style={{ color: weather.expressionColor || "#03A9F4" }}
+                        >
+                          {weather.weatherExpression || (weather.temp < 10 ? "추워요" : "시원해요")}
+                        </span>! 이런 아이템 어때요?
+                      </p>
+                    </div>
               </div>
             )}
 

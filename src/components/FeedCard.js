@@ -8,7 +8,19 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank, selectedDate, se
   const [isLiked, setIsLiked] = useState(record.likes?.includes(currentUserUid));
   const [likeCount, setLikeCount] = useState(record.likes?.length || 0);
 
-  const getWeatherEmoji = (weatherEmojis) => weatherEmojis?.[0] || "🌤️";
+  // 날씨 아이콘 코드에 따른 이모지 반환 함수 (Home, Record와 동일한 로직)
+  const getWeatherEmoji = (iconCode) => {
+    switch (iconCode) {
+      case "sunny": return "☀️";        // 맑음
+      case "cloudy": return "☁️";       // 구름많음
+      case "overcast": return "🌥️";     // 흐림
+      case "rain": return "🌧️";        // 비
+      case "snow": return "❄️";        // 눈
+      case "snow_rain": return "🌨️";   // 비/눈
+      case "shower": return "🌦️";      // 소나기
+      default: return "☁️";            // 기본값: 구름
+    }
+  };
 
   const feelingEmojiMap = {
     steam: "🥟", hot: "🥵", nice: "👍🏻", cold: "💨", ice: "🥶"
@@ -157,7 +169,20 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank, selectedDate, se
                 </button>
                 <span style={{ fontWeight: 600, fontSize: 14 }}>{likeCount}</span>
               </div>
-              <span style={{ fontSize: 18 }}>{getWeatherEmoji(record.weatherEmojis)}</span>
+              <span style={{ fontSize: 18 }}>
+                {(() => {
+                  // 새로운 기록(weather.icon이 있는 경우)은 weather.icon 사용
+                  if (record.weather?.icon && record.weather.icon !== "sunny") {
+                    return getWeatherEmoji(record.weather.icon);
+                  }
+                  // 기존 기록(weatherEmojis가 있는 경우)은 weatherEmojis 사용
+                  if (record.weatherEmojis && record.weatherEmojis.length > 0) {
+                    return record.weatherEmojis[0];
+                  }
+                  // 기본값
+                  return "☁️";
+                })()}
+              </span>
               <span style={{ fontSize: 18 }}>{feelingEmoji}</span>
             </>
           )}

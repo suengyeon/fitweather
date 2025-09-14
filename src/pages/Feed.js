@@ -11,6 +11,20 @@ import useWeather from "../hooks/useWeather";
 import WeatherCard from "../components/WeatherCard";
 import Sidebar from "../components/Sidebar";
 
+// 날씨 아이콘 코드에 따른 이모지 반환 함수 (Home, Record와 동일한 로직)
+function getWeatherEmoji(iconCode) {
+  switch (iconCode) {
+    case "sunny": return "☀️";        // 맑음
+    case "cloudy": return "☁️";       // 구름많음
+    case "overcast": return "🌥️";     // 흐림
+    case "rain": return "🌧️";        // 비
+    case "snow": return "❄️";        // 눈
+    case "snow_rain": return "🌨️";   // 비/눈
+    case "shower": return "🌦️";      // 소나기
+    default: return "☁️";            // 기본값: 구름
+  }
+}
+
 function Feed() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -19,6 +33,9 @@ function Feed() {
   const [order, setOrder] = useState("popular"); // 인기순 or 최신순
   const [region, setRegion] = useState(""); // 초기값 빈 문자열
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // 날씨 정보 가져오기 (모든 날짜에 대해 선택된 지역 사용)
+  const { weather, loading: weatherLoading } = useWeather(region);
 
   // 세션스토리지에서 저장된 지역 정보 가져오기
   const getStoredRegion = () => {
@@ -69,8 +86,6 @@ function Feed() {
     return `${year}-${monthStr}-${dayStr}`;
   });
 
-  // 날씨 데이터 fetch
-  const { weather, loading: weatherLoading } = useWeather(region);
 
   // 사용자 region fetch
   useEffect(() => {
@@ -266,7 +281,7 @@ function Feed() {
                   <div
                     className="absolute text-8xl animate-bounce"
                   >
-                    {weather.icon === "rain" ? "☔️" : "☀️"}
+                    {getWeatherEmoji(weather.icon)}
                   </div>
                 </div>
               </div>

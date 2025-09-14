@@ -12,9 +12,10 @@ const SERVICE_KEY = process.env.REACT_APP_KMA_SERVICE_KEY;
  * 주어진 지역(region)으로 격자(nx, ny)를 찾아
  * 기상청 단기예보 API를 호출하는 함수
  * @param {string} region - "Seoul", "Busan" 등
+ * @param {string} date - 날짜 (YYYY-MM-DD 형식, 선택사항)
  * @returns {Promise<object[]|null>} API에서 받은 예보 item 배열
  */
-export const fetchKmaForecast = async (region) => {
+export const fetchKmaForecast = async (region, date = null) => {
   // 1) 격자좌표 추출
   const coords = regionGrid[region];
   if (!coords) {
@@ -24,8 +25,10 @@ export const fetchKmaForecast = async (region) => {
   const { nx, ny } = coords;
 
   // 2) 날짜/시간 포맷 준비
-  const baseDate = getTodayYYYYMMDD(); // ex. "20250727"
+  const baseDate = date ? date.replace(/-/g, '') : getTodayYYYYMMDD(); // ex. "20250727"
   const baseTime = getBaseTime();      // ex. "1400"
+  
+  console.log("📅 요청 날짜:", baseDate, "지역:", region);
 
   // 3) URL 조립
   const url = 
@@ -56,6 +59,11 @@ export const fetchKmaForecast = async (region) => {
           {
             category: "TMP",
             fcstValue: "25",
+            fcstTime: fcstTime
+          },
+          {
+            category: "TAVG",
+            fcstValue: "23",
             fcstTime: fcstTime
           },
           {

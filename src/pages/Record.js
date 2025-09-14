@@ -12,9 +12,17 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "../contexts/AuthContext";
 import { doc } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
+import { getPastWeatherData, fetchAndSavePastWeather, deletePastWeatherData, savePastWeatherData } from "../api/pastWeather";
+import { fetchKmaPastWeather } from "../api/kmaPastWeather";
 
 function formatDateLocal(date) {
   return date.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식 (KST 기준)
+}
+
+function isToday(dateStr) {
+  const today = new Date();
+  const todayStr = formatDateLocal(today);
+  return dateStr === todayStr;
 }
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수
@@ -59,27 +67,23 @@ function Record() {
     if (existingRecord?.region) {
       return existingRecord.region; // 기존 기록이 있으면 기록의 지역
     }
-    // 과거 날짜이고 기록이 없으면 사용자 기본 지역 사용
-    const isTodayDate = isToday(dateStr);
-    if (!isTodayDate) {
-      return profile?.region; // 과거 날짜는 사용자 기본 지역
-    }
-    return location.state?.selectedRegion || profile?.region; // 오늘 날짜는 Home에서 전달받은 지역 또는 사용자 기본 지역
+    return location.state?.selectedRegion || "Seoul"; // 기본값: 서울
   });
 
-  // 날씨 정보 설정: 기록이 있으면 기록된 날씨, 없으면 기본값 (온도/습도/강수량은 0)
-  const [weather, setWeather] = useState(() => {
-    if (existingRecord?.weather) {
-      return existingRecord.weather; // 기존 기록이 있으면 기록된 날씨 정보 사용
+  // profile이 로드된 후 selectedRegion 업데이트
+  useEffect(() => {
+    if (profile?.region && !existingRecord?.region) {
+    const isTodayDate = isToday(dateStr);
+    if (!isTodayDate) {
+        // 과거 날짜는 사용자 기본 지역 사용
+        setSelectedRegion(profile.region);
+      } else if (!location.state?.selectedRegion) {
+        // 오늘 날짜이고 Home에서 전달받은 지역이 없으면 사용자 기본 지역 사용
+        setSelectedRegion(profile.region);
+      }
     }
-    // 기록이 없으면 기본값 (온도/습도/강수량은 0)
-    return {
-      temp: 0,
-      rain: 0,
-      humidity: 0,
-      icon: "sunny"
-    };
-  });
+  }, [profile?.region, existingRecord?.region, dateStr, location.state?.selectedRegion]);
+
   const [image, setImage] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
   const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] });
@@ -87,7 +91,7 @@ function Record() {
   const [feeling, setFeeling] = useState("");
   const [memo, setMemo] = useState("");
   const [isPublic, setIsPublic] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [weatherEmojis, setWeatherEmojis] = useState([]);
   const emojiList = ["☀️", "🌩️", "❄️", "🌧️", "💨", "☁️"];
   const toggleEmoji = (emoji) => {
@@ -107,27 +111,140 @@ function Record() {
 
   const inputRefs = { outer: useRef(), top: useRef(), bottom: useRef(), shoes: useRef(), acc: useRef() };
 
-  // 날씨 API 연동 (오늘 날짜일 때만, 선택된 지역 사용)
+  // 날씨 API 연동 (오늘 날짜일 때만)
   const { weather: apiWeather, loading: apiWeatherLoading } = useWeather(
     isToday(dateStr) ? selectedRegion : null
   );
 
-  // 날씨 로딩 상태 설정 (오늘 날짜일 때만 API 로딩 상태 사용)
-  const weatherLoading = isToday(dateStr) ? apiWeatherLoading : false;
+  // 과거 날씨 데이터 상태
+  const [pastWeather, setPastWeather] = useState(null);
+  const [pastWeatherLoading, setPastWeatherLoading] = useState(false);
+
+  // 과거 날짜일 때 저장된 날씨 데이터 불러오기
+  useEffect(() => {
+    const loadPastWeather = async () => {
+      console.log("날짜 확인:", dateStr, "오늘인가?", isToday(dateStr), "지역:", selectedRegion);
+      
+      if (isToday(dateStr) || !selectedRegion) {
+        console.log("오늘 날짜이거나 지역이 없어서 과거 날씨 로딩 건너뜀");
+        setPastWeather(null);
+        return;
+      }
+      
+      setPastWeatherLoading(true);
+      try {
+        console.log("과거 날씨 데이터 불러오기:", dateStr, selectedRegion);
+        
+        // 먼저 저장된 데이터 확인
+        const savedData = await getPastWeatherData(dateStr, selectedRegion);
+        if (savedData) {
+          console.log("저장된 과거 날씨 데이터 발견:", savedData);
+          console.log("강수량:", savedData.avgRain, "온도:", savedData.avgTemp);
+          
+          // 9월 12일이면 항상 삭제하고 다시 생성 (강수량 데이터 확인을 위해)
+          if (dateStr === "2025-09-12") {
+            console.log("9월 12일 데이터 삭제 후 다시 생성 (강수량 데이터 확인)");
+            await deletePastWeatherData(dateStr, selectedRegion);
+            // 삭제 후 계속 진행하여 새로운 데이터 생성
+          } else {
+            const weatherData = {
+              temp: savedData.avgTemp,
+              rain: savedData.avgRain,
+              humidity: savedData.avgHumidity,
+              icon: savedData.iconCode,
+              season: savedData.season,
+              sky: savedData.sky,
+              pty: savedData.pty
+            };
+            setPastWeather(weatherData);
+            setPastWeatherLoading(false);
+            return;
+          }
+        }
+        
+        // 저장된 데이터가 없으면 과거 관측 API에서 직접 가져오기
+        console.log("🌧️ 기상청 과거 관측 API 직접 호출:", dateStr, selectedRegion);
+        console.log("🔍 fetchKmaPastWeather 함수 호출 시작");
+        let pastData = await fetchKmaPastWeather(dateStr, selectedRegion);
+        console.log("🔍 fetchKmaPastWeather 함수 호출 완료, 결과:", pastData);
+        
+        if (pastData) {
+          console.log("✅ 기상청 과거 관측 API에서 데이터 가져옴:", pastData);
+          // 실제 데이터 저장
+          await savePastWeatherData(dateStr, selectedRegion, pastData);
+        } else {
+          console.log("⚠️ 과거 관측 API 실패, fetchAndSavePastWeather 시도");
+          const fallbackData = await fetchAndSavePastWeather(dateStr, selectedRegion);
+          if (fallbackData) {
+            pastData = fallbackData;
+          }
+        }
+        if (pastData) {
+          const weatherData = {
+            temp: pastData.avgTemp,
+            rain: pastData.avgRain,
+            humidity: pastData.avgHumidity,
+            icon: pastData.iconCode,
+            season: pastData.season,
+            sky: pastData.sky,
+            pty: pastData.pty
+          };
+          setPastWeather(weatherData);
+          console.log("과거 날씨 데이터 로드 완료:", weatherData);
+        } else {
+          // API에서도 데이터를 가져올 수 없으면 기본값 사용
+          const defaultWeather = {
+            temp: "20",
+            rain: "0",
+            humidity: "60",
+            icon: "sunny",
+            season: "초가을",
+            sky: "1",
+            pty: "0"
+          };
+          setPastWeather(defaultWeather);
+          console.log("기본값 사용:", defaultWeather);
+        }
+      } catch (error) {
+        console.error("과거 날씨 데이터 로드 실패:", error);
+        // 에러 발생 시에도 기본값 사용
+        const defaultWeather = {
+          temp: "20",
+          rain: "0",
+          humidity: "60",
+          icon: "sunny",
+          season: "초가을",
+          sky: "1",
+          pty: "0"
+        };
+        setPastWeather(defaultWeather);
+      } finally {
+        setPastWeatherLoading(false);
+      }
+    };
+
+    loadPastWeather();
+  }, [dateStr, selectedRegion]);
+
+  // 날씨 정보 설정: 기록이 있으면 기록된 날씨, 오늘 날짜면 실시간 날씨, 과거 날짜면 저장된 과거 날씨 사용
+  const weather = existingRecord?.weather || 
+    (isToday(dateStr) ? apiWeather : pastWeather) || {
+      temp: 20,
+      rain: 0,
+      humidity: 60,
+      icon: "sunny",
+      season: "초가을"
+    };
+
+  // 로딩 상태: 오늘은 API 로딩, 과거는 과거 데이터 로딩
+  const loading = profileLoading || 
+    (isToday(dateStr) ? apiWeatherLoading : pastWeatherLoading);
+
 
   // 지역 변경 핸들러
   const handleRegionChange = (newRegion) => {
     setSelectedRegion(newRegion);
-    // 지역 변경 시 날씨 정보 초기화 (오늘 날짜인 경우에만)
-    if (isToday(dateStr) && !existingRecord) {
-      setWeather(prev => ({
-        ...prev,
-        temp: 0,
-        rain: 0,
-        humidity: 0,
-        icon: "sunny"
-      }));
-    }
+    // 지역 변경 시 날씨 정보는 useWeather 훅에서 자동으로 업데이트됨
   };
 
   useEffect(() => {
@@ -160,33 +277,9 @@ function Record() {
     }
   }, [selectedRegion]);
 
-  // 오늘 날짜이고 API 날씨 데이터가 있으면 업데이트 (기록이 없을 때만)
-  useEffect(() => {
-    if (isToday(dateStr) && apiWeather && !existingRecord) {
-      setWeather(prev => ({
-        ...prev,
-        temp: apiWeather.temp || 0,
-        rain: apiWeather.rain || 0,
-        humidity: apiWeather.humidity || 0,
-        icon: apiWeather.icon || "sunny"
-      }));
-    }
-  }, [apiWeather, dateStr, existingRecord, selectedRegion]);
+  // 날씨 정보는 useWeather 훅에서 자동으로 관리됨
 
-  // 날씨 정보 직접 수정 함수들
-  const handleWeatherChange = (field, value) => {
-    setWeather(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleWeatherIconChange = (icon) => {
-    setWeather(prev => ({
-      ...prev,
-      icon: icon
-    }));
-  };
+  // 날씨 정보는 useWeather 훅에서 자동으로 관리되므로 수정 함수들 제거
 
   useEffect(() => {
     if (existingRecord) {
@@ -351,7 +444,7 @@ function Record() {
     }
 
     console.log("저장 진행 중...");
-    setLoading(true);
+    setSubmitLoading(true);
 
     try {
       console.log("저장 데이터 준비 중...");
@@ -370,7 +463,7 @@ function Record() {
         if (!querySnapshot.empty) {
           console.log("저장 실패: 중복 기록");
           toast.error("이미 기록하셨습니다.");
-          setLoading(false);
+          setSubmitLoading(false);
           return;
         }
         console.log("중복 기록 없음, 계속 진행");
@@ -454,7 +547,7 @@ function Record() {
       toast.error(`저장에 실패했습니다: ${err.message}`);
     } finally {
       console.log("저장 프로세스 종료");
-      setLoading(false);
+      setSubmitLoading(false);
     }
   };
 
@@ -518,15 +611,17 @@ function Record() {
             </select>
           </div>
 
-          {/* 날씨 일러스트 */}
-          <div className="mb-4 flex justify-center">
-            <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-              <span className="text-6xl animate-bounce">
-                {getWeatherEmoji(weather?.icon)}
-              </span>
+          {/* 날씨 일러스트 - 로딩 중이 아닐 때만 표시 */}
+          {!loading && weather && (
+            <div className="mb-4 flex justify-center">
+              <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                <span className="text-6xl animate-bounce">
+                  {getWeatherEmoji(weather.icon)}
+                </span>
+              </div>
             </div>
-          </div>
-          {weatherLoading ? (
+          )}
+          {loading ? (
             <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
           ) : weather ? (
             <>
@@ -535,9 +630,9 @@ function Record() {
                 {/* 계절 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span className="text-base font-semibold">계절</span>
-                  <button className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition-colors">
-                    자동
-                  </button>
+                  <div className="px-3 py-1 bg-blue-100 rounded text-sm text-blue-800 font-medium">
+                    {weather.season || "초가을"}
+                    </div>
                   </div>
 
                 {/* 온도 */}
@@ -624,9 +719,9 @@ function Record() {
             <button
               onClick={handleSubmit}
               className="px-4 py-2 rounded text-gray-600 font-normal hover:font-bold transition"
-              disabled={loading}
+              disabled={submitLoading}
             >
-              {loading ? "저장 중..." : "저장"}
+              {submitLoading ? "저장 중..." : "저장"}
             </button>
 
             {/* ✅ 삭제 버튼 (수정 모드일 때만) */}
