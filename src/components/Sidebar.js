@@ -46,7 +46,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <button
                 onClick={() => handleMenuClick("/mypage_userinfo")}
                 className={`block w-full text-left px-3 py-2 rounded transition-colors ${isActive("/mypage_userinfo")
-                  ? "bg-blue-300 text-blue-800"
+                  ? "text-gray-700 font-bold bg-blue-200"
                   : "text-gray-700 hover:bg-gray-300"
                   }`}
               >
@@ -55,7 +55,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <button
                 onClick={() => handleMenuClick("/calendar")}
                 className={`block w-full text-left px-3 py-2 rounded transition-colors ${isActive("/calendar")
-                  ? "bg-blue-300 text-blue-800"
+                  ? "text-gray-700 font-bold bg-blue-200"
                   : "text-gray-700 hover:bg-gray-300"
                   }`}
               >
@@ -64,11 +64,11 @@ export default function Sidebar({ isOpen, onClose }) {
               <button
                 onClick={() => handleMenuClick("/mypage_likes")}
                 className={`block w-full text-left px-3 py-2 rounded transition-colors ${isActive("/mypage_likes")
-                  ? "bg-blue-300 text-blue-800"
+                  ? "text-gray-700 font-bold bg-blue-200"
                   : "text-gray-700 hover:bg-gray-300"
                   }`}
               >
-                내가 좋아요 한 코디
+               구독
               </button>
             </div>
           </div>
@@ -80,7 +80,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <button
                 onClick={() => handleMenuClick("/feed")}
                 className={`block w-full text-left px-3 py-2 rounded transition-colors ${isActive("/feed")
-                  ? "bg-blue-300 text-blue-800"
+                  ? "text-gray-700 font-bold bg-blue-200"
                   : "text-gray-700 hover:bg-gray-300"
                   }`}
               >
@@ -95,7 +95,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <button
               onClick={() => handleMenuClick("/recommend")}
               className={`block w-full text-left px-3 py-2 rounded transition-colors ${isActive("/recommend")
-                ? "bg-blue-300 text-blue-800"
+                ? "text-gray-700 font-bold bg-blue-200"
                 : "text-gray-700 hover:bg-gray-300"
                 }`}
             >

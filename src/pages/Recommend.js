@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+// src/pages/Recommend.js
+import React, { useEffect, useState } from "react";
 import FeedCard from "../components/FeedCard";
 import { getAllRecords } from "../api/getAllRecords";
 import { toggleLike } from "../api/toggleLike";
@@ -11,34 +12,71 @@ function Recommend() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [outfits, setOutfits] = useState([]);
   const [filteredOutfits, setFilteredOutfits] = useState([]);
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [excludeMyRecords, setExcludeMyRecords] = useState(false);
   const [onlyMyRecords, setOnlyMyRecords] = useState(false);
-  
-  // 필터 상태
+  const [likedOnly, setLikedOnly] = useState(false);
+
+  // ✅ 계절 코드↔한글 레이블 매핑 (레코드가 한글, 셀렉트는 코드여도 매칭 가능)
+  const seasonMap = {
+    earlyspring: "초봄",
+    spring: "봄",
+    latespring: "늦봄",
+    earlysummer: "초여름",
+    summer: "여름",
+    latesummer: "늦여름",
+    earlyautumn: "초가을",
+    autumn: "가을",
+    lateautumn: "늦가을",
+    earlywinter: "초겨울",
+    winter: "겨울",
+    latewinter: "늦겨울",
+  };
+  const normalizeSeason = (v) => (v ? (seasonMap[v] || v) : "");
+
+  // ✅ 스타일 매칭 (영문/한글/복합 레이블 모두 인식)
+  const styleAliases = {
+    casual: ["casual", "캐주얼"],
+    minimal: ["minimal", "미니멀"],
+    formal: ["formal", "포멀"],
+    sporty: ["sporty", "스포티", "액티브", "스포티/액티브"],
+    street: ["street", "시크", "스트릿", "시크/스트릿"],
+    feminine: ["feminine", "러블리", "페미닌", "러블리/페미닌"],
+  };
+  const matchesStyle = (recordStyleField, filterKey) => {
+    if (!filterKey) return true;
+    // record.styles (array) 또는 record.style (string) 모두 대응
+    const wanted = styleAliases[filterKey] || [filterKey];
+    const checkOne = (s) =>
+      !!wanted.find((w) => String(s).toLowerCase() === String(w).toLowerCase());
+    if (Array.isArray(recordStyleField)) {
+      return recordStyleField.some(checkOne);
+    }
+    if (recordStyleField == null) return false;
+    return checkOne(recordStyleField);
+  };
+
+  // ⭐ 필터 상태 (region, feeling + season, style)
   const [filters, setFilters] = useState(() => {
-    // 세션스토리지에서 저장된 필터 상태 복원
-    const savedFilters = sessionStorage.getItem('recommendFilters');
-    if (savedFilters) {
+    const saved = sessionStorage.getItem("recommendFilters");
+    if (saved) {
       try {
-        return JSON.parse(savedFilters);
-      } catch (e) {
-        console.error('Failed to parse saved filters:', e);
+        const p = JSON.parse(saved);
+        return {
+          region: p.region || "",
+          feeling: p.feeling || "",
+          season: p.season || "", // ← 추가
+          style: p.style || "",   // ← 추가
+        };
+      } catch {
+        /* ignore */
       }
     }
-    
-    // 기본 필터 상태
-    return {
-      region: "",
-      tempRange: { min: 0, max: 100 },
-      rainRange: { min: 0, max: 100 },
-      humidityRange: { min: 0, max: 100 },
-      feeling: "",
-      weatherEmojis: []
-    };
+    return { region: "", feeling: "", season: "", style: "" };
   });
 
   // 지역 목록
@@ -59,444 +97,171 @@ function Recommend() {
     Ulsan: "울산",
     Yeosu: "여수",
     Busan: "부산",
-    Gwangju: "광주"
+    Gwangju: "광주",
   };
 
-  // 체감 이모지 목록
+  // 체감 옵션
   const feelingOptions = [
     { value: "steam", label: "🥟 (찐만두)", emoji: "🥟" },
     { value: "hot", label: "🥵 (더움)", emoji: "🥵" },
     { value: "nice", label: "👍🏻 (적당)", emoji: "👍🏻" },
     { value: "cold", label: "💨 (추움)", emoji: "💨" },
-    { value: "ice", label: "🥶 (동태)", emoji: "🥶" }
+    { value: "ice", label: "🥶 (동태)", emoji: "🥶" },
   ];
-
-  // 날씨 이모지 목록
-  const weatherEmojiOptions = ["☀️", "🌩️", "❄️", "🌧️", "💨", "☁️"];
 
   // 모든 기록 가져오기 (최근 30일)
   useEffect(() => {
     const fetchAllRecords = async () => {
       try {
         const records = await getAllRecords(30);
-        console.log("Fetched records:", records.length);
-        console.log("Sample record:", records[0]);
-        
-        // 부산 지역 기록 확인
-        const busanRecords = records.filter(r => r.region === 'Busan');
-        console.log("Busan records:", busanRecords.length);
-        
         setOutfits(records);
         setFilteredOutfits(records);
       } catch (error) {
         console.error("Error fetching records:", error);
       }
     };
-
     fetchAllRecords();
   }, []);
 
-  // 사용자 필터가 전달된 경우 적용
+  // 다른 페이지에서 전달된 필터 적용 (region/feeling만 유지하던 기존 로직)
   useEffect(() => {
     if (location.state?.userFilters && location.state?.userRegion) {
-      const userFilters = location.state.userFilters;
       const userRegion = location.state.userRegion;
-      
-      console.log("Applying user filters:", userFilters);
-      console.log("User region:", userRegion);
-      
-      setFilters({
-        region: userRegion,
-        tempRange: userFilters.tempRange,
-        rainRange: userFilters.rainRange,
-        humidityRange: userFilters.humidityRange,
-        feeling: "",
-        weatherEmojis: []
-      });
+      setFilters((prev) => ({ ...prev, region: userRegion, feeling: "" }));
     } else if (location.state?.currentWeather) {
-      // 홈에서 현재 날씨 정보로 이동한 경우
       const currentWeather = location.state.currentWeather;
-      console.log("Applying current weather filters:", currentWeather);
-      
-      // 현재 날씨에 맞는 범위로 필터 설정
-      const temp = parseInt(currentWeather.temp);
-      const rain = parseInt(currentWeather.rain);
-      const humidity = parseInt(currentWeather.humidity);
-      
-      setFilters({
-        region: currentWeather.region,
-        tempRange: { min: Math.max(0, temp - 5), max: Math.min(100, temp + 5) },
-        rainRange: { min: Math.max(0, rain - 10), max: Math.min(100, rain + 10) },
-        humidityRange: { min: Math.max(0, humidity - 10), max: Math.min(100, humidity + 10) },
+      setFilters((prev) => ({
+        ...prev,
+        region: currentWeather.region || "",
         feeling: "",
-        weatherEmojis: []
-      });
+      }));
     } else if (location.state?.fromDetail && location.state?.currentFilters) {
-      // FeedDetail에서 돌아온 경우, 전달받은 필터 상태 복원
-      console.log("Restoring filters from FeedDetail:", location.state.currentFilters);
-      setFilters(location.state.currentFilters);
+      const cf = location.state.currentFilters;
+      setFilters((prev) => ({
+        ...prev,
+        region: cf.region || "",
+        feeling: cf.feeling || "",
+        // season/style은 기존 저장값 유지
+      }));
     }
   }, [location.state]);
 
-    // 필터 적용 (디바운싱 적용)
+  // 필터 적용
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      let filtered = [...outfits];
+    // 필터 활성 여부
+    const hasFilters =
+      !!filters.region ||
+      !!filters.feeling ||
+      !!filters.season ||
+      !!filters.style ||
+      excludeMyRecords ||
+      onlyMyRecords ||
+      likedOnly;
+    setHasActiveFilters(hasFilters);
 
-      console.log("Filtering with:", filters);
-      console.log("Total records:", outfits.length);
+    let filtered = [...outfits];
 
-      // 필터가 하나라도 설정되어 있는지 확인
-      const hasFilters = filters.region || 
-                        filters.tempRange.min !== 0 || 
-                        filters.tempRange.max !== 100 || 
-                        filters.rainRange.min !== 0 || 
-                        filters.rainRange.max !== 100 || 
-                        filters.humidityRange.min !== 0 || 
-                        filters.humidityRange.max !== 100 || 
-                        filters.feeling || 
-                        filters.weatherEmojis.length > 0;
-
-      // 필터 상태를 상태로 저장
-      setHasActiveFilters(hasFilters);
-
-      if (!hasFilters) {
-        // 필터가 없으면 아무것도 표시하지 않음
-        setFilteredOutfits([]);
-        console.log("No filters, showing no records");
-        return;
+    filtered = filtered.filter((record) => {
+      // 나의 기록 제외/만
+      if (excludeMyRecords && user?.uid && record.uid === user.uid) return false;
+      if (onlyMyRecords) {
+        if (!user?.uid) return false;
+        if (record.uid !== user.uid) return false;
       }
 
-      // 필터가 있으면 필터링
-      filtered = filtered.filter(record => {
-        // 나의 기록만 체크박스가 체크되어 있으면 나의 기록만 표시
-        if (onlyMyRecords && record.uid !== user?.uid) {
-          return false;
-        }
+      // 내가 좋아요 한 코디
+      if (likedOnly) {
+        if (!user?.uid) return false;
+        const likesArr = Array.isArray(record.likes) ? record.likes : [];
+        if (!likesArr.includes(user.uid)) return false;
+      }
 
-        // 나의 기록 제외 체크박스가 체크되어 있으면 나의 기록 제외
-        if (excludeMyRecords && record.uid === user?.uid) {
-          return false;
-        }
+      // 지역
+      if (filters.region && record.region !== filters.region) return false;
 
-        // 지역 필터 (지역이 선택되면 반드시 일치해야 함)
-        const regionMatch = !filters.region || record.region === filters.region;
-        
-        // 지역이 선택되었는데 일치하지 않으면 제외
-        if (filters.region && !regionMatch) {
-          return false;
-        }
-        
-        // 온도 필터
-        const temp = record.temp || record.weather?.temp;
-        const tempMatch = temp !== null && temp !== undefined && 
-                         temp >= filters.tempRange.min && temp <= filters.tempRange.max;
-        
-        // 강수량 필터
-        const rain = record.rain || record.weather?.rain;
-        const rainMatch = rain !== null && rain !== undefined && 
-                         rain >= filters.rainRange.min && rain <= filters.rainRange.max;
-        
-        // 습도 필터
-        const humidity = record.humidity || record.weather?.humidity;
-        const humidityMatch = humidity !== null && humidity !== undefined && 
-                             humidity >= filters.humidityRange.min && humidity <= filters.humidityRange.max;
-        
-        // 체감 필터
-        const feelingMatch = !filters.feeling || record.feeling === filters.feeling;
-        
-        // 날씨 이모지 필터
-        const recordEmojis = record.weatherEmojis || [];
-        const emojiMatch = filters.weatherEmojis.length === 0 || 
-                          filters.weatherEmojis.some(emoji => recordEmojis.includes(emoji));
+      // 체감
+      if (filters.feeling && record.feeling !== filters.feeling) return false;
 
-        // 지역이 선택되지 않았으면 다른 조건들 중 하나라도 만족하면 포함
-        if (!filters.region) {
-          // 선택된 필터만 확인
-          const conditions = [];
-          
-          // 온도 범위가 기본값이 아니면 온도 조건 확인
-          if (filters.tempRange.min !== 0 || filters.tempRange.max !== 100) {
-            conditions.push(tempMatch);
-          }
-          
-          // 강수량 범위가 기본값이 아니면 강수량 조건 확인
-          if (filters.rainRange.min !== 0 || filters.rainRange.max !== 100) {
-            conditions.push(rainMatch);
-          }
-          
-          // 습도 범위가 기본값이 아니면 습도 조건 확인
-          if (filters.humidityRange.min !== 0 || filters.humidityRange.max !== 100) {
-            conditions.push(humidityMatch);
-          }
-          
-          // 체감이 선택되었으면 체감 조건 확인
-          if (filters.feeling) {
-            conditions.push(feelingMatch);
-          }
-          
-          // 날씨 이모지가 선택되었으면 이모지 조건 확인
-          if (filters.weatherEmojis.length > 0) {
-            conditions.push(emojiMatch);
-          }
-          
-          // 조건이 없으면 모든 기록 표시
-          if (conditions.length === 0) {
-            return true;
-          }
-          
-          // 모든 조건을 만족해야 함
-          return conditions.every(condition => condition);
-        }
-        
-        // 지역이 선택되었으면 해당 지역이면서 다른 조건들도 만족해야 함
-        if (!regionMatch) {
-          return false;
-        }
-        
-        // 선택된 필터만 확인
-        const conditions = [];
-        
-        // 온도 범위가 기본값이 아니면 온도 조건 확인
-        if (filters.tempRange.min !== 0 || filters.tempRange.max !== 100) {
-          conditions.push(tempMatch);
-        }
-        
-        // 강수량 범위가 기본값이 아니면 강수량 조건 확인
-        if (filters.rainRange.min !== 0 || filters.rainRange.max !== 100) {
-          conditions.push(rainMatch);
-        }
-        
-        // 습도 범위가 기본값이 아니면 습도 조건 확인
-        if (filters.humidityRange.min !== 0 || filters.humidityRange.max !== 100) {
-          conditions.push(humidityMatch);
-        }
-        
-        // 체감이 선택되었으면 체감 조건 확인
-        if (filters.feeling) {
-          conditions.push(feelingMatch);
-        }
-        
-        // 날씨 이모지가 선택되었으면 이모지 조건 확인
-        if (filters.weatherEmojis.length > 0) {
-          conditions.push(emojiMatch);
-        }
-        
-        // 조건이 없으면 지역만 일치하면 표시
-        if (conditions.length === 0) {
-          return true;
-        }
-        
-        // 모든 조건을 만족해야 함
-        return conditions.every(condition => condition);
-      });
+      // ✅ 계절: record.season(한글) 또는 record.weather?.season 등에서 비교
+      if (filters.season) {
+        const wantedKo = normalizeSeason(filters.season); // 코드→한글
+        const recSeason =
+          record.season ||
+          record.weather?.season ||
+          record.meta?.season ||
+          "";
+        if (normalizeSeason(recSeason) !== wantedKo) return false;
+      }
 
-      // 하트순으로 정렬
-      filtered.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
-      
-      console.log("Filtered results:", filtered.length);
-      setFilteredOutfits(filtered);
-    }, 50); // 50ms 디바운싱
+      // ✅ 스타일: record.style(string) 또는 record.styles(array) 대응
+      if (filters.style) {
+        const recStyle = record.styles ?? record.style ?? null;
+        if (!matchesStyle(recStyle, filters.style)) return false;
+      }
 
-    return () => clearTimeout(timeoutId);
-  }, [outfits, filters, excludeMyRecords, onlyMyRecords, user]);
+      return true;
+    });
 
-  // 필터 상태를 세션스토리지에 저장
+    // 좋아요 수 내림차순
+    filtered.sort(
+      (a, b) => (b.likes?.length || 0) - (a.likes?.length || 0)
+    );
+
+    setFilteredOutfits(filtered);
+  }, [
+    outfits,
+    filters,
+    excludeMyRecords,
+    onlyMyRecords,
+    likedOnly,
+    user,
+  ]);
+
+  // 필터 상태 저장
   useEffect(() => {
-    sessionStorage.setItem('recommendFilters', JSON.stringify(filters));
+    sessionStorage.setItem("recommendFilters", JSON.stringify(filters));
   }, [filters]);
 
-  // 좋아요 토글 함수
+  // 좋아요 토글
   const handleToggleLike = async (recordId, liked) => {
     if (!user) return;
     await toggleLike(recordId, user.uid);
-    setOutfits(prev =>
-      prev.map(record =>
+    setOutfits((prev) =>
+      prev.map((record) =>
         record.id === recordId
           ? {
             ...record,
             likes: liked
-              ? record.likes.filter(uid => uid !== user.uid)
-              : [...record.likes, user.uid],
+              ? record.likes.filter((uid) => uid !== user.uid)
+              : [...(record.likes || []), user.uid],
           }
           : record
       )
     );
   };
 
-  // 필터 핸들러들
-  const handleRegionChange = (region) => {
-    setFilters(prev => ({ ...prev, region }));
-  };
-
-  const handleFeelingChange = (feeling) => {
-    setFilters(prev => ({ ...prev, feeling }));
-  };
-
-  const handleWeatherEmojiToggle = (emoji) => {
-    setFilters(prev => ({
-      ...prev,
-      weatherEmojis: prev.weatherEmojis.includes(emoji)
-        ? prev.weatherEmojis.filter(e => e !== emoji)
-        : [...prev.weatherEmojis, emoji]
-    }));
-  };
+  // 필터 핸들러
+  const handleRegionChange = (region) =>
+    setFilters((prev) => ({ ...prev, region }));
+  const handleFeelingChange = (feeling) =>
+    setFilters((prev) => ({ ...prev, feeling }));
+  const handleSeasonChange = (season) =>
+    setFilters((prev) => ({ ...prev, season }));
+  const handleStyleChange = (style) =>
+    setFilters((prev) => ({ ...prev, style }));
 
   const clearFilters = () => {
-    setFilters({
-      region: "",
-      tempRange: { min: 0, max: 100 },
-      rainRange: { min: 0, max: 100 },
-      humidityRange: { min: 0, max: 100 },
-      feeling: "",
-      weatherEmojis: []
-    });
-  };
-
-  // 온도 슬라이더 컴포넌트
-  const TemperatureSlider = ({ min, max, onChange }) => {
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragType, setDragType] = useState(null); // 'min' or 'max'
-    const sliderRef = useRef(null);
-
-    const handleMouseDown = (e, type) => {
-      setIsDragging(true);
-      setDragType(type);
-      e.preventDefault();
-    };
-
-    const handleSliderClick = (e) => {
-      if (!sliderRef.current) return;
-      
-      const rect = sliderRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      const value = Math.round(percentage);
-      
-      // 클릭한 위치가 현재 범위의 중간점보다 왼쪽이면 최소값, 오른쪽이면 최대값 조정
-      const midPoint = (min + max) / 2;
-      if (value < midPoint) {
-        // 최소값 조정
-        const newMin = Math.min(value, max);
-        onChange({ min: newMin, max });
-        setIsDragging(true);
-        setDragType('min');
-      } else {
-        // 최대값 조정
-        const newMax = Math.max(value, min);
-        onChange({ min, max: newMax });
-        setIsDragging(true);
-        setDragType('max');
-      }
-    };
-
-    const handleMouseMove = useCallback((e) => {
-      if (!isDragging || !sliderRef.current) return;
-
-      requestAnimationFrame(() => {
-        const rect = sliderRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-        const value = Math.round(percentage);
-
-        if (dragType === 'min') {
-          const newMin = Math.min(value, max);
-          onChange({ min: newMin, max });
-        } else if (dragType === 'max') {
-          const newMax = Math.max(value, min);
-          onChange({ min, max: newMax });
-        }
-      });
-    }, [isDragging, dragType, min, max, onChange]);
-
-    const handleMouseUp = useCallback(() => {
-      setIsDragging(false);
-      setDragType(null);
-    }, []);
-
-    useEffect(() => {
-      if (isDragging) {
-        document.addEventListener('mousemove', handleMouseMove, { passive: true });
-        document.addEventListener('mouseup', handleMouseUp);
-        document.body.style.userSelect = 'none'; // 드래그 중 텍스트 선택 방지
-        
-        return () => {
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', handleMouseUp);
-          document.body.style.userSelect = '';
-        };
-      }
-    }, [isDragging, handleMouseMove, handleMouseUp]);
-
-    const minPosition = min;
-    const maxPosition = max;
-
-    return (
-      <div className="w-full">
-        {/* 슬라이더 바 */}
-        <div className="relative w-full h-12 mb-4">
-          <div
-            ref={sliderRef}
-            className="absolute w-full h-3 bg-gray-200 rounded-full top-4 cursor-pointer"
-            onClick={handleSliderClick}
-          >
-            {/* 선택된 범위 표시 */}
-            <div
-              className="absolute h-3 bg-blue-300 rounded-full transition-all duration-150 ease-out"
-              style={{
-                left: `${minPosition}%`,
-                width: `${maxPosition - minPosition}%`
-              }}
-            />
-            
-            {/* 최소값 핸들 */}
-            <div
-              className={`absolute w-5 h-5 bg-blue-600 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all duration-150 ease-out ${
-                isDragging && dragType === 'min' ? 'scale-110 shadow-xl' : ''
-              }`}
-              style={{ 
-                left: `${minPosition}%`, 
-                top: '50%',
-                transform: `translate(-50%, -50%) ${isDragging && dragType === 'min' ? 'scale(1.1)' : ''}`
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                handleMouseDown(e, 'min');
-              }}
-            />
-            
-            {/* 최대값 핸들 */}
-            <div
-              className={`absolute w-5 h-5 bg-blue-600 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all duration-150 ease-out ${
-                isDragging && dragType === 'max' ? 'scale-110 shadow-xl' : ''
-              }`}
-              style={{ 
-                left: `${maxPosition}%`, 
-                top: '50%',
-                transform: `translate(-50%, -50%) ${isDragging && dragType === 'max' ? 'scale(1.1)' : ''}`
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                handleMouseDown(e, 'max');
-              }}
-            />
-          </div>
-        </div>
-        
-        {/* 온도 값 표시 */}
-        <div className="flex justify-between text-sm text-gray-600 font-medium">
-          <span className="bg-blue-100 px-2 py-1 rounded">{min}</span>
-          <span className="bg-blue-100 px-2 py-1 rounded">{max}</span>
-        </div>
-      </div>
-    );
+    setFilters({ region: "", feeling: "", season: "", style: "" });
+    setExcludeMyRecords(false);
+    setOnlyMyRecords(false);
+    setLikedOnly(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
       {/* 사이드바 */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
@@ -546,8 +311,12 @@ function Recommend() {
                 id="excludeMyRecords"
                 checked={excludeMyRecords}
                 onChange={(e) => {
-                  setExcludeMyRecords(e.target.checked);
-                  if (e.target.checked) setOnlyMyRecords(false);
+                  const checked = e.target.checked;
+                  setExcludeMyRecords(checked);
+                  if (checked) {
+                    setOnlyMyRecords(false);
+                    setLikedOnly(false);
+                  }
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />
@@ -561,8 +330,12 @@ function Recommend() {
                 id="onlyMyRecords"
                 checked={onlyMyRecords}
                 onChange={(e) => {
-                  setOnlyMyRecords(e.target.checked);
-                  if (e.target.checked) setExcludeMyRecords(false);
+                  const checked = e.target.checked;
+                  setOnlyMyRecords(checked);
+                  if (checked) {
+                    setExcludeMyRecords(false);
+                    setLikedOnly(false);
+                  }
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />
@@ -570,9 +343,28 @@ function Recommend() {
                 나의 기록만
               </label>
             </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="likedOnly"
+                checked={likedOnly}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setLikedOnly(checked);
+                  if (checked) {
+                    setOnlyMyRecords(false);
+                    setExcludeMyRecords(false);
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="likedOnly" className="ml-2 text-sm text-gray-700">
+                내가 좋아요 한 코디
+              </label>
+            </div>
           </div>
 
-          {/* 지역 필터 */}
+          {/* 지역 */}
           <div className="mb-6">
             <label className="block text-base font-semibold mb-2">지역</label>
             <select
@@ -582,51 +374,14 @@ function Recommend() {
             >
               <option value="">전체 지역</option>
               {Object.entries(regionMap).map(([eng, kor]) => (
-                <option key={eng} value={eng}>{kor}</option>
+                <option key={eng} value={eng}>
+                  {kor}
+                </option>
               ))}
             </select>
           </div>
 
-          {/* 온도 범위 필터 */}
-          <div className="mb-6">
-            <label className="block text-base font-semibold mb-2">온도 범위 (°C)</label>
-            <TemperatureSlider
-              min={filters.tempRange.min}
-              max={filters.tempRange.max}
-              onChange={(newRange) => setFilters(prev => ({
-                ...prev,
-                tempRange: newRange
-              }))}
-            />
-          </div>
-
-          {/* 강수량 범위 필터 */}
-          <div className="mb-6">
-            <label className="block text-base font-semibold mb-2">강수량 범위 (mm)</label>
-            <TemperatureSlider
-              min={filters.rainRange.min}
-              max={filters.rainRange.max}
-              onChange={(newRange) => setFilters(prev => ({
-                ...prev,
-                rainRange: newRange
-              }))}
-            />
-          </div>
-
-          {/* 습도 범위 필터 */}
-          <div className="mb-6">
-            <label className="block text-base font-semibold mb-2">습도 범위 (%)</label>
-            <TemperatureSlider
-              min={filters.humidityRange.min}
-              max={filters.humidityRange.max}
-              onChange={(newRange) => setFilters(prev => ({
-                ...prev,
-                humidityRange: newRange
-              }))}
-            />
-          </div>
-
-          {/* 체감 필터 */}
+          {/* 체감 */}
           <div className="mb-6">
             <label className="block text-base font-semibold mb-3">체감</label>
             <select
@@ -635,7 +390,7 @@ function Recommend() {
               className="w-full px-3 py-2 border rounded-md text-center"
             >
               <option value="">전체</option>
-              {feelingOptions.map(option => (
+              {feelingOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -643,32 +398,58 @@ function Recommend() {
             </select>
           </div>
 
-          {/* 날씨 이모지 필터 */}
-          <div className="mb-6">
-            <label className="block text-base font-semibold mb-3">날씨 이모지</label>
-            <div className="grid grid-cols-3 gap-2">
-              {weatherEmojiOptions.map(emoji => (
-                <button
-                  key={emoji}
-                  onClick={() => handleWeatherEmojiToggle(emoji)}
-                  className={`p-3 text-lg rounded-md transition-colors ${
-                    filters.weatherEmojis.includes(emoji)
-                      ? "bg-blue-200 border-2 border-blue-400"
-                      : "bg-gray-100 hover:bg-gray-200"
-                  }`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+          {/* ✅ 계절 */}
+          <div className="mb-5">
+            <label className="block text-base font-semibold mb-3">계절</label>
+            <select
+              value={filters.season}
+              onChange={(e) => handleSeasonChange(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md text-center"
+            >
+              <option value="">전체</option>
+              <option value="earlyspring">초봄</option>
+              <option value="spring">봄</option>
+              <option value="latespring">늦봄</option>
+              <option value="earlysummer">초여름</option>
+              <option value="summer">여름</option>
+              <option value="latesummer">늦여름</option>
+              <option value="earlyautumn">초가을</option>
+              <option value="autumn">가을</option>
+              <option value="lateautumn">늦가을</option>
+              <option value="earlywinter">초겨울</option>
+              <option value="winter">겨울</option>
+              <option value="latewinter">늦겨울</option>
+            </select>
+          </div>
+
+          {/* ✅ 스타일 */}
+          <div className="mb-5">
+            <label className="block text-base font-semibold mb-3">스타일</label>
+            <select
+              value={filters.style}
+              onChange={(e) => handleStyleChange(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md text-center"
+            >
+              <option value="">전체</option>
+              <option value="casual">캐주얼</option>
+              <option value="minimal">미니멀</option>
+              <option value="formal">포멀</option>
+              <option value="sporty">스포티/액티브</option>
+              <option value="street">시크/스트릿</option>
+              <option value="feminine">러블리/페미닌</option>
+            </select>
           </div>
         </div>
 
         {/* 오른쪽: 코디 목록 */}
         <div className="w-full md:w-3/4 bg-white rounded-lg shadow p-6">
           <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-2"> 총 {filteredOutfits.length}개의 코디</h3>
-            <p className="text-sm text-gray-600">좋아요 순으로 정렬된 추천 코디입니다.</p>
+            <h3 className="text-lg font-semibold mb-2">
+              총 {filteredOutfits.length}개의 코디
+            </h3>
+            <p className="text-sm text-gray-600">
+              좋아요 순으로 정렬된 추천 코디입니다.
+            </p>
           </div>
 
           {filteredOutfits.length === 0 ? (
@@ -677,12 +458,14 @@ function Recommend() {
                 {hasActiveFilters ? "조건에 맞는 코디가 없습니다" : "필터를 설정해주세요"}
               </p>
               <p className="text-sm text-gray-400">
-                {hasActiveFilters ? "필터를 조정해보세요" : "지역, 온도, 강수량, 습도, 체감, 날씨 이모지 중 하나를 선택해보세요"}
+                {hasActiveFilters
+                  ? "필터를 조정해보세요"
+                  : "지역/체감/계절/스타일 또는 '나의 기록 제외/만'을 설정해보세요"}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {filteredOutfits.map(outfit => (
+              {filteredOutfits.map((outfit) => (
                 <FeedCard
                   key={outfit.id}
                   record={outfit}
@@ -699,4 +482,4 @@ function Recommend() {
   );
 }
 
-export default Recommend; 
+export default Recommend;

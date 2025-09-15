@@ -39,7 +39,6 @@ function getWeatherEmoji(iconCode) {
   }
 }
 
-
 function Record() {
   const today = new Date();
   const navigate = useNavigate();
@@ -93,16 +92,6 @@ function Record() {
   const [isPublic, setIsPublic] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [weatherEmojis, setWeatherEmojis] = useState([]);
-  const emojiList = ["☀️", "🌩️", "❄️", "🌧️", "💨", "☁️"];
-  const toggleEmoji = (emoji) => {
-    setWeatherEmojis((prev) =>
-      prev.includes(emoji)
-        ? prev.filter((e) => e !== emoji)
-        : prev.length < 2
-          ? [...prev, emoji]
-          : prev // 최대 2개까지 선택
-    );
-  };
   const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -346,8 +335,6 @@ function Record() {
       return newList;
     });
   };
-
-
 
   const handleAddItem = (category, value) => {
     if (!value.trim()) return;
