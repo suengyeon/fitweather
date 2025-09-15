@@ -130,7 +130,7 @@ function Login() {
     <div className="h-screen bg-gray-100 flex flex-col">
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
-        <button className="bg-blue-300 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-400">
+        <button className="bg-blue-200 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-300">
           <Bars3Icon className="w-5 h-5" />
         </button>
 
@@ -138,7 +138,7 @@ function Login() {
 
         <a
           href="/"
-          className="bg-blue-300 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-300"
         >
           <HomeIcon className="w-5 h-5" />
         </a>

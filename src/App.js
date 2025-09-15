@@ -22,6 +22,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import FeedDetail from "./pages/FeedDetail";
 import MyPageLikes from "./pages/MyPageLikes";
+import Follow from "./pages/Follow";
+
 
 // 전역 테스트 함수: 브라우저 콘솔에서 testSaveOutfitRecord() 호출
 window.testSaveOutfitRecord = async () => {
@@ -91,19 +93,19 @@ function App() {
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/login" element={<Login />} />
           <Route path="/record" element={<Record />} />
-                  <Route path="/feed" element={<Feed />} />
-        <Route path="/recommend" element={<Recommend />} />
-        <Route path="/recommend-view" element={<RecommendView />} />
-        <Route path="/recommend-filter-settings" element={<RecommendFilterSettings />} />
-        <Route path="/FeedDetail/:id" element={<FeedDetail />} />
-        <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
+          <Route path="/feed" element={<Feed />} />
+          <Route path="/recommend" element={<Recommend />} />
+          <Route path="/recommend-view" element={<RecommendView />} />
+          <Route path="/recommend-filter-settings" element={<RecommendFilterSettings />} />
+          <Route path="/FeedDetail/:id" element={<FeedDetail />} />
+          <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
 
           <Route path="/mypage_likes" element={<MyPageLikes />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/calendar/:uid" element={<Calendar />} />
           <Route path="/" element={<Home />} />
-          
+          <Route path="/follow" element={<Follow />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
