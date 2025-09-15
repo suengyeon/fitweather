@@ -90,7 +90,7 @@ function MyPageUserInfo() {
       <div className="flex flex-col items-center justify-start flex-1 px-4 mt-12">
         
         {/* 정보 카드 */}
-        <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
+        <div className="bg-white rounded-lg px-8 py-8 w-full max-w-xl mb-8">
         {[
           { label: "지역", value: getKoreanRegionName(region) },
           { label: "닉네임", value: nickname },

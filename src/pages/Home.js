@@ -324,7 +324,7 @@ function Home() {
           <div className="flex justify-end items-center px-4 py-3 bg-blue-100 shadow">
             <button
               onClick={() => navigate("/login")}
-              className="bg-blue-300 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-400"
+              className="bg-blue-200 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-300"
             >
               login
             </button>
