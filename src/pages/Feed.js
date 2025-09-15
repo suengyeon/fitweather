@@ -92,10 +92,10 @@ function Feed() {
   useEffect(() => {
     async function fetchUserRegion() {
       if (!user) return;
-      
+
       console.log("Feed - location.state:", location.state);
       console.log("Feed - stored region:", getStoredRegion());
-      
+
       // FeedDetail에서 뒤로가기로 돌아온 경우 세션스토리지 지역 유지
       if (location.state?.fromDetail) {
         const storedRegion = getStoredRegion();
@@ -103,7 +103,7 @@ function Feed() {
         if (storedRegion) {
           setRegion(storedRegion);
         }
-        
+
         // 세션스토리지에 없으면 전달받은 지역 정보 사용
         if (location.state?.region) {
           console.log("Feed - fromDetail, using passed region:", location.state.region);
@@ -111,7 +111,7 @@ function Feed() {
           // 세션스토리지에도 저장
           sessionStorage.setItem('feedRegion', location.state.region);
         }
-        
+
         // 전달받은 날짜 정보가 있으면 적용
         if (location.state?.year && location.state?.month && location.state?.day) {
           console.log("Feed - fromDetail, using passed date:", location.state.year, location.state.month, location.state.day);
@@ -121,10 +121,10 @@ function Feed() {
           // 세션스토리지에도 저장
           sessionStorage.setItem('feedDate', `${location.state.year}-${location.state.month}-${location.state.day}`);
         }
-        
+
         return;
       }
-      
+
       // 세션스토리지에서 저장된 지역이 있으면 사용
       const storedRegion = getStoredRegion();
       if (storedRegion) {
@@ -132,7 +132,7 @@ function Feed() {
         setRegion(storedRegion);
         return;
       }
-      
+
       // 저장된 지역이 없으면 사용자 기본 지역 사용
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
@@ -218,26 +218,21 @@ function Feed() {
 
   // regionMap for dropdown (전체 지역 목록)
   const regionMap = {
-    Baengnyeongdo: "백령도",
     Incheon: "인천",
     Seoul: "서울",
     Chuncheon: "춘천",
     Gangneung: "강릉",
     Ulleungdo: "울릉도/독도",
-    Hongseong: "홍성",
     Suwon: "수원",
     Cheongju: "청주",
-    Andong: "안동",
     Jeonju: "전주",
     Daejeon: "대전",
     Daegu: "대구",
     Pohang: "포항",
-    Heuksando: "흑산도",
     Mokpo: "목포",
     Jeju: "제주",
     Ulsan: "울산",
     Yeosu: "여수",
-    Changwon: "창원",
     Busan: "부산",
     Gwangju: "광주"
   };
@@ -299,9 +294,10 @@ function Feed() {
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-4 mt-6 relative">
-            <div className="flex items-center gap-5 relative">
-              <label htmlFor="region" className="font-bold">지역</label>
+          <div className="flex flex-col items-center gap-8 mt-6">
+            {/* 지역 */}
+            <div className="flex items-center justify-between gap-4 w-60">
+              <label htmlFor="region" className="font-semibold">지역</label>
               <select
                 id="region"
                 value={region}
@@ -310,36 +306,39 @@ function Feed() {
                   console.log("Feed - region changed to:", newRegion);
                   setRegion(newRegion);
                 }}
-                className="w-[120px] px-3 py-2 rounded border text-center relative z-10"
-                style={{ overflow: 'visible' }}
+                className="w-32 px-3 py-2 rounded text-sm text-center"
               >
                 {Object.entries(regionMap).map(([eng, kor]) => (
                   <option key={eng} value={eng}>{kor}</option>
                 ))}
               </select>
             </div>
-            <div className="flex items-center gap-5 mt-4 relative">
-              <label htmlFor="sort" className="font-bold">정렬</label>
+
+            {/* 정렬 */}
+            <div className="flex items-center justify-between gap-4 w-60">
+              <label htmlFor="sort" className="font-semibold">정렬</label>
               <select
                 id="sort"
                 value={order}
                 onChange={e => setOrder(e.target.value)}
-                className="w-[120px] px-3 py-2 rounded border text-center relative z-10"
-                style={{ overflow: 'visible' }}
+                className="w-32 px-3 py-2 rounded text-sm text-center"
               >
+                <option value="" className="text-gray-500">선택</option>
                 <option value="popular">인기순</option>
                 <option value="latest">최신순</option>
               </select>
             </div>
-            <div className="flex items-center gap-5 mt-4 relative">
-              <label htmlFor="style" className="font-bold">스타일</label>
+
+            {/* 스타일 */}
+            <div className="flex items-center justify-between gap-4 w-60">
+              <label htmlFor="style" className="font-semibold">스타일</label>
               <select
                 id="style"
                 value={style}
                 onChange={e => setStyle(e.target.value)}
-                className="w-[120px] px-3 py-2 rounded border text-center relative z-10"
-                style={{ overflow: 'visible' }}
+                className="w-32 px-3 py-2 rounded  text-sm text-center"
               >
+                <option value="" className="text-gray-500">선택</option>
                 <option value="casual">캐주얼</option>
                 <option value="minimal">미니멀</option>
                 <option value="formal">포멀</option>
@@ -349,6 +348,7 @@ function Feed() {
               </select>
             </div>
           </div>
+
 
           {/* 로고 */}
           <div className="flex justify-center items-center pt-32">
@@ -415,7 +415,7 @@ function Feed() {
 
           {/* TOP3 강조 */}
           {isPopular && top3.length > 0 && (
-            <div className="w-full bg-gray-200 px-6 pb-6 pt-4 overflow-x-auto">
+            <div className="w-full bg-gray-200 px-6 pb-4 pt-4 overflow-x-auto">
               <div className="flex justify-center gap-20 min-w-max">
                 {top3.map((outfit, idx) => (
                   <FeedCard
@@ -434,7 +434,7 @@ function Feed() {
             </div>
           )}
           {/* 나머지 피드 카드 목록 */}
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="mt-4 flex-1 overflow-y-auto px-6 pb-6">
             {outfits.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">해당 날짜에 기록이 없습니다.</p>

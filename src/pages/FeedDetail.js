@@ -426,14 +426,14 @@ function FeedDetail() {
             <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
                 <button
                     onClick={handleGoBack}
-                    className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+                    className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
                 >
                     <ArrowLeftIcon className="w-5 h-5" />
                 </button>
                 <h2 className="font-bold text-lg">{formattedDate}</h2>
                 <button
                     onClick={() => navigate("/")}
-                    className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+                    className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
                 >
                     <HomeIcon className="w-5 h-5" />
                 </button>
@@ -703,7 +703,7 @@ function CommentSection({
                                 });
                                 return isAuthor;
                             })() && (
-                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-medium">
+                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-md font-medium">
                                     작성자
                                 </span>
                             )}

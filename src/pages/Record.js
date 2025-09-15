@@ -80,8 +80,8 @@ function Record() {
   // profile이 로드된 후 selectedRegion 업데이트
   useEffect(() => {
     if (profile?.region && !existingRecord?.region) {
-    const isTodayDate = isToday(dateStr);
-    if (!isTodayDate) {
+      const isTodayDate = isToday(dateStr);
+      if (!isTodayDate) {
         // 과거 날짜는 사용자 기본 지역 사용
         setSelectedRegion(profile.region);
       } else if (!location.state?.selectedRegion) {
@@ -123,23 +123,23 @@ function Record() {
   useEffect(() => {
     const loadPastWeather = async () => {
       console.log("날짜 확인:", dateStr, "오늘인가?", isToday(dateStr), "지역:", selectedRegion);
-      
+
       if (isToday(dateStr) || !selectedRegion) {
         console.log("오늘 날짜이거나 지역이 없어서 과거 날씨 로딩 건너뜀");
         setPastWeather(null);
         return;
       }
-      
+
       setPastWeatherLoading(true);
       try {
         console.log("과거 날씨 데이터 불러오기:", dateStr, selectedRegion);
-        
+
         // 먼저 저장된 데이터 확인
         const savedData = await getPastWeatherData(dateStr, selectedRegion);
         if (savedData) {
           console.log("저장된 과거 날씨 데이터 발견:", savedData);
           console.log("강수량:", savedData.avgRain, "온도:", savedData.avgTemp);
-          
+
           // 9월 12일이면 항상 삭제하고 다시 생성 (강수량 데이터 확인을 위해)
           if (dateStr === "2025-09-12") {
             console.log("9월 12일 데이터 삭제 후 다시 생성 (강수량 데이터 확인)");
@@ -160,13 +160,13 @@ function Record() {
             return;
           }
         }
-        
+
         // 저장된 데이터가 없으면 과거 관측 API에서 직접 가져오기
         console.log("🌧️ 기상청 과거 관측 API 직접 호출:", dateStr, selectedRegion);
         console.log("🔍 fetchKmaPastWeather 함수 호출 시작");
         let pastData = await fetchKmaPastWeather(dateStr, selectedRegion);
         console.log("🔍 fetchKmaPastWeather 함수 호출 완료, 결과:", pastData);
-        
+
         if (pastData) {
           console.log("✅ 기상청 과거 관측 API에서 데이터 가져옴:", pastData);
           // 실제 데이터 저장
@@ -226,17 +226,17 @@ function Record() {
   }, [dateStr, selectedRegion]);
 
   // 날씨 정보 설정: 기록이 있으면 기록된 날씨, 오늘 날짜면 실시간 날씨, 과거 날짜면 저장된 과거 날씨 사용
-  const weather = existingRecord?.weather || 
+  const weather = existingRecord?.weather ||
     (isToday(dateStr) ? apiWeather : pastWeather) || {
-      temp: 20,
-      rain: 0,
-      humidity: 60,
-      icon: "sunny",
-      season: "초가을"
-    };
+    temp: 20,
+    rain: 0,
+    humidity: 60,
+    icon: "sunny",
+    season: "초가을"
+  };
 
   // 로딩 상태: 오늘은 API 로딩, 과거는 과거 데이터 로딩
-  const loading = profileLoading || 
+  const loading = profileLoading ||
     (isToday(dateStr) ? apiWeatherLoading : pastWeatherLoading);
 
 
@@ -385,7 +385,7 @@ function Record() {
   // + 버튼 클릭 핸들러
   const handleAddSelectedItem = (category) => {
     let valueToAdd = "";
-    
+
     if (customInputMode[category]) {
       // 직접입력 모드인 경우
       valueToAdd = customInputs[category];
@@ -397,7 +397,7 @@ function Record() {
       // 일반 드롭다운 선택인 경우
       const selectedValue = selectedItems[category];
       if (!selectedValue) return;
-      
+
       // 선택된 옵션의 텍스트를 가져오기 위해 옵션 목록에서 찾기
       const optionTexts = {
         outer: { jacket: "재킷", blazer: "점퍼", coat: "코트", cardigan: "가디건", hoodzipup: "후드집업", blazer: "블레이저", windbreak: "바람막이", jersey: "저지", padding: "패딩" },
@@ -583,7 +583,7 @@ function Record() {
   // 댓글 새로고침 핸들러
   const handleRefreshComments = async () => {
     if (!existingRecord?.id) return;
-    
+
     setIsRefreshing(true);
     try {
       console.log("Record - 댓글 새로고침 시작 - record ID:", existingRecord.id);
@@ -609,7 +609,7 @@ function Record() {
   useEffect(() => {
     const fetchComments = async () => {
       if (!existingRecord?.id) return;
-      
+
       try {
         console.log("Record - 댓글 데이터 불러오기 시작 - record ID:", existingRecord.id);
         const commentsRef = doc(db, "comments", existingRecord.id);
@@ -628,7 +628,7 @@ function Record() {
         setComments([]);
       }
     };
-    
+
     fetchComments();
   }, [existingRecord?.id]);
 
@@ -650,28 +650,28 @@ function Record() {
         content: newComment.trim(),
         replies: []
       };
-      
+
       try {
         const updatedComments = [...comments, newCommentObj];
         setComments(updatedComments);
         setNewComment("");
-        
+
         console.log("Record - 댓글 저장 시작 - record ID:", existingRecord.id);
         const commentsRef = doc(db, "comments", existingRecord.id);
         await setDoc(commentsRef, {
           comments: updatedComments,
           lastUpdated: new Date()
         }, { merge: true });
-        
+
         console.log("Record - 새 댓글 추가 성공:", newCommentObj);
         console.log("Record - 저장된 댓글 목록:", updatedComments);
-        
+
         // 댓글 목록 다시 불러오기 (다른 사용자에게도 즉시 반영되도록)
         const commentsSnap = await getDoc(commentsRef);
         if (commentsSnap.exists()) {
-            const freshCommentsData = commentsSnap.data();
-            setComments(freshCommentsData.comments || []);
-            console.log("Record - 댓글 목록 새로고침 완료:", freshCommentsData.comments);
+          const freshCommentsData = commentsSnap.data();
+          setComments(freshCommentsData.comments || []);
+          console.log("Record - 댓글 목록 새로고침 완료:", freshCommentsData.comments);
         }
       } catch (error) {
         console.error("Record - 댓글 저장 실패:", error);
@@ -703,15 +703,15 @@ function Record() {
           }
           return comment;
         }).filter(comment => comment !== null);
-        
+
         setComments(updatedComments);
-        
+
         const commentsRef = doc(db, "comments", existingRecord.id);
         await setDoc(commentsRef, {
           comments: updatedComments,
           lastUpdated: new Date()
         }, { merge: true });
-        
+
         console.log("댓글 삭제:", commentId);
       } catch (error) {
         console.error("댓글 삭제 실패:", error);
@@ -750,7 +750,7 @@ function Record() {
         content: replyContent.trim(),
         replies: []
       };
-      
+
       try {
         const updatedComments = comments.map(comment => {
           if (comment.id === replyToCommentId) {
@@ -773,26 +773,26 @@ function Record() {
           }
           return comment;
         });
-        
+
         setComments(updatedComments);
-        
+
         const commentsRef = doc(db, "comments", existingRecord.id);
         await setDoc(commentsRef, {
           comments: updatedComments,
           lastUpdated: new Date()
         }, { merge: true });
-        
+
         setReplyToCommentId(null);
         setReplyContent("");
-        
+
         console.log("Record - 답글 추가:", newReply);
-        
+
         // 댓글 목록 다시 불러오기
         const commentsSnap = await getDoc(commentsRef);
         if (commentsSnap.exists()) {
-            const freshCommentsData = commentsSnap.data();
-            setComments(freshCommentsData.comments || []);
-            console.log("Record - 답글 추가 후 댓글 목록 새로고침 완료:", freshCommentsData.comments);
+          const freshCommentsData = commentsSnap.data();
+          setComments(freshCommentsData.comments || []);
+          console.log("Record - 답글 추가 후 댓글 목록 새로고침 완료:", freshCommentsData.comments);
         }
       } catch (error) {
         console.error("답글 저장 실패:", error);
@@ -835,7 +835,7 @@ function Record() {
               {/* +댓글 보기 버튼 - 기존 기록이 있을 때만 표시 */}
               {existingRecord && (
                 <div className="mb-4 flex justify-start">
-                  <button 
+                  <button
                     onClick={handleCommentViewToggle}
                     className="px-3 py-1 bg-white rounded text-sm font-medium hover:bg-gray-100 transition-colors"
                   >
@@ -844,131 +844,128 @@ function Record() {
                 </div>
               )}
               {/* 지역 선택 드롭다운 */}
-          <div className="mt-4 mb-8">
-            <select
-              value={selectedRegion || "Seoul"}
-              onChange={e => handleRegionChange(e.target.value)}
-              className="w-30 px-4 py-2 border rounded bg-white text-center"
-            >
-              <option value="Incheon">인천</option>
-              <option value="Seoul">서울</option>
-              <option value="Chuncheon">춘천</option>
-              <option value="Gangneung">강릉</option>
-              <option value="Ulleungdo">울릉도/독도</option>
-              <option value="Suwon">수원</option>
-              <option value="Cheongju">청주</option>
-              <option value="Jeonju">전주</option>
-              <option value="Daejeon">대전</option>
-              <option value="Daegu">대구</option>
-              <option value="Pohang">포항</option>
-              <option value="Mokpo">목포</option>
-              <option value="Jeju">제주</option>
-              <option value="Ulsan">울산</option>
-              <option value="Yeosu">여수</option>
-              <option value="Busan">부산</option>
-              <option value="Gwangju">광주</option>
-            </select>
-          </div>
-
-          {/* 날씨 일러스트 - 로딩 중이 아닐 때만 표시 */}
-          {!loading && weather && (
-            <div className="mb-4 flex justify-center">
-              <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                <span className="text-6xl animate-bounce">
-                  {getWeatherEmoji(weather.icon)}
-                </span>
-              </div>
-            </div>
-          )}
-          {loading ? (
-            <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
-          ) : weather ? (
-            <>
-              {/* 날씨 정보 필드들 */}
-              <div className="mt-8 space-y-6">
-                {/* 계절 */}
-                <div className="flex justify-center">
-                  <div className="flex items-center w-60">
-                    <span className="w-28 text-base font-semibold text-left">계절</span>
-                    <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
-                      {weather.season || "초가을"}
-                    </div>
-                    </div>
-                  </div>
-
-                {/* 온도 */}
-                <div className="flex justify-center">
-                  <div className="flex items-center w-60">
-                    <span className="w-28 text-base font-semibold text-left">온도</span>
-                    <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
-                      {weather?.temp || 0}°C
-                </div>
-              </div>
-                </div>
-
-                {/* 강수량 */}
-                <div className="flex justify-center">
-                  <div className="flex items-center w-60">
-                    <span className="w-28 text-base font-semibold text-left">강수량</span>
-                    <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
-                      {weather?.rain || 0}mm
-                    </div>
-                  </div>
-                </div>
-
-                {/* 습도 */}
-                <div className="flex justify-center">
-                  <div className="flex items-center w-60">
-                    <span className="w-28 text-base font-semibold text-left">습도</span>
-                    <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
-                      {weather?.humidity || 0}%
-                    </div>
-                </div>
-              </div>
-
-                {/* 체감 선택 */}
-                <div className="flex justify-center">
-                  <div className="flex items-center w-60">
-                    <span className="w-28 text-base font-semibold text-left">체감</span>
+              <div className="mb-8">
                 <select
-                  value={feeling}
-                  onChange={(e) => setFeeling(e.target.value)}
-                      className="ml-auto w-32 h-9 px-3 py-1 border rounded text-sm text-center flex items-center justify-center"
+                  value={selectedRegion || "Seoul"}
+                  onChange={e => handleRegionChange(e.target.value)}
+                  className="w-30 px-4 py-2 border rounded bg-white text-center"
                 >
-                  <option value="" className="text-gray-500">선택</option>
-                      <option value="steam">🥟 (찐만두)</option>
-                      <option value="hot">🥵 (더움)</option>
-                      <option value="nice">👍🏻 (적당)</option>
-                      <option value="cold">💨 (추움)</option>
-                      <option value="ice">🥶 (동태)</option>
+                  <option value="Incheon">인천</option>
+                  <option value="Seoul">서울</option>
+                  <option value="Chuncheon">춘천</option>
+                  <option value="Gangneung">강릉</option>
+                  <option value="Ulleungdo">울릉도/독도</option>
+                  <option value="Suwon">수원</option>
+                  <option value="Cheongju">청주</option>
+                  <option value="Jeonju">전주</option>
+                  <option value="Daejeon">대전</option>
+                  <option value="Daegu">대구</option>
+                  <option value="Pohang">포항</option>
+                  <option value="Mokpo">목포</option>
+                  <option value="Jeju">제주</option>
+                  <option value="Ulsan">울산</option>
+                  <option value="Yeosu">여수</option>
+                  <option value="Busan">부산</option>
+                  <option value="Gwangju">광주</option>
                 </select>
+              </div>
+
+              {/* 날씨 일러스트 - 로딩 중이 아닐 때만 표시 */}
+              {!loading && weather && (
+                <div className="mb-4 flex justify-center">
+                  <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <span className="text-6xl animate-bounce">
+                      {getWeatherEmoji(weather.icon)}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {loading ? (
+                <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
+              ) : weather ? (
+                <>
+                  {/* 날씨 정보 필드들 */}
+                  <div className="mt-8 space-y-6">
+                    {/* 계절 */}
+                    <div className="flex justify-center">
+                      <div className="flex items-center w-60">
+                        <span className="w-28 text-base font-semibold text-left">계절</span>
+                        <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
+                          {weather.season || "초가을"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 온도 */}
+                    <div className="flex justify-center">
+                      <div className="flex items-center w-60">
+                        <span className="w-28 text-base font-semibold text-left">온도</span>
+                        <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
+                          {weather?.temp || 0}°C
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 강수량 */}
+                    <div className="flex justify-center">
+                      <div className="flex items-center w-60">
+                        <span className="w-28 text-base font-semibold text-left">강수량</span>
+                        <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
+                          {weather?.rain || 0}mm
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 습도 */}
+                    <div className="flex justify-center">
+                      <div className="flex items-center w-60">
+                        <span className="w-28 text-base font-semibold text-left">습도</span>
+                        <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
+                          {weather?.humidity || 0}%
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 체감 선택 */}
+                    <div className="flex justify-center">
+                      <div className="flex items-center w-60">
+                        <span className="w-28 text-base font-semibold text-left">체감</span>
+                        <select
+                          value={feeling}
+                          onChange={(e) => setFeeling(e.target.value)}
+                          className="ml-auto w-32 h-9 px-3 py-1 border rounded text-sm text-center flex items-center justify-center"
+                        >
+                          <option value="" className="text-gray-500">선택</option>
+                          <option value="steam">🥟 (찐만두)</option>
+                          <option value="hot">🥵 (더움)</option>
+                          <option value="nice">👍🏻 (적당)</option>
+                          <option value="cold">💨 (추움)</option>
+                          <option value="ice">🥶 (동태)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* 스타일 선택 */}
+                    <div className="flex justify-center">
+                      <div className="flex items-center w-60">
+                        <span className="w-28 text-base font-semibold text-left">스타일</span>
+                        <select className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center">
+                          <option value="" className="text-gray-500">선택</option>
+                          <option value="casual">캐주얼</option>
+                          <option value="minimal">미니멀</option>
+                          <option value="formal">포멀</option>
+                          <option value="sporty">스포티/액티브</option>
+                          <option value="street">시크/스트릿</option>
+                          <option value="feminine">러블리/페미닌</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
-                {/* 스타일 선택 */}
-                <div className="flex justify-center">
-                  <div className="flex items-center w-60">
-                    <span className="w-28 text-base font-semibold text-left">스타일</span>
-                    <select className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center">
-                      <option value="" className="text-gray-500">선택</option>
-                      <option value="casual">캐주얼</option>
-                      <option value="minimal">미니멀</option>
-                      <option value="formal">포멀</option>
-                      <option value="sporty">스포티/액티브</option>
-                      <option value="street">시크/스트릿</option>
-                      <option value="feminine">러블리/페미닌</option>
-                    </select>
-                </div>
-                </div>
-              </div>
-              {/* Fitweather 로고 - 하단에 배치 */}
-              <div className="flex-1 flex items-end justify-center">
-                <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
-          )}
+                </>
+              ) : (
+                <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
+              )}
             </div>
           ) : (
             // 댓글 섹션
@@ -999,7 +996,7 @@ function Record() {
         {/* 오른쪽 입력 폼 */}
         <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center min-h-[705px] rounded-lg">
           {/* 입력폼 상단 바 */}
-          <div className="flex justify-between bg-gray-200 items-center mb-4 px-4 py-1">
+          <div className="flex items-center justify-between bg-gray-200 mb-4 px-4 h-12">
             {/* 피드 체크박스 */}
             <div className="flex items-center gap-2 ml-2">
               <input
@@ -1014,24 +1011,27 @@ function Record() {
               </label>
             </div>
 
-            <button
-              onClick={handleSubmit}
-              className="px-4 py-2 rounded text-gray-600 font-medium hover:font-bold transition"
-              disabled={loading}
-            >
-              {submitLoading ? "저장 중..." : "저장"}
-            </button>
-
-            {/* ✅ 삭제 버튼 (수정 모드일 때만) */}
-            {isEditMode && (
+            {/* 우측 액션: 저장 → 삭제 */}
+            <div className="flex items-center">
               <button
-                onClick={handleDelete}
-                className="px-4 py-2 text-red-600 font-normal hover:bg-red-300 transition bg-red-200"
+                onClick={handleSubmit}
+                className="px-4 py-2 rounded text-gray-600 font-medium hover:font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
               >
-                삭제
+                {submitLoading ? "저장 중..." : "저장"}
               </button>
-            )}
+
+              {isEditMode && (
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2  text-red-500 font-medium hover:font-bold transition"
+                >
+                  삭제
+                </button>
+              )}
+            </div>
           </div>
+
           {/* 이미지 업로드 및 미리보기 */}
           <div className="flex flex-col md:flex-row gap-4 w-full">
             {/* 이미지 미리보기 영역 */}
@@ -1128,7 +1128,7 @@ function Record() {
               {/* Outer 드롭다운 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Outer</label>
-                    <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center">
                   {customInputMode.outer ? (
                     <div className="flex gap-2 items-center w-80">
                       <input
@@ -1169,28 +1169,28 @@ function Record() {
                   <button
                     type="button"
                     onClick={() => handleAddSelectedItem("outer")}
-                        className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
-                      >
-                        +
-                      </button>
-                    </div>
+                    className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  >
+                    +
+                  </button>
+                </div>
                 {outfit.outer.length > 0 && (
-                      <ul className="ml-2 mt-1 text-sm text-gray-600">
+                  <ul className="ml-2 mt-1 text-sm text-gray-600">
                     {outfit.outer.map((item, idx) => (
-                          <li key={idx} className="flex items-center gap-1">
-                            • {item}
-                            <button
-                              type="button"
+                      <li key={idx} className="flex items-center gap-1">
+                        • {item}
+                        <button
+                          type="button"
                           className="ml-1 mb-1 px-2 py-0.5 rounded bg-gray-200 hover:bg-red-200 text-xs text-red-500 hover:text-red-700 transition"
                           onClick={() => handleRemoveItem("outer", idx)}
-                            >
-                              -
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                        >
+                          -
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
               {/* Top 드롭다운 */}
               <div>
@@ -1465,174 +1465,174 @@ function Record() {
 
 // CommentSection 컴포넌트
 function CommentSection({
-    comments,
-    newComment,
-    setNewComment,
-    onCommentSubmit,
-    onCommentDelete,
-    onReply,
-    onClose,
-    onRefresh,
-    isRefreshing,
-    replyToCommentId,
-    replyContent,
-    setReplyContent,
-    onReplySubmit,
-    onCancelReply,
-    currentUserProfile,
-    user,
-    author
+  comments,
+  newComment,
+  setNewComment,
+  onCommentSubmit,
+  onCommentDelete,
+  onReply,
+  onClose,
+  onRefresh,
+  isRefreshing,
+  replyToCommentId,
+  replyContent,
+  setReplyContent,
+  onReplySubmit,
+  onCancelReply,
+  currentUserProfile,
+  user,
+  author
 }) {
-    const renderComment = (comment, isReply = false, isSubReply = false) => (
-        <div key={comment.id} className={`${isReply ? 'ml-6 mt-2' : isSubReply ? 'mt-2' : 'mb-4'}`}>
-            <div className="bg-white rounded-lg p-3 border">
-                <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <div className="font-semibold text-sm text-gray-800 flex items-center gap-2">
-                            <span>
-                                {isSubReply ? `ㄴㄴ ${comment.author}` : isReply ? `ㄴ ${comment.author}` : comment.author}
-                            </span>
-                            {comment.authorUid === user?.uid && (
-                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-medium">
-                                    작성자
-                                </span>
-                            )}
-                        </div>
-                        <div className="text-xs text-gray-500">{comment.timestamp}</div>
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => onReply(comment.id)}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                        >
-                            답글
-                        </button>
-                        {/* 내 기록에서는 모든 댓글 삭제 가능 (댓글 작성자 또는 게시물 작성자) */}
-                        {(() => {
-                            const canDelete = comment.authorUid === user?.uid || (author && author.uid === user?.uid);
-                            console.log("Record - 삭제 권한 확인:", {
-                                commentAuthorUid: comment.authorUid,
-                                currentUserUid: user?.uid,
-                                authorUid: author?.uid,
-                                canDelete: canDelete
-                            });
-                            return canDelete;
-                        })() && (
-                            <button
-                                onClick={() => onCommentDelete(comment.id)}
-                                className="text-xs text-red-600 hover:text-red-800"
-                            >
-                                삭제
-                            </button>
-                        )}
-                    </div>
-                </div>
-                <p className="text-sm text-gray-700 mb-2">{comment.content}</p>
+  const renderComment = (comment, isReply = false, isSubReply = false) => (
+    <div key={comment.id} className={`${isReply ? 'ml-6 mt-2' : isSubReply ? 'mt-2' : 'mb-4'}`}>
+      <div className="bg-white rounded-lg p-3 px-4 border">
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <div className="font-bold text-sm text-gray-800 flex items-center gap-2 mb-1">
+              <span>
+                {isSubReply ? `ㄴㄴ ${comment.author}` : isReply ? `ㄴ ${comment.author}` : comment.author}
+              </span>
+              {comment.authorUid === user?.uid && (
+                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-md font-medium">
+                  작성자
+                </span>
+              )}
             </div>
-
-            {/* 답글 작성 폼 */}
-            {replyToCommentId === comment.id && (
-                <div className={`${isReply ? 'ml-6' : 'ml-0'} mt-2 bg-gray-50 rounded-lg p-3 border`}>
-                    <form onSubmit={onReplySubmit} className="space-y-2">
-                        <textarea
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="답글 작성"
-                            className="w-full h-16 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            maxLength={1000}
-                        />
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs text-gray-500">
-                                {replyContent.length}/1000
-                            </span>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={onCancelReply}
-                                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                                >
-                                    취소
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={!replyContent.trim()}
-                                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                >
-                                    답글 등록
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {/* 대댓글 렌더링 */}
-            {comment.replies && comment.replies.length > 0 && (
-                <div className="mt-2">
-                    {comment.replies.map(reply => renderComment(reply, true, isReply))}
-                </div>
-            )}
+            <div className="text-xs text-gray-500">{comment.timestamp}</div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onReply(comment.id)}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              답글
+            </button>
+            {/* 내 기록에서는 모든 댓글 삭제 가능 (댓글 작성자 또는 게시물 작성자) */}
+            {(() => {
+              const canDelete = comment.authorUid === user?.uid || (author && author.uid === user?.uid);
+              console.log("Record - 삭제 권한 확인:", {
+                commentAuthorUid: comment.authorUid,
+                currentUserUid: user?.uid,
+                authorUid: author?.uid,
+                canDelete: canDelete
+              });
+              return canDelete;
+            })() && (
+                <button
+                  onClick={() => onCommentDelete(comment.id)}
+                  className="text-xs text-red-600 hover:text-red-800"
+                >
+                  삭제
+                </button>
+              )}
+          </div>
         </div>
-    );
+        <p className="text-sm text-gray-700 mb-2">{comment.content}</p>
+      </div>
 
-    return (
-        <div className="h-full flex flex-col">
-            {/* 헤더 */}
-            <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-                <h3 className="text-lg font-semibold">댓글</h3>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={onRefresh}
-                        disabled={isRefreshing}
-                        className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="댓글 새로고침"
-                    >
-                        <ArrowPathIcon className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button 
-                        onClick={onClose}
-                        className="p-1 hover:bg-gray-200 rounded"
-                    >
-                        <XMarkIcon className="w-5 h-5 text-gray-600" />
-                    </button>
-                </div>
+      {/* 답글 작성 폼 */}
+      {replyToCommentId === comment.id && (
+        <div className={`${isReply ? 'ml-6' : 'ml-0'} mt-2 bg-gray-50 rounded-lg p-3 border`}>
+          <form onSubmit={onReplySubmit} className="space-y-2">
+            <textarea
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+              placeholder="답글 작성"
+              className="w-full h-16 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              maxLength={1000}
+            />
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-500">
+                {replyContent.length}/1000
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onCancelReply}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={!replyContent.trim()}
+                  className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  답글 등록
+                </button>
+              </div>
             </div>
-
-            {/* 댓글 목록 */}
-            <div className="flex-1 overflow-y-auto p-4">
-                {comments.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">아직 댓글이 없습니다.</p>
-                ) : (
-                    comments.map(comment => renderComment(comment))
-                )}
-            </div>
-
-            {/* 댓글 입력 폼 */}
-            <div className="border-t bg-gray-50 p-4">
-                <form onSubmit={onCommentSubmit} className="space-y-3">
-                    <textarea
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="댓글 작성"
-                        className="w-full h-20 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        maxLength={1000}
-                    />
-                    <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-500">
-                            {newComment.length}/1000
-                        </span>
-                        <button
-                            type="submit"
-                            disabled={!newComment.trim()}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
-                        >
-                            등록
-                        </button>
-                    </div>
-                </form>
-            </div>
+          </form>
         </div>
-    );
+      )}
+
+      {/* 대댓글 렌더링 */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-2">
+          {comment.replies.map(reply => renderComment(reply, true, isReply))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="h-full flex flex-col ">
+      {/* 헤더 */}
+      <div className="flex justify-between items-center p-4 border-b bg-gray-50 rounded-t-lg">
+        <h3 className="text-lg font-semibold">댓글</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            title="댓글 새로고침"
+          >
+            <ArrowPathIcon className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-200 rounded"
+          >
+            <XMarkIcon className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+      </div>
+
+      {/* 댓글 목록 */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {comments.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">아직 댓글이 없습니다.</p>
+        ) : (
+          comments.map(comment => renderComment(comment))
+        )}
+      </div>
+
+      {/* 댓글 입력 폼 */}
+      <div className="border-t bg-gray-50 p-4 rounded-b-lg">
+        <form onSubmit={onCommentSubmit} className="space-y-3">
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="댓글 작성"
+            className="w-full h-20 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-blue-300"
+            maxLength={1000}
+          />
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-500">
+              {newComment.length}/1000
+            </span>
+            <button
+              type="submit"
+              disabled={!newComment.trim()}
+              className="px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+            >
+              등록
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 // 스타일 함수
