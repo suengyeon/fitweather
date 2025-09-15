@@ -1,12 +1,21 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toggleLike } from "../api/toggleLike";
+import { HeartIcon } from "@heroicons/react/24/outline";
+import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
 
 function FeedCard({ record, currentUserUid, onToggleLike, rank, selectedDate, selectedYear, selectedMonth, selectedDay, currentFilters }) {
   const navigate = useNavigate();
   const [imageIndex, setImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(record.likes?.includes(currentUserUid));
   const [likeCount, setLikeCount] = useState(record.likes?.length || 0);
+  
+  // 새로운 상태 관리
+  const [isSaved, setIsSaved] = useState(false); // 저장/구독 상태
+  const [thumbsUpCount, setThumbsUpCount] = useState(156); // 좋아요 수 (임시 데이터)
+  const [thumbsDownCount, setThumbsDownCount] = useState(15); // 싫어요 수 (임시 데이터)
+  const [isThumbsUp, setIsThumbsUp] = useState(false); // 좋아요 상태
+  const [isThumbsDown, setIsThumbsDown] = useState(false); // 싫어요 상태
 
   // 날씨 아이콘 코드에 따른 이모지 반환 함수 (Home, Record와 동일한 로직)
   const getWeatherEmoji = (iconCode) => {
@@ -46,6 +55,37 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank, selectedDate, se
       setIsLiked(isLiked);
       setLikeCount(prev => isLiked ? prev + 1 : prev - 1);
     }
+  };
+
+  // 저장/구독 핸들러
+  const handleSaveClick = (e) => {
+    e.stopPropagation();
+    setIsSaved(!isSaved);
+    // TODO: 실제 저장/구독 API 호출
+  };
+
+  // 좋아요 핸들러
+  const handleThumbsUpClick = (e) => {
+    e.stopPropagation();
+    if (isThumbsDown) {
+      setIsThumbsDown(false);
+      setThumbsDownCount(prev => prev - 1);
+    }
+    setIsThumbsUp(!isThumbsUp);
+    setThumbsUpCount(prev => isThumbsUp ? prev - 1 : prev + 1);
+    // TODO: 실제 좋아요 API 호출
+  };
+
+  // 싫어요 핸들러
+  const handleThumbsDownClick = (e) => {
+    e.stopPropagation();
+    if (isThumbsUp) {
+      setIsThumbsUp(false);
+      setThumbsUpCount(prev => prev - 1);
+    }
+    setIsThumbsDown(!isThumbsDown);
+    setThumbsDownCount(prev => isThumbsDown ? prev - 1 : prev + 1);
+    // TODO: 실제 싫어요 API 호출
   };
 
   const handlePrev = (e) => {
@@ -102,6 +142,40 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank, selectedDate, se
         </span>
       )}
 
+      {/* 저장/구독 하트 아이콘 - 오른쪽 상단 */}
+      <button
+        onClick={handleSaveClick}
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          background: "rgba(255, 255, 255, 0.8)",
+          border: "none",
+          borderRadius: "50%",
+          width: "32px",
+          height: "32px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          cursor: "pointer",
+          zIndex: 2,
+          transition: "all 0.2s ease"
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = "rgba(255, 255, 255, 1)";
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = "rgba(255, 255, 255, 0.8)";
+        }}
+      >
+        {isSaved ? (
+          <HeartIconSolid className="w-5 h-5 text-red-500" />
+        ) : (
+          <HeartIcon className="w-5 h-5 text-gray-600" />
+        )}
+      </button>
+
       {/* 이미지 영역 */}
       <div style={{ height: "230px", position: "relative" }}>
         {record.imageUrls?.length > 0 ? (
@@ -138,57 +212,121 @@ function FeedCard({ record, currentUserUid, onToggleLike, rank, selectedDate, se
       </div>
 
       {/* 정보 영역 */}
-      <div style={{ padding: "10px", height: "80px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-        {/* ♥ 하트 / 날씨 / 체감 */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {record.uid === currentUserUid ? (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <span style={{ fontSize: 18, color: "red" }}>♥</span>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{likeCount}</span>
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>나의 기록</span>
-              <span style={{ fontSize: 18 }}>{feelingEmoji}</span>
-            </>
-          ) : (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <button
-                  onClick={handleLikeClick}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: 18,
-                    color: isLiked ? "red" : "#ccc",
-                    padding: 0
-                  }}
-                >
-                  ♥
-                </button>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{likeCount}</span>
-              </div>
-              <span style={{ fontSize: 18 }}>
-                {(() => {
-                  // 새로운 기록(weather.icon이 있는 경우)은 weather.icon 사용
-                  if (record.weather?.icon && record.weather.icon !== "sunny") {
-                    return getWeatherEmoji(record.weather.icon);
-                  }
-                  // 기존 기록(weatherEmojis가 있는 경우)은 weatherEmojis 사용
-                  if (record.weatherEmojis && record.weatherEmojis.length > 0) {
-                    return record.weatherEmojis[0];
-                  }
-                  // 기본값
-                  return "☁️";
-                })()}
+      <div style={{ padding: "8px", height: "80px", display: "flex", flexDirection: "column", justifyContent: "flex-start", paddingTop: "12px" }}>
+        {/* 체감 정보와 좋아요/싫어요 버튼을 한 줄로 배치 */}
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "space-between",
+          gap: "8px"
+        }}>
+          {/* 좋아요/싫어요 버튼 (왼쪽) */}
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "6px"
+          }}>
+            {/* 좋아요 버튼 */}
+            <button
+              onClick={handleThumbsUpClick}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "2px",
+                background: isThumbsUp ? "rgba(59, 130, 246, 0.1)" : "rgba(0, 0, 0, 0.05)",
+                border: "1px solid rgba(0, 0, 0, 0.1)",
+                cursor: "pointer",
+                padding: "2px 4px",
+                borderRadius: "8px",
+                transition: "all 0.2s ease",
+                minWidth: "32px",
+                justifyContent: "center"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = isThumbsUp ? "rgba(59, 130, 246, 0.2)" : "rgba(0, 0, 0, 0.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = isThumbsUp ? "rgba(59, 130, 246, 0.1)" : "rgba(0, 0, 0, 0.05)";
+              }}
+            >
+              <span style={{ fontSize: 10 }}>
+                👍
               </span>
-              <span style={{ fontSize: 18 }}>{feelingEmoji}</span>
-            </>
-          )}
+              <span style={{ 
+                fontSize: 9, 
+                fontWeight: 600, 
+                color: isThumbsUp ? "#3b82f6" : "#374151" 
+              }}>
+                {thumbsUpCount}
+              </span>
+            </button>
+
+            {/* 싫어요 버튼 */}
+            <button
+              onClick={handleThumbsDownClick}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "2px",
+                background: isThumbsDown ? "rgba(239, 68, 68, 0.1)" : "rgba(0, 0, 0, 0.05)",
+                border: "1px solid rgba(0, 0, 0, 0.1)",
+                cursor: "pointer",
+                padding: "2px 4px",
+                borderRadius: "8px",
+                transition: "all 0.2s ease",
+                minWidth: "32px",
+                justifyContent: "center"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = isThumbsDown ? "rgba(239, 68, 68, 0.2)" : "rgba(0, 0, 0, 0.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = isThumbsDown ? "rgba(239, 68, 68, 0.1)" : "rgba(0, 0, 0, 0.05)";
+              }}
+            >
+              <span style={{ fontSize: 10 }}>
+                👎
+              </span>
+              <span style={{ 
+                fontSize: 9, 
+                fontWeight: 600, 
+                color: isThumbsDown ? "#ef4444" : "#374151" 
+              }}>
+                {thumbsDownCount}
+              </span>
+            </button>
+          </div>
+
+           {/* 날씨/체감 정보 (오른쪽) */}
+           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+             {record.uid === currentUserUid ? (
+               <>
+                 <span style={{ fontSize: 12, fontWeight: 600 }}>나의 기록</span>
+                 <span style={{ fontSize: 16 }}>{feelingEmoji}</span>
+               </>
+             ) : (
+               <>
+                 <span style={{ fontSize: 16 }}>
+                   {(() => {
+                     // 새로운 기록(weather.icon이 있는 경우)은 weather.icon 사용
+                     if (record.weather?.icon && record.weather.icon !== "sunny") {
+                       return getWeatherEmoji(record.weather.icon);
+                     }
+                     // 기존 기록(weatherEmojis가 있는 경우)은 weatherEmojis 사용
+                     if (record.weatherEmojis && record.weatherEmojis.length > 0) {
+                       return record.weatherEmojis[0];
+                     }
+                     // 기본값
+                     return "☁️";
+                   })()}
+                 </span>
+                 <span style={{ fontSize: 16 }}>{feelingEmoji}</span>
+               </>
+             )}
+           </div>
         </div>
-
-
       </div>
     </div>
   );

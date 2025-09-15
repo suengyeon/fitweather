@@ -32,6 +32,7 @@ function Feed() {
   const [outfits, setOutfits] = useState([]);
   const [order, setOrder] = useState("popular"); // 인기순 or 최신순
   const [region, setRegion] = useState(""); // 초기값 빈 문자열
+  const [style, setStyle] = useState("casual"); // 스타일 필터 (기본값: 캐주얼)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // 날씨 정보 가져오기 (모든 날짜에 대해 선택된 지역 사용)
@@ -162,11 +163,19 @@ function Feed() {
     sessionStorage.setItem('feedDate', `${selectedYear}-${selectedMonth}-${selectedDay}`);
   }, [selectedYear, selectedMonth, selectedDay]);
 
-  // region/order/selectedDate 바뀔 때마다 records fetch
+  // region/order/style/selectedDate 바뀔 때마다 records fetch
   useEffect(() => {
     if (!region) return;
-    getRecords(region, order, selectedDate).then(setOutfits);
-  }, [region, order, selectedDate]);
+    getRecords(region, order, selectedDate).then(records => {
+      // 스타일 필터링 적용
+      const filteredRecords = records.filter(record => {
+        // 스타일이 설정되지 않은 기록은 모든 스타일에 포함
+        if (!record.style) return true;
+        return record.style === style;
+      });
+      setOutfits(filteredRecords);
+    });
+  }, [region, order, style, selectedDate]);
 
   // 지역 변경 시 세션스토리지에 저장
   useEffect(() => {
@@ -320,6 +329,23 @@ function Feed() {
               >
                 <option value="popular">인기순</option>
                 <option value="latest">최신순</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-5 mt-4 relative">
+              <label htmlFor="style" className="font-bold">스타일</label>
+              <select
+                id="style"
+                value={style}
+                onChange={e => setStyle(e.target.value)}
+                className="w-[120px] px-3 py-2 rounded border text-center relative z-10"
+                style={{ overflow: 'visible' }}
+              >
+                <option value="casual">캐주얼</option>
+                <option value="minimal">미니멀</option>
+                <option value="formal">포멀</option>
+                <option value="sporty">스포티/액티브</option>
+                <option value="street">시크/스트릿</option>
+                <option value="feminine">러블리/페미닌</option>
               </select>
             </div>
           </div>
