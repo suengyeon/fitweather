@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function MenuSidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;

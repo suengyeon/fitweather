@@ -8,8 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import useWeather from "../hooks/useWeather";
-import WeatherCard from "../components/WeatherCard";
-import Sidebar from "../components/Sidebar";
+import MenuSidebar from "../components/MenuSidebar";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수 (Home, Record와 동일한 로직)
 function getWeatherEmoji(iconCode) {
@@ -251,7 +250,7 @@ function Feed() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
       {/* 사이드바 */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button

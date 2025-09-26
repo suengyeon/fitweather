@@ -8,7 +8,7 @@ import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import useWeather from "../hooks/useWeather";
-import Sidebar from "../components/Sidebar";
+import MenuSidebar from "../components/MenuSidebar";
 
 export default function MyPageLikes() {
   const navigate = useNavigate();
@@ -134,7 +134,7 @@ export default function MyPageLikes() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button

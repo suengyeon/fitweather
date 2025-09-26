@@ -6,7 +6,7 @@ import { getDocs, collection, query, where, doc, getDoc, updateDoc } from "fireb
 import { db } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import { useAuth } from "../contexts/AuthContext";
-import Sidebar from "../components/Sidebar";
+import MenuSidebar from "../components/MenuSidebar";
 import "react-calendar/dist/Calendar.css";
 import "../pages/Calendar.css";
 
@@ -218,7 +218,7 @@ function CalendarPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="relative flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         {/* 왼쪽: 햄버거 버튼 */}

@@ -11,7 +11,7 @@ import { toast } from "react-toastify";
 import { collection, query, where, getDocs, addDoc, deleteDoc, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "../contexts/AuthContext";
-import Sidebar from "../components/Sidebar";
+import MenuSidebar from "../components/MenuSidebar";
 import { getPastWeatherData, fetchAndSavePastWeather, deletePastWeatherData, savePastWeatherData } from "../api/pastWeather";
 import { fetchKmaPastWeather } from "../api/kmaPastWeather";
 
@@ -808,7 +808,7 @@ function Record() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
       {/* 사이드바 */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button

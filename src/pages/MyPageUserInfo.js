@@ -4,7 +4,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
-import Sidebar from "../components/Sidebar";
+import MenuSidebar from "../components/MenuSidebar";
 
 function MyPageUserInfo() {
   const { user } = useAuth();
@@ -64,7 +64,7 @@ function MyPageUserInfo() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
       {/* 사이드바 */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button 
