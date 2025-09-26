@@ -167,23 +167,36 @@ function CalendarPage() {
     if (!isOwnCalendar || !user?.uid) return;
 
     const newPublicState = !isPublic;
-    
+
     try {
       console.log("공개 여부 변경 중:", newPublicState);
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         isPublic: newPublicState
       });
-      
+
       // 상태 업데이트
       setIsPublic(newPublicState);
       console.log("공개 여부 변경 완료:", newPublicState);
-      
+
       // 성공 메시지
       alert(newPublicState ? "캘린더가 공개되었습니다." : "캘린더가 비공개로 설정되었습니다.");
     } catch (error) {
       console.error("공개 여부 업데이트 실패:", error);
       alert("공개 여부 변경에 실패했습니다.");
+    }
+  };
+
+  const getWeatherEmoji = (iconCode) => {
+    switch (iconCode) {
+      case "sunny": return "☀️";
+      case "cloudy": return "☁️";
+      case "overcast": return "🌥️";
+      case "rain": return "🌧️";
+      case "snow": return "❄️";
+      case "snow_rain": return "🌨️";
+      case "shower": return "🌦️";
+      default: return "";
     }
   };
 
@@ -193,7 +206,7 @@ function CalendarPage() {
 
     const dateStr = formatDateLocal(date);
     const record = outfitMap[dateStr];
-    const weather = record?.weatherEmojis?.slice(0, 2).join(" ");
+    const weatherEmoji = getWeatherEmoji(record?.weather?.icon ?? record?.icon ?? "");
     const feelingEmoji =
       {
         steam: "🥟",
@@ -208,7 +221,7 @@ function CalendarPage() {
         {/* 상단: 날짜와 날씨 이모지 */}
         <div className="calendar-tile-top">
           <span className="calendar-date">{date.getDate()}</span>
-          <span className="calendar-weather">{weather}</span>
+          <span className="calendar-weather">{weatherEmoji}</span>
         </div>
         {/* 하단: 체감 이모지 */}
         {feelingEmoji && <div className="calendar-feeling">{feelingEmoji}</div>}
