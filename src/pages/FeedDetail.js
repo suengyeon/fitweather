@@ -6,9 +6,54 @@ import { db } from "../firebase";
 import { HomeIcon, ArrowLeftIcon, HandThumbUpIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
-import WeatherCard from "../components/WeatherCard";
 import { toggleLike } from "../api/toggleLike";
 import { useAuth } from "../contexts/AuthContext";
+
+function addReplyRecursively(nodes, targetId, newReply) {
+    if (!Array.isArray(nodes)) return nodes;
+    return nodes.map((node) => {
+        if (node.id === targetId) {
+            const nextReplies = Array.isArray(node.replies) ? [...node.replies, newReply] : [newReply];
+            return { ...node, replies: nextReplies };
+        }
+        if (Array.isArray(node.replies) && node.replies.length > 0) {
+            return { ...node, replies: addReplyRecursively(node.replies, targetId, newReply) };
+        }
+        return node;
+    });
+}
+
+// targetId에 해당하는 노드만 지우고, 그 노드의 자식(replies)은 같은 위치로 승격하여 보존
+function deleteNodeKeepChildren(nodes, targetId) {
+    if (!Array.isArray(nodes)) return { list: nodes, changed: false };
+
+    let changed = false;
+    const result = [];
+
+    for (const node of nodes) {
+        if (node.id === targetId) {
+            // ✅ 이 노드만 삭제하고, 자식들을 같은 레벨로 승격
+            if (Array.isArray(node.replies) && node.replies.length > 0) {
+                result.push(...node.replies);
+            }
+            changed = true;
+            continue; // 현재 노드는 추가하지 않음
+        }
+
+        // 자식들 재귀 처리
+        let nextNode = node;
+        if (Array.isArray(node.replies) && node.replies.length > 0) {
+            const { list: childList, changed: childChanged } = deleteNodeKeepChildren(node.replies, targetId);
+            if (childChanged) {
+                changed = true;
+                nextNode = { ...node, replies: childList };
+            }
+        }
+        result.push(nextNode);
+    }
+
+    return { list: result, changed };
+}
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수
 function getWeatherEmoji(iconCode) {
@@ -82,8 +127,6 @@ function FeedDetail() {
         }
     };
     const [formattedDate, setFormattedDate] = useState("");
-
-
     const { user } = useAuth();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -92,13 +135,13 @@ function FeedDetail() {
     const [author, setAuthor] = useState(null);
     const [likeCount, setLikeCount] = useState(0);
     const [currentUserProfile, setCurrentUserProfile] = useState(null); // 현재 로그인된 사용자 프로필
-    
+
     // 구독 상태 관리
     const [isSubscribed, setIsSubscribed] = useState(false);
     // 좋아요 상태 관리 (기존 liked와 별도)
     const [isThumbsUp, setIsThumbsUp] = useState(false);
     const [thumbsUpCount, setThumbsUpCount] = useState(156); // 임시 데이터
-    
+
     // 댓글 뷰 상태 관리
     const [isCommentViewVisible, setIsCommentViewVisible] = useState(false);
     const [newComment, setNewComment] = useState("");
@@ -144,7 +187,7 @@ function FeedDetail() {
     useEffect(() => {
         const fetchCurrentUserProfile = async () => {
             if (!user) return;
-            
+
             try {
                 const userRef = doc(db, "users", user.uid);
                 const userSnap = await getDoc(userRef);
@@ -155,7 +198,7 @@ function FeedDetail() {
                 console.error("현재 사용자 프로필 가져오기 실패:", error);
             }
         };
-        
+
         fetchCurrentUserProfile();
     }, [user]);
 
@@ -181,7 +224,7 @@ function FeedDetail() {
                 setComments([]);
             }
         };
-        
+
         fetchComments();
     }, [id]);
 
@@ -244,7 +287,7 @@ function FeedDetail() {
         e.preventDefault();
         if (newComment.trim()) {
             const newCommentObj = {
-                id: Date.now(), // 임시 ID 생성
+                id: (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`), // 임시 ID 생성
                 author: currentUserProfile?.nickname || user?.displayName || "익명", // 현재 로그인된 사용자의 닉네임
                 authorUid: user?.uid, // 작성자 UID 추가
                 timestamp: new Date().toLocaleString('ko-KR', {
@@ -257,13 +300,13 @@ function FeedDetail() {
                 content: newComment.trim(),
                 replies: []
             };
-            
+
             try {
                 // 댓글 목록에 새 댓글 추가
                 const updatedComments = [...comments, newCommentObj];
                 setComments(updatedComments);
                 setNewComment("");
-                
+
                 // Firestore에 댓글 저장
                 console.log("댓글 저장 시작 - record ID:", id);
                 const commentsRef = doc(db, "comments", id);
@@ -271,10 +314,10 @@ function FeedDetail() {
                     comments: updatedComments,
                     lastUpdated: new Date()
                 }, { merge: true });
-                
+
                 console.log("새 댓글 추가 성공:", newCommentObj);
                 console.log("저장된 댓글 목록:", updatedComments);
-                
+
                 // 댓글 목록 다시 불러오기 (다른 사용자에게도 즉시 반영되도록)
                 const commentsSnap = await getDoc(commentsRef);
                 if (commentsSnap.exists()) {
@@ -292,52 +335,38 @@ function FeedDetail() {
 
     // 댓글 삭제 핸들러
     const handleCommentDelete = async (commentId) => {
-        if (window.confirm("댓글을 삭제하시겠습니까?")) {
-            try {
-                const updatedComments = comments.map(comment => {
-                    if (comment.id === commentId) {
-                        return null; // 삭제할 댓글
-                    }
-                    // 대댓글과 답글의 답글에서도 삭제
-                    if (comment.replies) {
-                        const updatedReplies = comment.replies.map(reply => {
-                            if (reply.id === commentId) {
-                                return null; // 삭제할 답글
-                            }
-                            // 답글의 답글에서도 삭제
-                            if (reply.replies) {
-                                const updatedSubReplies = reply.replies.filter(subReply => subReply.id !== commentId);
-                                return { ...reply, replies: updatedSubReplies };
-                            }
-                            return reply;
-                        }).filter(reply => reply !== null); // null인 답글 제거
-                        return { ...comment, replies: updatedReplies };
-                    }
-                    return comment;
-                }).filter(comment => comment !== null); // null인 댓글 제거
-                
-                setComments(updatedComments);
-                
-                // Firestore에 삭제된 댓글 반영
-                const commentsRef = doc(db, "comments", id);
-                await setDoc(commentsRef, {
-                    comments: updatedComments,
-                    lastUpdated: new Date()
-                }, { merge: true });
-                
-                console.log("댓글 삭제:", commentId);
-            } catch (error) {
-                console.error("댓글 삭제 실패:", error);
-                // 실패 시 UI 롤백
-                setComments(comments);
-            }
+        if (!window.confirm("댓글을 삭제하시겠습니까?")) return;
+
+        try {
+            const { list: updatedList, changed } = deleteNodeKeepChildren(comments, commentId);
+            if (!changed) return;
+
+            setComments(updatedList);
+
+            const commentsRef = doc(db, "comments", id);
+            await setDoc(
+                commentsRef,
+                { comments: updatedList, lastUpdated: new Date() },
+                { merge: true }
+            );
+
+            const snap = await getDoc(commentsRef);
+            if (snap.exists()) setComments(snap.data()?.comments || []);
+        } catch (err) {
+            console.error("댓글 삭제 실패:", err);
         }
     };
 
+
     // 답글 작성 시작 핸들러
     const handleReply = (commentId) => {
-        setReplyToCommentId(commentId);
-        setReplyContent("");
+        if (replyToCommentId === commentId) {
+            setReplyToCommentId(null);
+            setReplyContent("");
+        } else {
+            setReplyToCommentId(commentId);
+            setReplyContent("");
+        }
     };
 
     // 답글 작성 취소 핸들러
@@ -349,74 +378,41 @@ function FeedDetail() {
     // 답글 제출 핸들러
     const handleReplySubmit = async (e) => {
         e.preventDefault();
-        if (replyContent.trim() && replyToCommentId) {
-            const newReply = {
-                id: Date.now(),
-                author: currentUserProfile?.nickname || user?.displayName || "익명", // 현재 로그인된 사용자의 닉네임
-                authorUid: user?.uid, // 작성자 UID 추가
-                timestamp: new Date().toLocaleString('ko-KR', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }).replace(/\./g, '-').replace(/,/g, '').replace(/\s/g, ' '),
-                content: replyContent.trim(),
-                replies: []
-            };
-            
-            try {
-                const updatedComments = comments.map(comment => {
-                    // 원댓글에 답글 추가
-                    if (comment.id === replyToCommentId) {
-                        return {
-                            ...comment,
-                            replies: [...(comment.replies || []), newReply]
-                        };
-                    }
-                    // 답글에 답글 추가 (답글의 답글)
-                    if (comment.replies) {
-                        const updatedReplies = comment.replies.map(reply => {
-                            if (reply.id === replyToCommentId) {
-                                return {
-                                    ...reply,
-                                    replies: [...(reply.replies || []), newReply]
-                                };
-                            }
-                            return reply;
-                        });
-                        return { ...comment, replies: updatedReplies };
-                    }
-                    return comment;
-                });
-                
-                setComments(updatedComments);
-                
-                // Firestore에 답글 저장
-                const commentsRef = doc(db, "comments", id);
-                await setDoc(commentsRef, {
-                    comments: updatedComments,
-                    lastUpdated: new Date()
-                }, { merge: true });
-                
-                // 답글 작성 완료 후 초기화
-                setReplyToCommentId(null);
-                setReplyContent("");
-                
-                console.log("답글 추가:", newReply);
-                
-                // 댓글 목록 다시 불러오기
-                const commentsSnap = await getDoc(commentsRef);
-                if (commentsSnap.exists()) {
-                    const freshCommentsData = commentsSnap.data();
-                    setComments(freshCommentsData.comments || []);
-                    console.log("답글 추가 후 댓글 목록 새로고침 완료:", freshCommentsData.comments);
-                }
-            } catch (error) {
-                console.error("답글 저장 실패:", error);
-                // 실패 시 UI 롤백
-                setComments(comments);
+        if (!replyContent.trim() || !replyToCommentId) return;
+
+        const newReply = {
+            id: (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`),
+            author: currentUserProfile?.nickname || user?.displayName || "익명",
+            authorUid: user?.uid,
+            timestamp: new Date().toLocaleString('ko-KR', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            }).replace(/\./g, '-').replace(/,/g, '').replace(/\s/g, ' '),
+            content: replyContent.trim(),
+            replies: []
+        };
+
+        // 1) 낙관적 업데이트 (바로 보이게)
+        const optimistic = addReplyRecursively(comments, replyToCommentId, newReply);
+        setComments(optimistic);
+        setReplyToCommentId(null);
+        setReplyContent("");
+
+        try {
+            // 2) 서버 반영
+            const commentsRef = doc(db, "comments", id);
+            await setDoc(commentsRef, { comments: optimistic, lastUpdated: new Date() }, { merge: true });
+
+            // 3) 서버 기준 새로고침 (동시성 보호)
+            const snap = await getDoc(commentsRef);
+            if (snap.exists()) {
+                const fresh = snap.data()?.comments || [];
+                setComments(fresh);
             }
+        } catch (err) {
+            console.error("답글 저장 실패:", err);
+            // 롤백 대신, 화면은 유지하고 알림만
+            // 필요시 토스트: toast.error("답글 저장에 실패했습니다.");
         }
     };
 
@@ -448,7 +444,7 @@ function FeedDetail() {
                         <div className="px-6 py-6 text-center h-full">
                             {/* 댓글 보기 버튼 */}
                             <div className="mb-4 flex justify-start">
-                                <button 
+                                <button
                                     onClick={handleCommentViewToggle}
                                     className="px-3 py-1 bg-white rounded text-sm font-medium hover:bg-gray-100 transition-colors"
                                 >
@@ -521,28 +517,28 @@ function FeedDetail() {
                                 <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
                             </div>
                         </div>
-                            ) : (
-                                // 댓글 섹션
-                                <CommentSection
-                                    comments={comments}
-                                    newComment={newComment}
-                                    setNewComment={setNewComment}
-                                    onCommentSubmit={handleCommentSubmit}
-                                    onCommentDelete={handleCommentDelete}
-                                    onReply={handleReply}
-                                    onClose={() => setIsCommentViewVisible(false)}
-                                    onRefresh={handleRefreshComments}
-                                    isRefreshing={isRefreshing}
-                                    replyToCommentId={replyToCommentId}
-                                    replyContent={replyContent}
-                                    setReplyContent={setReplyContent}
-                                    onReplySubmit={handleReplySubmit}
-                                    onCancelReply={handleCancelReply}
-                                    currentUserProfile={currentUserProfile}
-                                    user={user}
-                                    author={author}
-                                />
-                            )}
+                    ) : (
+                        // 댓글 섹션
+                        <CommentSection
+                            comments={comments}
+                            newComment={newComment}
+                            setNewComment={setNewComment}
+                            onCommentSubmit={handleCommentSubmit}
+                            onCommentDelete={handleCommentDelete}
+                            onReply={handleReply}
+                            onClose={() => setIsCommentViewVisible(false)}
+                            onRefresh={handleRefreshComments}
+                            isRefreshing={isRefreshing}
+                            replyToCommentId={replyToCommentId}
+                            replyContent={replyContent}
+                            setReplyContent={setReplyContent}
+                            onReplySubmit={handleReplySubmit}
+                            onCancelReply={handleCancelReply}
+                            currentUserProfile={currentUserProfile}
+                            user={user}
+                            author={author}
+                        />
+                    )}
                 </div>
 
                 {/* 오른쪽: 이미지 & 착장 */}
@@ -550,13 +546,13 @@ function FeedDetail() {
 
                     {/* 닉네임 + 버튼들 상단 바 */}
                     <div className="relative bg-gray-200 h-12 flex items-center px-4 mb-6">
-                        <button 
+                        <button
                             onClick={() => navigate(`/calendar/${data.uid}`)}
                             className="absolute left-1/2 transform -translate-x-1/2 text-normal font-semibold hover:text-blue-600 hover:underline transition-colors"
                         >
                             {author ? `${author.nickname || author.uid}님의 기록` : ""}
                         </button>
-                        
+
                         {/* 구독 버튼 (하트 아이콘) */}
                         <button
                             onClick={handleSubscribe}
@@ -568,14 +564,14 @@ function FeedDetail() {
                                 <HeartIcon className="w-6 h-6 text-gray-500" />
                             )}
                         </button>
-                        
+
                         {/* 좋아요 버튼 (엄지척 아이콘) */}
                         <button
                             onClick={handleThumbsUp}
                             className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110"
                         >
-                            <HandThumbUpIcon 
-                                className={`w-5 h-5 ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`} 
+                            <HandThumbUpIcon
+                                className={`w-5 h-5 ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`}
                             />
                             <span className={`text-sm font-semibold ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`}>
                                 {thumbsUpCount}
@@ -664,7 +660,6 @@ function feelingToEmoji(feeling) {
     return map[feeling] || feeling;
 }
 
-// CommentSection 컴포넌트
 function CommentSection({
     comments,
     newComment,
@@ -684,98 +679,89 @@ function CommentSection({
     user,
     author
 }) {
-    const renderComment = (comment, isReply = false, isSubReply = false) => (
-        <div key={comment.id} className={`${isReply ? 'ml-6 mt-2' : isSubReply ? 'mt-2' : 'mb-4'}`}>
-            <div className="bg-white rounded-lg p-3 border">
-                <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <div className="font-semibold text-sm text-gray-800 flex items-center gap-2">
-                            <span>
-                                {isSubReply ? `ㄴㄴ ${comment.author}` : isReply ? `ㄴ ${comment.author}` : comment.author}
-                            </span>
-                            {(() => {
-                                const isAuthor = comment.authorUid === author?.uid;
-                                console.log("FeedDetail - 작성자 표시 확인:", {
-                                    commentAuthorUid: comment.authorUid,
-                                    authorUid: author?.uid,
-                                    isAuthor: isAuthor,
-                                    commentAuthor: comment.author
-                                });
-                                return isAuthor;
-                            })() && (
-                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-md font-medium">
-                                    작성자
-                                </span>
+    // 같은 너비 유지: level=0(원댓글), level>=1(답글/답글의답글 전부 동일 들여쓰기)
+    const renderComment = (comment, level = 0) => {
+        const isIndented = level >= 1;
+        return (
+            <div key={comment.id} className={`${isIndented ? 'mt-2' : 'mb-4'}`}>
+                <div className="bg-white rounded-lg p-3 border w-full">
+                    <div className="flex justify-between items-start mb-2">
+                        <div>
+                            <div className="font-semibold text-sm text-gray-800 flex items-center gap-2">
+                                <span>{isIndented ? `ㄴ ${comment.author}` : comment.author}</span>
+                                {(comment.authorUid === author?.uid) && (
+                                    <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-md font-medium">
+                                        작성자
+                                    </span>
+                                )}
+                            </div>
+                            <div className="text-xs text-gray-500">{comment.timestamp}</div>
+                        </div>
+
+                        <div className="flex gap-2">
+                            {/* 부모로부터 받은 핸들러 사용 */}
+                            <button
+                                onClick={() => onReply(comment.id)}
+                                className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                                답글
+                            </button>
+                            {(comment.authorUid === user?.uid || author?.uid === user?.uid) && (
+                                <button
+                                    onClick={() => onCommentDelete(comment.id)}
+                                    className="text-xs text-red-600 hover:text-red-800"
+                                >
+                                    삭제
+                                </button>
                             )}
                         </div>
-                        <div className="text-xs text-gray-500">{comment.timestamp}</div>
                     </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => onReply(comment.id)}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                        >
-                            답글
-                        </button>
-                        {/* 댓글 작성자이거나 게시물 작성자만 삭제 가능 */}
-                        {(comment.authorUid === user?.uid || 
-                          (author && author.uid === user?.uid)) && (
-                            <button
-                                onClick={() => onCommentDelete(comment.id)}
-                                className="text-xs text-red-600 hover:text-red-800"
-                            >
-                                삭제
-                            </button>
-                        )}
-                    </div>
-                </div>
-                <p className="text-sm text-gray-700 mb-2">{comment.content}</p>
-            </div>
 
-            {/* 답글 작성 폼 */}
-            {replyToCommentId === comment.id && (
-                <div className={`${isReply ? 'ml-6' : 'ml-0'} mt-2 bg-gray-50 rounded-lg p-3 border`}>
-                    <form onSubmit={onReplySubmit} className="space-y-2">
-                        <textarea
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="답글 작성"
-                            className="w-full h-16 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            maxLength={1000}
-                        />
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs text-gray-500">
-                                {replyContent.length}/1000
-                            </span>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={onCancelReply}
-                                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                                >
-                                    취소
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={!replyContent.trim()}
-                                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                >
-                                    답글 등록
-                                </button>
+                    <p className="text-sm text-gray-700 mb-2">{comment.content}</p>
+                </div>
+
+                {/* 답글 작성 폼 */}
+                {replyToCommentId === comment.id && (
+                    <div className={`mt-2 bg-gray-50 rounded-lg p-3 border ${isIndented ? '' : ''}`}>
+                        <form onSubmit={onReplySubmit} className="space-y-2">
+                            <textarea
+                                value={replyContent}
+                                onChange={(e) => setReplyContent(e.target.value)}
+                                placeholder="답글 작성"
+                                className="w-full h-16 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                maxLength={1000}
+                            />
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-500">{replyContent.length}/1000</span>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={onCancelReply}
+                                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                                    >
+                                        취소
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={!replyContent.trim()}
+                                        className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    >
+                                        답글 등록
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    </form>
-                </div>
-            )}
+                        </form>
+                    </div>
+                )}
 
-            {/* 대댓글 렌더링 */}
-            {comment.replies && comment.replies.length > 0 && (
-                <div className="mt-2">
-                    {comment.replies.map(reply => renderComment(reply, true, isReply))}
-                </div>
-            )}
-        </div>
-    );
+                {Array.isArray(comment.replies) && comment.replies.length > 0 && (
+                    <div className={`mt-2 ${level === 0 ? 'ml-6' : ''}`}>
+                        {comment.replies.map((r) => renderComment(r, 1))} {/* 레벨은 1로 고정 */}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="h-full flex flex-col">
@@ -783,7 +769,7 @@ function CommentSection({
             <div className="flex justify-between items-center p-4 border-b bg-gray-50">
                 <h3 className="text-lg font-semibold">댓글</h3>
                 <div className="flex gap-2">
-                    <button 
+                    <button
                         onClick={onRefresh}
                         disabled={isRefreshing}
                         className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
@@ -791,10 +777,7 @@ function CommentSection({
                     >
                         <ArrowPathIcon className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
                     </button>
-                    <button 
-                        onClick={onClose}
-                        className="p-1 hover:bg-gray-200 rounded"
-                    >
+                    <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded">
                         <XMarkIcon className="w-5 h-5 text-gray-600" />
                     </button>
                 </div>
@@ -805,7 +788,7 @@ function CommentSection({
                 {comments.length === 0 ? (
                     <p className="text-gray-500 text-center py-8">아직 댓글이 없습니다.</p>
                 ) : (
-                    comments.map(comment => renderComment(comment))
+                    comments.map((comment) => renderComment(comment, 0))  // ✅ level=0에서 시작
                 )}
             </div>
 
@@ -820,9 +803,7 @@ function CommentSection({
                         maxLength={1000}
                     />
                     <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-500">
-                            {newComment.length}/1000
-                        </span>
+                        <span className="text-xs text-gray-500">{newComment.length}/1000</span>
                         <button
                             type="submit"
                             disabled={!newComment.trim()}
