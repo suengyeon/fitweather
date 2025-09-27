@@ -3,10 +3,11 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import { HomeIcon, ArrowLeftIcon, HandThumbUpIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { HomeIcon, ArrowLeftIcon, HandThumbUpIcon, HandThumbDownIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
 import { toggleLike } from "../api/toggleLike";
+import { toggleSubscription, checkSubscription } from "../api/subscribe";
 import { useAuth } from "../contexts/AuthContext";
 
 function addReplyRecursively(nodes, targetId, newReply) {
@@ -140,7 +141,27 @@ function FeedDetail() {
     const [isSubscribed, setIsSubscribed] = useState(false);
     // 좋아요 상태 관리 (기존 liked와 별도)
     const [isThumbsUp, setIsThumbsUp] = useState(false);
-    const [thumbsUpCount, setThumbsUpCount] = useState(156); // 임시 데이터
+    const [thumbsUpCount, setThumbsUpCount] = useState(0); // 0으로 초기화
+    const [isThumbsDown, setIsThumbsDown] = useState(false);
+    const [thumbsDownCount, setThumbsDownCount] = useState(0); // 0으로 초기화
+
+    // 구독 상태 확인
+    useEffect(() => {
+        const checkSubscriptionStatus = async () => {
+            if (!user?.uid || !data?.uid || user.uid === data.uid) return;
+            
+            try {
+                const isSubscribed = await checkSubscription(user.uid, data.uid);
+                setIsSubscribed(isSubscribed);
+            } catch (error) {
+                console.error("구독 상태 확인 실패:", error);
+            }
+        };
+
+        if (data?.uid) {
+            checkSubscriptionStatus();
+        }
+    }, [user?.uid, data?.uid]);
 
     // 댓글 뷰 상태 관리
     const [isCommentViewVisible, setIsCommentViewVisible] = useState(false);
@@ -166,7 +187,14 @@ function FeedDetail() {
                 // 기록의 실제 날짜를 포맷팅
                 if (record.date) {
                     const [year, month, day] = record.date.split('-').map(Number);
-                    setFormattedDate(`${year}년 ${month}월 ${day}일`);
+                    let dateString = `${year}년 ${month}월 ${day}일`;
+                    
+                    // 시간 정보가 있으면 추가
+                    if (record.recordedTime) {
+                        dateString += ` ${record.recordedTime}`;
+                    }
+                    
+                    setFormattedDate(dateString);
                 }
 
                 // 작성자 정보 fetch
@@ -242,16 +270,86 @@ function FeedDetail() {
     };
 
     // 구독 버튼 클릭 핸들러
-    const handleSubscribe = () => {
+    const handleSubscribe = async () => {
+        if (!user || !data?.uid) {
+            console.error("❌ 사용자 정보가 없습니다.");
+            return;
+        }
+
+        const previousState = isSubscribed;
         setIsSubscribed(!isSubscribed);
-        // TODO: 실제 구독 API 호출
+        
+        try {
+            console.log("📡 구독 API 호출 시작:", { followerId: user.uid, followingId: data.uid });
+            const isSubscribed = await toggleSubscription(user.uid, data.uid);
+            console.log("✅ 구독 토글 성공:", { recordId: id, isSubscribed });
+        } catch (err) {
+            console.error("❌ 구독 API 오류:", err);
+            // 롤백
+            setIsSubscribed(previousState);
+        }
     };
 
-    // 좋아요 버튼 클릭 핸들러
-    const handleThumbsUp = () => {
+    // 좋아요 버튼 클릭 핸들러 (피드페이지와 동일한 로직)
+    const handleThumbsUp = async (e) => {
+        e.stopPropagation();
+        
+        if (!user) {
+            console.error("❌ 사용자 정보가 없습니다.");
+            return;
+        }
+
+        const previousState = isThumbsUp;
         setIsThumbsUp(!isThumbsUp);
         setThumbsUpCount(prev => isThumbsUp ? prev - 1 : prev + 1);
-        // TODO: 실제 좋아요 API 호출
+        
+        // 싫어요가 활성화되어 있으면 비활성화
+        if (isThumbsDown) {
+            setIsThumbsDown(false);
+            setThumbsDownCount(prev => prev - 1);
+        }
+        
+        try {
+            console.log("👍 좋아요 API 호출:", { recordId: id, userId: user.uid });
+            // TODO: 실제 좋아요 API 호출 (현재는 UI만 업데이트)
+            // await thumbsUpAPI(id, user.uid);
+        } catch (err) {
+            console.error("❌ 좋아요 API 오류:", err);
+            // 롤백
+            setIsThumbsUp(previousState);
+            setThumbsUpCount(prev => isThumbsUp ? prev + 1 : prev - 1);
+        }
+    };
+
+    // 싫어요 버튼 클릭 핸들러
+    const handleThumbsDown = async (e) => {
+        e.stopPropagation();
+        
+        if (!user) {
+            console.error("❌ 사용자 정보가 없습니다.");
+            return;
+        }
+
+        const previousState = isThumbsDown;
+        setIsThumbsDown(!isThumbsDown);
+        setThumbsDownCount(prev => isThumbsDown ? prev - 1 : prev + 1);
+        
+        // 좋아요가 활성화되어 있으면 비활성화
+        if (isThumbsUp) {
+            setIsThumbsUp(false);
+            setThumbsUpCount(prev => prev - 1);
+        }
+        
+        try {
+            console.log("👎 싫어요 API 호출:", { recordId: id, userId: user.uid });
+            // TODO: 실제 싫어요 API 호출 (현재는 UI만 업데이트)
+            // await thumbsDownAPI(id, user.uid);
+        } catch (err) {
+            console.error("❌ 싫어요 API 오류:", err);
+            // 롤백
+            setIsThumbsDown(previousState);
+            setThumbsDownCount(prev => isThumbsDown ? prev + 1 : prev - 1);
+        }
     };
 
     // 댓글 뷰 토글 핸들러
@@ -546,6 +644,36 @@ function FeedDetail() {
 
                     {/* 닉네임 + 버튼들 상단 바 */}
                     <div className="relative bg-gray-200 h-12 flex items-center px-4 mb-6">
+                        {/* 왼쪽: 구독 버튼 (하트) */}
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleSubscribe();
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            style={{
+                                cursor: "pointer",
+                                fontSize: "24px",
+                                transition: "all 0.2s ease",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "none",
+                                background: "transparent",
+                                color: isSubscribed ? "#dc2626" : "#9ca3af"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.transform = "scale(1.2)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.transform = "scale(1)";
+                            }}
+                        >
+                            {isSubscribed ? "♥" : "♡"}
+                        </button>
+
+                        {/* 가운데: 닉네임 */}
                         <button
                             onClick={() => navigate(`/calendar/${data.uid}`)}
                             className="absolute left-1/2 transform -translate-x-1/2 text-normal font-semibold hover:text-blue-600 hover:underline transition-colors"
@@ -553,30 +681,34 @@ function FeedDetail() {
                             {author ? `${author.nickname || author.uid}님의 기록` : ""}
                         </button>
 
-                        {/* 구독 버튼 (하트 아이콘) */}
-                        <button
-                            onClick={handleSubscribe}
-                            className="ml-auto mr-2 px-2 py-1 rounded text-xl transition hover:scale-110"
-                        >
-                            {isSubscribed ? (
-                                <HeartIconSolid className="w-6 h-6 text-red-500" />
-                            ) : (
-                                <HeartIcon className="w-6 h-6 text-gray-500" />
-                            )}
-                        </button>
+                        {/* 오른쪽: 좋아요/싫어요 버튼 */}
+                        <div className="flex items-center gap-2 ml-auto">
+                            {/* 👍 좋아요 */}
+                            <button
+                                onClick={handleThumbsUp}
+                                className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110"
+                            >
+                                <HandThumbUpIcon
+                                    className={`w-5 h-5 ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`}
+                                />
+                                <span className={`text-sm font-semibold ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`}>
+                                    {thumbsUpCount}
+                                </span>
+                            </button>
 
-                        {/* 좋아요 버튼 (엄지척 아이콘) */}
-                        <button
-                            onClick={handleThumbsUp}
-                            className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110"
-                        >
-                            <HandThumbUpIcon
-                                className={`w-5 h-5 ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`}
-                            />
-                            <span className={`text-sm font-semibold ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`}>
-                                {thumbsUpCount}
-                            </span>
-                        </button>
+                            {/* 👎 싫어요 */}
+                            <button
+                                onClick={handleThumbsDown}
+                                className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110"
+                            >
+                                <HandThumbDownIcon
+                                    className={`w-5 h-5 ${isThumbsDown ? 'text-red-500' : 'text-gray-500'}`}
+                                />
+                                <span className={`text-sm font-semibold ${isThumbsDown ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {thumbsDownCount}
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* 이미지 + 착장 목록 */}

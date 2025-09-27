@@ -72,12 +72,22 @@ function CalendarPage() {
           // 공개되지 않은 캘린더인 경우 접근 거부
           if (!userData.isPublic) {
             alert("이 사용자의 캘린더는 비공개입니다.");
-            navigate("/feed");
+            // 이전 페이지로 이동 (구독 페이지, FeedDetail 페이지 등)
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              navigate("/feed");
+            }
             return;
           }
         } else {
           alert("사용자를 찾을 수 없습니다.");
-          navigate("/feed");
+          // 이전 페이지로 이동 (구독 페이지, FeedDetail 페이지 등)
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            navigate("/feed");
+          }
           return;
         }
       } else {

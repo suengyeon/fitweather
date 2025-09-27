@@ -11,6 +11,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
+import { getRecommendations } from "../api/getRecommendations";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수
 function getWeatherEmoji(iconCode) {
@@ -36,12 +37,60 @@ function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [alarmOpen, setAlarmOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  
+  // 추천 관련 상태
+  const [recommendations, setRecommendations] = useState([]);
+  const [currentRecommendationIndex, setCurrentRecommendationIndex] = useState(0);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (profile?.region) {
       setSelectedRegion(profile.region);
     }
   }, [profile?.region]);
+
+  // 추천 데이터 가져오기
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (!selectedRegion) return;
+      
+      setRecommendationLoading(true);
+      try {
+        console.log("🔍 추천 데이터 요청:", selectedRegion);
+        const data = await getRecommendations(selectedRegion, 3);
+        console.log("📊 추천 데이터 결과:", data);
+        setRecommendations(data);
+        
+        // 새로고침 시 순차적 표시를 위한 인덱스 업데이트
+        setCurrentRecommendationIndex(prev => {
+          const newIndex = (prev + 1) % Math.max(data.length, 1);
+          console.log("🔄 추천 인덱스 변경:", prev, "->", newIndex);
+          return newIndex;
+        });
+      } catch (error) {
+        console.error("추천 데이터 가져오기 실패:", error);
+        setRecommendations([]);
+      } finally {
+        setRecommendationLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, [selectedRegion]);
+
+  // 새로고침 버튼 클릭 핸들러
+  const handleRefreshRecommendation = () => {
+    if (recommendations.length > 0) {
+      setIsRefreshing(true);
+      setCurrentRecommendationIndex(prev => (prev + 1) % recommendations.length);
+      
+      // 새로고침 아이콘 애니메이션 완료 후 상태 리셋
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 1000); // 새로고침 아이콘 회전 시간
+    }
+  };
 
   // 샘플 데이터 (백엔드 붙기 전 UI 테스트용)
   useEffect(() => {
@@ -102,6 +151,17 @@ function Home() {
 
   const { weather, loading: weatherLoading } = useWeather(selectedRegion);
   const loading = profileLoading || weatherLoading;
+
+  // 현재 표시할 추천 데이터 계산
+  const currentRecommendation = useMemo(() => {
+    console.log("🎯 현재 추천 데이터 계산:", {
+      recommendations: recommendations.length,
+      currentIndex: currentRecommendationIndex,
+      current: recommendations[currentRecommendationIndex]
+    });
+    if (recommendations.length === 0) return null;
+    return recommendations[currentRecommendationIndex];
+  }, [recommendations, currentRecommendationIndex]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -221,71 +281,158 @@ function Home() {
               </div>
             )}
 
-            {/* 옷 추천 카드 */}
-            <div className="w-full max-w-md mt-6">
-              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
-                {/* 카드 헤더 */}
-                <div className="flex items-center justify-between mb-4">
-                  <select className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none">
-                    <option value="casual">캐주얼</option>
-                    <option value="minimal">미니멀</option>
-                    <option value="formal">포멀</option>
-                    <option value="sporty">스포티/액티브</option>
-                    <option value="street">시크/스트릿</option>
-                    <option value="feminine">러블리/페미닌</option>
-                  </select>
-                  <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-                    <ArrowPathIcon className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* 추천 아이템 그리드 */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "16px",
-                  }}
-                >
-                  {/* 아우터 */}
-                  <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
-                    <div className="text-sm font-medium text-gray-800 mb-1">아우터</div>
-                    <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">가디건</div>
+            {/* 추천 섹션 */}
+            {recommendationLoading ? (
+              <div className="w-full max-w-md mt-6">
+                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+                  <div className="text-center text-gray-500">
+                    <p>추천 데이터를 불러오는 중...</p>
                   </div>
-
-                  {/* 하의 */}
-                  <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
-                    <div className="text-sm font-medium text-gray-800 mb-1">하의</div>
-                    <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">바지</div>
-                  </div>
-
-                  {/* 상의 */}
-                  <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
-                    <div className="text-sm font-medium text-gray-800 mb-1">상의</div>
-                    <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">긴팔티</div>
-                  </div>
-
-                  {/* 신발 */}
-                  <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
-                    <div className="text-sm font-medium text-gray-800 mb-1">신발</div>
-                    <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">스니커즈</div>
-                  </div>
-
-                  {/* 악세서리 - 두 열을 모두 차지 */}
-                  <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px", gridColumn: "1 / -1" }}>
-                    <div className="text-sm font-medium text-gray-800 mb-1">악세서리</div>
-                    <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">우산</div>
-                  </div>
-                </div>
-
-                {/* 착장 보기 링크 */}
-                <div className="flex justify-end mt-4">
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
-                    착장 보기
-                  </a>
                 </div>
               </div>
-            </div>
+            ) : currentRecommendation ? (
+              <div className="w-full max-w-md mt-6">
+            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+                  {/* 카드 헤더 */}
+                  <div className="flex items-center justify-between mb-4">
+                    <select className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none">
+                      <option value="casual">캐주얼</option>
+                      <option value="minimal">미니멀</option>
+                      <option value="formal">포멀</option>
+                      <option value="sporty">스포티/액티브</option>
+                      <option value="street">시크/스트릿</option>
+                      <option value="feminine">러블리/페미닌</option>
+                    </select>
+               <button 
+                 onClick={handleRefreshRecommendation}
+                 className={`p-1 text-gray-400 hover:text-gray-600 transition-colors ${isRefreshing ? 'animate-spin' : ''}`}
+               >
+                 <ArrowPathIcon className="w-4 h-4" />
+               </button>
+                  </div>
+
+                  {/* 추천 아이템 그리드 */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "16px",
+                    }}
+                  >
+                    {/* 아우터 */}
+                    <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
+                      <div className="text-sm font-medium text-gray-800 mb-1">아우터</div>
+                      <div className="flex flex-wrap gap-1">
+                        {currentRecommendation.outfit?.outer?.length > 0 ? (
+                          currentRecommendation.outfit.outer.map((item, index) => (
+                            <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                              {item}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                            가디건
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 하의 */}
+                    <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
+                      <div className="text-sm font-medium text-gray-800 mb-1">하의</div>
+                      <div className="flex flex-wrap gap-1">
+                        {currentRecommendation.outfit?.bottom?.length > 0 ? (
+                          currentRecommendation.outfit.bottom.map((item, index) => (
+                            <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                              {item}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                            바지
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 상의 */}
+                    <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
+                      <div className="text-sm font-medium text-gray-800 mb-1">상의</div>
+                      <div className="flex flex-wrap gap-1">
+                        {currentRecommendation.outfit?.top?.length > 0 ? (
+                          currentRecommendation.outfit.top.map((item, index) => (
+                            <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                              {item}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                            긴팔티
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 신발 */}
+                    <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
+                      <div className="text-sm font-medium text-gray-800 mb-1">신발</div>
+                      <div className="flex flex-wrap gap-1">
+                        {currentRecommendation.outfit?.shoes?.length > 0 ? (
+                          currentRecommendation.outfit.shoes.map((item, index) => (
+                            <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                              {item}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                            스니커즈
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 악세서리 - 두 열을 모두 차지 */}
+                    <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px", gridColumn: "1 / -1" }}>
+                      <div className="text-sm font-medium text-gray-800 mb-1">악세서리</div>
+                      <div className="flex flex-wrap gap-1">
+                        {currentRecommendation.outfit?.acc?.length > 0 ? (
+                          currentRecommendation.outfit.acc.map((item, index) => (
+                            <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                              {item}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                            우산
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 착장 보기 링크 */}
+                  <div className="flex justify-end mt-4">
+                    <button 
+                      onClick={() => {
+                        // 모든 기록은 FeedDetail로 이동 (내 기록이든 다른 사람 기록이든)
+                        navigate(`/feed-detail/${currentRecommendation.id}`);
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      착장 보기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full max-w-md mt-6">
+                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+                  <div className="text-center text-gray-500">
+                    <p>오늘의 추천 착장이 없습니다.</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 버튼들 */}
             <div className="flex gap-4 mt-6">

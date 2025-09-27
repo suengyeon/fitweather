@@ -109,11 +109,11 @@ function Recommend() {
     { value: "ice", label: "🥶 (동태)", emoji: "🥶" },
   ];
 
-  // 모든 기록 가져오기 (최근 30일)
+  // 모든 기록 가져오기 (전체 기록)
   useEffect(() => {
     const fetchAllRecords = async () => {
       try {
-        const records = await getAllRecords(30);
+        const records = await getAllRecords();
         setOutfits(records);
         setFilteredOutfits(records);
       } catch (error) {
@@ -202,10 +202,20 @@ function Recommend() {
       return true;
     });
 
-    // 좋아요 수 내림차순
-    filtered.sort(
-      (a, b) => (b.likes?.length || 0) - (a.likes?.length || 0)
-    );
+    // 정렬: 1차 좋아요 내림차순, 2차 싫어요 오름차순
+    filtered.sort((a, b) => {
+      const aLikes = a.likes?.length || 0;
+      const bLikes = b.likes?.length || 0;
+      const aDislikes = a.dislikes?.length || 0;
+      const bDislikes = b.dislikes?.length || 0;
+      
+      // 1차: 좋아요 개수 내림차순
+      if (aLikes !== bLikes) {
+        return bLikes - aLikes;
+      }
+      // 2차: 싫어요 개수 오름차순 (적은 순서대로)
+      return aDislikes - bDislikes;
+    });
 
     setFilteredOutfits(filtered);
   }, [

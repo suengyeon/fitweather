@@ -35,6 +35,8 @@ export const saveOutfitRecord = async (record) => {
       imageUrls:     record.imageUrls,
       feedback:      record.feedback,
       outfit:        record.outfit,
+      styles:        record.styles, // 스타일 정보 추가
+      season:        record.season, // 계절 정보 추가
       isPublic:      record.isPublic
     });
     return docRef.id;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import FeedCard from "../components/FeedCard";
 import { getRecords } from "../api/getRecords";
 import { toggleLike } from "../api/toggleLike";
@@ -7,7 +7,6 @@ import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
-import useWeather from "../hooks/useWeather";
 import MenuSidebar from "../components/MenuSidebar";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수 (Home, Record와 동일한 로직)
@@ -34,8 +33,7 @@ function Feed() {
   const [style, setStyle] = useState("casual"); // 스타일 필터 (기본값: 캐주얼)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // 날씨 정보 가져오기 (모든 날짜에 대해 선택된 지역 사용)
-  const { weather, loading: weatherLoading } = useWeather(region);
+  // 날씨 정보는 저장된 데이터만 사용 (API 호출 없음)
 
   // 세션스토리지에서 저장된 지역 정보 가져오기
   const getStoredRegion = () => {
@@ -85,6 +83,7 @@ function Feed() {
     const dayStr = String(day).padStart(2, '0');
     return `${year}-${monthStr}-${dayStr}`;
   });
+
 
 
   // 사용자 region fetch
@@ -205,15 +204,32 @@ function Feed() {
     );
   };
 
-  // 인기순일 때 TOP3 분리
+  // 인기순일 때 TOP3 분리 (useMemo로 자동 재정렬)
   const isPopular = order === "popular";
-  let top3 = [];
-  let rest = outfits;
-  if (isPopular && outfits.length > 0) {
-    const sorted = [...outfits].sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
-    top3 = sorted.slice(0, 3);
-    rest = sorted.slice(3);
-  }
+  const { top3, rest } = useMemo(() => {
+    let top3 = [];
+    let rest = outfits;
+    
+    if (isPopular && outfits.length > 0) {
+      const sorted = [...outfits].sort((a, b) => {
+        const aLikes = a.likes?.length || 0;
+        const bLikes = b.likes?.length || 0;
+        const aDislikes = a.dislikes?.length || 0;
+        const bDislikes = b.dislikes?.length || 0;
+        
+        // 1차: 좋아요 개수 내림차순
+        if (aLikes !== bLikes) {
+          return bLikes - aLikes;
+        }
+        // 2차: 싫어요 개수 오름차순 (적은 순서대로)
+        return aDislikes - bDislikes;
+      });
+      top3 = sorted.slice(0, 3);
+      rest = sorted.slice(3);
+    }
+    
+    return { top3, rest };
+  }, [outfits, isPopular]);
 
   // regionMap for dropdown (전체 지역 목록)
   const regionMap = {
@@ -275,21 +291,20 @@ function Feed() {
 
           {/* 날씨 일러스트 */}
           <div className="flex justify-center items-center mb-6" style={{ minHeight: 120 }}>
-            {weatherLoading ? (
-              <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
-            ) : weather ? (
+            {outfits.length > 0 && outfits[0].weather ? (
+              // 저장된 날씨 정보 표시 (API 호출 없음)
               <div className="flex flex-col items-center">
-                {/* 날씨 아이콘 박스 */}
-                <div className={`w-60 h-60 bg-gray-200 rounded flex items-center justify-center text-6xl relative overflow-hidden`}>
-                  <div
-                    className="absolute text-8xl animate-bounce"
-                  >
-                    {getWeatherEmoji(weather.icon)}
+                <div className="w-60 h-60 bg-gray-200 rounded flex items-center justify-center text-6xl relative overflow-hidden">
+                  <div className="absolute text-8xl">
+                    {getWeatherEmoji(outfits[0].weather.icon)}
                   </div>
+                </div>
+                <div className="mt-2 text-sm text-gray-600">
+                  {outfits[0].weather.temp}°C
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-red-500">날씨 정보를 가져올 수 없습니다.</p>
+              <p className="text-sm text-gray-500">해당 날짜의 날씨 정보가 없습니다.</p>
             )}
           </div>
 

@@ -128,8 +128,20 @@ function RecommendView() {
     console.log("Filtered results:", filtered.length);
     console.log("Sample filtered record:", filtered[0]);
 
-    // 좋아요 순으로 정렬
-    filtered.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+    // 정렬: 1차 좋아요 내림차순, 2차 싫어요 오름차순
+    filtered.sort((a, b) => {
+      const aLikes = a.likes?.length || 0;
+      const bLikes = b.likes?.length || 0;
+      const aDislikes = a.dislikes?.length || 0;
+      const bDislikes = b.dislikes?.length || 0;
+      
+      // 1차: 좋아요 개수 내림차순
+      if (aLikes !== bLikes) {
+        return bLikes - aLikes;
+      }
+      // 2차: 싫어요 개수 오름차순 (적은 순서대로)
+      return aDislikes - bDislikes;
+    });
     setFilteredOutfits(filtered);
   }, [outfits, userFilters, userRegion, excludeMyRecords, onlyMyRecords, user]);
 

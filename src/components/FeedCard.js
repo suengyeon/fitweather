@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toggleLike } from "../api/toggleLike";
+import { toggleSubscription, checkSubscription } from "../api/subscribe";
 import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
 
@@ -19,13 +20,32 @@ function FeedCard({
   const [imageIndex, setImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(record.likes?.includes(currentUserUid));
   const [likeCount, setLikeCount] = useState(record.likes?.length || 0);
+  
+  // 내 기록인지 확인
+  const isMyRecord = record.uid === currentUserUid;
 
-  // 저장/구독/추천 데모 상태
+  // 구독 상태
   const [isSaved, setIsSaved] = useState(false);
-  const [thumbsUpCount, setThumbsUpCount] = useState(156);
-  const [thumbsDownCount, setThumbsDownCount] = useState(15);
+  const [thumbsUpCount, setThumbsUpCount] = useState(0);
+  const [thumbsDownCount, setThumbsDownCount] = useState(0);
   const [isThumbsUp, setIsThumbsUp] = useState(false);
   const [isThumbsDown, setIsThumbsDown] = useState(false);
+
+  // 구독 상태 확인
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      if (!currentUserUid || !record.uid || currentUserUid === record.uid) return;
+      
+      try {
+        const isSubscribed = await checkSubscription(currentUserUid, record.uid);
+        setIsSaved(isSubscribed);
+      } catch (error) {
+        console.error("구독 상태 확인 실패:", error);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [currentUserUid, record.uid]);
 
   // 체감 이모지
   const feelingEmojiMap = {
@@ -51,13 +71,32 @@ function FeedCard({
     }
   };
 
-  const handleSaveClick = (e) => {
+  const handleSaveClick = async (e) => {
     e.stopPropagation();
+    
+    console.log("🔍 구독 버튼 클릭:", { currentUserUid, recordUid: record.uid, recordId: record.id });
+    
+    if (!currentUserUid || !record.uid) {
+      console.error("❌ 사용자 정보가 없습니다:", { currentUserUid, recordUid: record.uid });
+      return;
+    }
+
+    const previousState = isSaved;
+    console.log("🔄 구독 상태 변경 전:", { isSaved: previousState });
     setIsSaved(!isSaved);
-    // TODO: 저장/구독 API 연동
+    
+    try {
+      console.log("📡 구독 API 호출 시작:", { followerId: currentUserUid, followingId: record.uid });
+      const isSubscribed = await toggleSubscription(currentUserUid, record.uid);
+      console.log("✅ 구독 토글 성공:", { recordId: record.id, isSubscribed });
+    } catch (err) {
+      console.error("❌ 구독 API 오류:", err);
+      // 롤백
+      setIsSaved(previousState);
+    }
   };
 
-  const handleThumbsUpClick = (e) => {
+  const handleThumbsUpClick = async (e) => {
     e.stopPropagation();
     if (isThumbsDown) {
       setIsThumbsDown(false);
@@ -65,9 +104,20 @@ function FeedCard({
     }
     setIsThumbsUp(!isThumbsUp);
     setThumbsUpCount((p) => (isThumbsUp ? p - 1 : p + 1));
+    
+    // TODO: 실제 좋아요 API 호출
+    try {
+      // await thumbsUpAPI(record.id, currentUserUid);
+      console.log("👍 좋아요 API 호출:", record.id);
+    } catch (err) {
+      console.error("좋아요 API 오류:", err);
+      // 롤백
+      setIsThumbsUp(isThumbsUp);
+      setThumbsUpCount((p) => (isThumbsUp ? p + 1 : p - 1));
+    }
   };
 
-  const handleThumbsDownClick = (e) => {
+  const handleThumbsDownClick = async (e) => {
     e.stopPropagation();
     if (isThumbsUp) {
       setIsThumbsUp(false);
@@ -75,6 +125,17 @@ function FeedCard({
     }
     setIsThumbsDown(!isThumbsDown);
     setThumbsDownCount((p) => (isThumbsDown ? p - 1 : p + 1));
+    
+    // TODO: 실제 싫어요 API 호출
+    try {
+      // await thumbsDownAPI(record.id, currentUserUid);
+      console.log("👎 싫어요 API 호출:", record.id);
+    } catch (err) {
+      console.error("싫어요 API 오류:", err);
+      // 롤백
+      setIsThumbsDown(isThumbsDown);
+      setThumbsDownCount((p) => (isThumbsDown ? p + 1 : p - 1));
+    }
   };
 
   const handlePrev = (e) => {
@@ -127,35 +188,37 @@ function FeedCard({
         </span>
       )}
 
-      {/* 저장/구독 하트 */}
-      <button
-        onClick={handleSaveClick}
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          background: "rgba(255, 255, 255, 0.8)",
-          border: "none",
-          borderRadius: "50%",
-          width: "32px",
-          height: "32px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          cursor: "pointer",
-          zIndex: 2,
-          transition: "all 0.2s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.background = "rgba(255, 255, 255, 1)";
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.background = "rgba(255, 255, 255, 0.8)";
-        }}
-      >
-        {isSaved ? <HeartIconSolid className="w-5 h-5 text-red-500" /> : <HeartIcon className="w-5 h-5 text-gray-600" />}
-      </button>
+      {/* 저장/구독 하트 - 내 기록이 아닐 때만 표시 */}
+      {!isMyRecord && (
+        <button
+          onClick={handleSaveClick}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            background: "rgba(255, 255, 255, 0.8)",
+            border: "none",
+            borderRadius: "50%",
+            width: "32px",
+            height: "32px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            cursor: "pointer",
+            zIndex: 2,
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = "rgba(255, 255, 255, 1)";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = "rgba(255, 255, 255, 0.8)";
+          }}
+        >
+          {isSaved ? <HeartIconSolid className="w-5 h-5 text-red-500" /> : <HeartIcon className="w-5 h-5 text-gray-600" />}
+        </button>
+      )}
 
       {/* 이미지 */}
       <div style={{ height: "230px", position: "relative" }}>
@@ -199,14 +262,17 @@ function FeedCard({
           <div className="flex items-center gap-1.5">
             {/* 👍 좋아요 */}
             <button
-              onClick={(e) => { e.stopPropagation(); handleThumbsUpClick(e); }}
-              onMouseDown={(e) => e.stopPropagation()}
+              onClick={isMyRecord ? undefined : (e) => { e.stopPropagation(); handleThumbsUpClick(e); }}
+              onMouseDown={isMyRecord ? undefined : (e) => e.stopPropagation()}
+              disabled={isMyRecord}
               className={
                 `inline-flex items-center gap-1 rounded-lg px-2 py-1.5 min-w-8 justify-center transition-colors
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400
-       ${isThumbsUp
-                  ? "bg-blue-500/20 text-blue-600 hover:bg-blue-500/10 hover:text-blue-600"
-                  : "bg-white/70 text-gray-700 hover:bg-blue-500/10 hover:text-blue-600"
+       ${isMyRecord 
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : isThumbsUp
+                    ? "bg-blue-500/20 text-blue-600 hover:bg-blue-500/10 hover:text-blue-600"
+                    : "bg-white/70 text-gray-700 hover:bg-blue-500/10 hover:text-blue-600"
                 }`
               }
             >
@@ -218,14 +284,17 @@ function FeedCard({
 
             {/* 👎 싫어요 */}
             <button
-              onClick={(e) => { e.stopPropagation(); handleThumbsDownClick(e); }}
-              onMouseDown={(e) => e.stopPropagation()}
+              onClick={isMyRecord ? undefined : (e) => { e.stopPropagation(); handleThumbsDownClick(e); }}
+              onMouseDown={isMyRecord ? undefined : (e) => e.stopPropagation()}
+              disabled={isMyRecord}
               className={
                 `inline-flex items-center gap-1 rounded-lg px-2 py-1.5 min-w-8 justify-center transition-colors
                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400
-       ${isThumbsDown
-                  ? "bg-red-500/20 text-red-600 hover:bg-red-500/30 hover:text-red-600"
-                  : "bg-white/70 text-gray-700 hover:bg-red-500/30 hover:text-red-600"
+       ${isMyRecord
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : isThumbsDown
+                    ? "bg-red-500/20 text-red-600 hover:bg-red-500/30 hover:text-red-600"
+                    : "bg-white/70 text-gray-700 hover:bg-red-500/30 hover:text-red-600"
                 }`
               }
             >
