@@ -97,7 +97,7 @@ function App() {
           <Route path="/recommend" element={<Recommend />} />
           <Route path="/recommend-view" element={<RecommendView />} />
           <Route path="/recommend-filter-settings" element={<RecommendFilterSettings />} />
-          <Route path="/FeedDetail/:id" element={<FeedDetail />} />
+          <Route path="/feed-detail/:id" element={<FeedDetail />} />
           <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
 
           <Route path="/mypage_likes" element={<MyPageLikes />} />

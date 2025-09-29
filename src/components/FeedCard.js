@@ -153,7 +153,7 @@ function FeedCard({
       navigate("/record", { state: { existingRecord: record } });
     } else {
       const isFromRecommend = window.location.pathname.includes("/recommend");
-      navigate(`/FeedDetail/${record.id}`, {
+      navigate(`/feed-detail/${record.id}`, {
         state: {
           fromCard: true,
           fromFeed: !isFromRecommend,

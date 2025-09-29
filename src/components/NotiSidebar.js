@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon } from "@heroicons/react/24/solid";
 import { useNavigate } from "react-router-dom";
 import { buildTitle } from "../utils/notiTitle";
@@ -6,9 +6,60 @@ import { buildTitle } from "../utils/notiTitle";
 // 간단한 유틸: 클래스 합치기
 const cx = (...arr) => arr.filter(Boolean).join(" ");
 
+// 알림 제목 생성 함수
+const getNotificationTitle = (notification) => {
+  switch (notification.type) {
+    case 'follow':
+      return `${notification.sender?.nickname || '알 수 없음'}님이 구독을 시작했어요`;
+    case 'comment_on_my_post':
+      return '내 기록에 댓글이 달렸어요';
+    case 'reply_to_my_comment':
+      return '내 댓글에 답글이 달렸어요';
+    default:
+      return notification.title || '새 알림';
+  }
+};
+
+// 알림 내용 생성 함수
+const getNotificationMessage = (notification) => {
+  switch (notification.type) {
+    case 'follow':
+      return `${notification.sender?.nickname || '알 수 없음'}이 나를 구독하기 시작했어요.`;
+    case 'comment_on_my_post':
+      return `${notification.sender?.nickname || '알 수 없음'}: '${notification.message || '댓글 내용'}'`;
+    case 'reply_to_my_comment':
+      return `답글: '${notification.message || '답글 내용'}'`;
+    default:
+      return notification.message || '';
+  }
+};
+
 // 간단한 시간표시(분/시간/일 전)
 const timeAgo = (dateish) => {
-    const d = typeof dateish === "string" ? new Date(dateish) : dateish;
+    let d;
+    
+    // Firestore Timestamp 객체 처리
+    if (dateish && typeof dateish === 'object' && dateish.toDate) {
+        d = dateish.toDate();
+    }
+    // 문자열인 경우
+    else if (typeof dateish === "string") {
+        d = new Date(dateish);
+    }
+    // Date 객체인 경우
+    else if (dateish instanceof Date) {
+        d = dateish;
+    }
+    // 기타 경우
+    else {
+        d = new Date(dateish);
+    }
+    
+    // 유효한 날짜인지 확인
+    if (!d || isNaN(d.getTime())) {
+        return "알 수 없음";
+    }
+    
     const diff = Math.floor((Date.now() - d.getTime()) / 1000);
     if (diff < 5) return "방금";
     if (diff < 60) return `${diff}s`;
@@ -33,7 +84,7 @@ const timeAgo = (dateish) => {
  *   }>
  * - onItemClick?: (n) => void      // 개별 클릭 훅(없으면 link로 navigate)
  * - onMarkAllRead?: () => void
- * - onClearAll?: () => void
+ * - onDeleteSelected?: (ids: string[]) => void
  */
 export default function NotiSidebar({
     isOpen,
@@ -41,10 +92,14 @@ export default function NotiSidebar({
     notifications = [],
     onItemClick,
     onMarkAllRead,
-    onClearAll,
+    onDeleteSelected,
     onMarkOneRead // 개별 읽음 콜백
 }) {
     const navigate = useNavigate();
+    
+    // 선택 삭제 모드 상태 관리
+    const [isDeleteMode, setIsDeleteMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState(new Set());
 
     const unreadCount = useMemo(
         () => notifications.filter((n) => !n.read).length,
@@ -52,10 +107,41 @@ export default function NotiSidebar({
     );
 
     const handleItemClick = (n) => {
+        // 삭제 모드일 때는 클릭 이벤트 무시
+        if (isDeleteMode) return;
+        
         onMarkOneRead?.(n.id);
         if (onItemClick) onItemClick(n);
         else if (n.link) navigate(n.link); // 폴백 네비게이션
         onClose?.();
+    };
+
+    // 삭제 모드 토글 핸들러
+    const handleDeleteModeToggle = () => {
+        if (isDeleteMode) {
+            // 삭제 모드 종료 시 선택된 알림들 삭제
+            if (selectedIds.size > 0) {
+                onDeleteSelected?.(Array.from(selectedIds));
+            }
+            setIsDeleteMode(false);
+            setSelectedIds(new Set());
+        } else {
+            // 삭제 모드 시작
+            setIsDeleteMode(true);
+        }
+    };
+
+    // 체크박스 변경 핸들러
+    const handleCheckboxChange = (notificationId, event) => {
+        event.stopPropagation(); // 이벤트 버블링 방지
+        
+        const newSelectedIds = new Set(selectedIds);
+        if (newSelectedIds.has(notificationId)) {
+            newSelectedIds.delete(notificationId);
+        } else {
+            newSelectedIds.add(notificationId);
+        }
+        setSelectedIds(newSelectedIds);
     };
 
     return (
@@ -98,12 +184,12 @@ export default function NotiSidebar({
                             <span>읽음</span>
                         </button>
                         <button
-                            onClick={onClearAll}
+                            onClick={handleDeleteModeToggle}
                             className="flex items-center gap-1 text-sm px-2 py-1 rounded hover:bg-gray-300"
-                            title="모두 삭제"
+                            title={isDeleteMode ? "삭제 완료" : "선택 삭제"}
                         >
                             <TrashIcon className="w-4 h-4" />
-                            <span>삭제</span>
+                            <span>{isDeleteMode ? "완료" : "삭제"}</span>
                         </button>
                         <button
                             onClick={onClose}
@@ -132,6 +218,17 @@ export default function NotiSidebar({
                                         )}
                                     >
                                         <div className="flex gap-2">
+                                            {/* 체크박스 (삭제 모드일 때만 표시) */}
+                                            {isDeleteMode && (
+                                                <div className="flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.has(n.id)}
+                                                        onChange={(e) => handleCheckboxChange(n.id, e)}
+                                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                    />
+                                                </div>
+                                            )}
                                             {/* 썸네일 */}
                                             <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center">
                                                 <BellIcon className="w-4 h-4 text-gray-700" />
@@ -144,16 +241,14 @@ export default function NotiSidebar({
                                                             n.read ? "text-gray-400" : "text-gray-800"
                                                         )}
                                                         >
-                                                            {n.title ?? buildTitle(n)}
+                                                            {getNotificationTitle(n)}
                                                         </p>
-                                                        {n.message && (
-                                                            <p className={cx("text-sm line-clamp-2",
-                                                                n.read ? "text-gray-400" : "text-gray-700"
-                                                            )}
-                                                            >
-                                                                {n.message}
-                                                            </p>
+                                                        <p className={cx("text-sm line-clamp-2",
+                                                            n.read ? "text-gray-400" : "text-gray-700"
                                                         )}
+                                                        >
+                                                            {getNotificationMessage(n)}
+                                                        </p>
                                                     </div>
                                                     {/* 시간/읽음뱃지 */}
                                                     <div className="flex flex-col items-end shrink-0">

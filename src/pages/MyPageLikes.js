@@ -106,7 +106,7 @@ export default function MyPageLikes() {
   const handleCardClick = (outfitId) => {
     if (year && month && day) {
       const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      navigate(`/FeedDetail/${outfitId}`, {
+      navigate(`/feed-detail/${outfitId}`, {
         state: {
           fromLikes: true,
           selectedDate: dateStr,

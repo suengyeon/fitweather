@@ -13,6 +13,7 @@ import { useAuth } from "../contexts/AuthContext";
 import MenuSidebar from "../components/MenuSidebar";
 import { getPastWeatherData, fetchAndSavePastWeather, deletePastWeatherData, savePastWeatherData } from "../api/pastWeather";
 import { fetchKmaPastWeather } from "../api/kmaPastWeather";
+import { createCommentNotification, createReplyNotification } from "../api/subscribe";
 
 function formatDateLocal(date) {
   return date.toLocaleDateString("sv-SE"); // YYYY-MM-DD 형식 (KST 기준)
@@ -705,6 +706,17 @@ function Record() {
         console.log("Record - 새 댓글 추가 성공:", newCommentObj);
         console.log("Record - 저장된 댓글 목록:", updatedComments);
 
+        // 댓글 알림 생성 (자신의 기록이 아닌 경우에만)
+        if (existingRecord.uid !== user?.uid) {
+          
+          await createCommentNotification(
+            user?.uid, // 댓글 작성자
+            existingRecord.uid, // 기록 작성자
+            existingRecord.id, // 기록 ID
+            newComment.trim() // 댓글 내용
+          );
+        }
+
         // 댓글 목록 다시 불러오기 (다른 사용자에게도 즉시 반영되도록)
         const commentsSnap = await getDoc(commentsRef);
         if (commentsSnap.exists()) {
@@ -790,6 +802,31 @@ function Record() {
       // 2) 서버 반영  ✅ id → existingRecord.id
       const commentsRef = doc(db, "comments", existingRecord.id);
       await setDoc(commentsRef, { comments: optimistic, lastUpdated: new Date() }, { merge: true });
+
+      // 답글 알림 생성 (원댓글 작성자와 답글 작성자가 다른 경우에만)
+      const findCommentAuthor = (comments, commentId) => {
+        for (const comment of comments) {
+          if (comment.id === commentId) {
+            return comment.authorUid;
+          }
+          if (comment.replies && comment.replies.length > 0) {
+            const found = findCommentAuthor(comment.replies, commentId);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const originalCommentAuthor = findCommentAuthor(comments, replyToCommentId);
+      if (originalCommentAuthor && originalCommentAuthor !== user?.uid) {
+        
+        await createReplyNotification(
+          user?.uid, // 답글 작성자
+          originalCommentAuthor, // 원댓글 작성자
+          existingRecord.id, // 기록 ID
+          replyContent.trim() // 답글 내용
+        );
+      }
 
       // 3) 서버 기준 동기화
       const snap = await getDoc(commentsRef);

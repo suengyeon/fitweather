@@ -123,12 +123,25 @@ export default function Follow() {
         [targetUserId]: isSubscribed
       }));
       
-      // 구독 취소 시 해당 사용자를 목록에서 제거
+      // 구독 취소 시 팔로잉 목록에서만 제거 (팔로워는 그대로 유지)
       if (!isSubscribed) {
-        // 팔로잉 목록에서 제거
+        // 팔로잉 목록에서만 제거 (내가 팔로우 취소한 경우)
         setFollowing(prev => prev.filter(user => user.id !== targetUserId));
-        // 팔로워 목록에서 제거
-        setFollowers(prev => prev.filter(user => user.id !== targetUserId));
+        console.log("📤 팔로잉 목록에서 제거:", targetUserId);
+      } else {
+        // 구독 시 팔로잉 목록에 추가 (이미 있는 경우는 중복 방지)
+        setFollowing(prev => {
+          const exists = prev.some(user => user.id === targetUserId);
+          if (!exists) {
+            // 팔로워 목록에서 해당 사용자 정보 가져와서 팔로잉에 추가
+            const userToAdd = followers.find(user => user.id === targetUserId);
+            if (userToAdd) {
+              return [...prev, userToAdd];
+            }
+          }
+          return prev;
+        });
+        console.log("📥 팔로잉 목록에 추가:", targetUserId);
       }
       
       console.log("✅ 구독 토글 성공:", { targetUserId, isSubscribed });
@@ -164,7 +177,7 @@ export default function Follow() {
         {/* 상단 라벨 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl py-2 text-center font-semibold">팔로잉</div>
-          <div className="bg-white rounded-xl py-2 text-center font-semibold">팔로우</div>
+          <div className="bg-white rounded-xl py-2 text-center font-semibold">팔로워</div>
         </div>
 
         {/* 2열 카드 영역 */}
@@ -223,7 +236,7 @@ export default function Follow() {
             </ul>
           </section>
 
-          {/* 팔로우 카드 */}
+          {/* 팔로워 카드 */}
           <section className="bg-white rounded-2xl min-h-[60vh] p-4">
             <ul className="space-y-4">
               {loading ? (

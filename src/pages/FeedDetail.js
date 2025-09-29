@@ -7,7 +7,7 @@ import { HomeIcon, ArrowLeftIcon, HandThumbUpIcon, HandThumbDownIcon, XMarkIcon,
 import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
 import { toggleLike } from "../api/toggleLike";
-import { toggleSubscription, checkSubscription } from "../api/subscribe";
+import { toggleSubscription, checkSubscription, createCommentNotification, createReplyNotification } from "../api/subscribe";
 import { useAuth } from "../contexts/AuthContext";
 
 function addReplyRecursively(nodes, targetId, newReply) {
@@ -144,6 +144,7 @@ function FeedDetail() {
     const [thumbsUpCount, setThumbsUpCount] = useState(0); // 0으로 초기화
     const [isThumbsDown, setIsThumbsDown] = useState(false);
     const [thumbsDownCount, setThumbsDownCount] = useState(0); // 0으로 초기화
+
 
     // 구독 상태 확인
     useEffect(() => {
@@ -416,6 +417,17 @@ function FeedDetail() {
                 console.log("새 댓글 추가 성공:", newCommentObj);
                 console.log("저장된 댓글 목록:", updatedComments);
 
+                // 댓글 알림 생성 (자신의 기록이 아닌 경우에만)
+                if (data.uid !== user?.uid) {
+                    
+                    await createCommentNotification(
+                        user?.uid, // 댓글 작성자
+                        data.uid, // 기록 작성자
+                        id, // 기록 ID
+                        newComment.trim() // 댓글 내용
+                    );
+                }
+
                 // 댓글 목록 다시 불러오기 (다른 사용자에게도 즉시 반영되도록)
                 const commentsSnap = await getDoc(commentsRef);
                 if (commentsSnap.exists()) {
@@ -500,6 +512,31 @@ function FeedDetail() {
             // 2) 서버 반영
             const commentsRef = doc(db, "comments", id);
             await setDoc(commentsRef, { comments: optimistic, lastUpdated: new Date() }, { merge: true });
+
+            // 답글 알림 생성 (원댓글 작성자와 답글 작성자가 다른 경우에만)
+            const findCommentAuthor = (comments, commentId) => {
+                for (const comment of comments) {
+                    if (comment.id === commentId) {
+                        return comment.authorUid;
+                    }
+                    if (comment.replies && comment.replies.length > 0) {
+                        const found = findCommentAuthor(comment.replies, commentId);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const originalCommentAuthor = findCommentAuthor(comments, replyToCommentId);
+            if (originalCommentAuthor && originalCommentAuthor !== user?.uid) {
+                
+                await createReplyNotification(
+                    user?.uid, // 답글 작성자
+                    originalCommentAuthor, // 원댓글 작성자
+                    id, // 기록 ID
+                    replyContent.trim() // 답글 내용
+                );
+            }
 
             // 3) 서버 기준 새로고침 (동시성 보호)
             const snap = await getDoc(commentsRef);
