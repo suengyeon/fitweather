@@ -1,5 +1,3 @@
-// 캘린더 공유 기능 유틸리티
-
 import { db } from '../firebase';
 import { 
   collection, 

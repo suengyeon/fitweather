@@ -4,6 +4,10 @@ import { doc, getDoc, updateDoc, query, collection, where, getDocs } from "fireb
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import { BellIcon } from "@heroicons/react/24/outline";
+import MenuSidebar from "../components/MenuSidebar";
+import NotiSidebar from "../components/NotiSidebar";
+import useNotiSidebar from "../hooks/useNotiSidebar";
 
 function ProfileEdit() {
   const { user } = useAuth();
@@ -14,6 +18,13 @@ function ProfileEdit() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { alarmOpen, setAlarmOpen,
+    notifications, unreadCount,
+    markAllRead, handleDeleteSelected,
+    markOneRead, handleAlarmItemClick,
+  } = useNotiSidebar();
+
 
   // 1. 기존 정보 불러오기
   useEffect(() => {
@@ -68,22 +79,50 @@ function ProfileEdit() {
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
+      {/* 사이드바 */}
+      <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <NotiSidebar
+        isOpen={alarmOpen}
+        onClose={() => setAlarmOpen(false)}
+        notifications={notifications}
+        onMarkAllRead={markAllRead}
+        onDeleteSelected={handleDeleteSelected}
+        onMarkOneRead={markOneRead}
+        onItemClick={handleAlarmItemClick}
+      />
+
       {/* 네비게이션 바 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
-        <button className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400">
+        <button
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">내 정보 수정</h2>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
-        >
-          <HomeIcon className="w-5 h-5" />
-        </button>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/")}
+            className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
+          >
+            <HomeIcon className="w-5 h-5" />
+          </button>
+          <button
+            className="relative flex items-center justify-center 
+              bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+            onClick={() => setAlarmOpen(true)}
+            aria-label="알림 열기"
+          >
+            <BellIcon className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+            )}
+          </button>
+        </div>
       </div>
 
-       <div className="mt-10 flex justify-center">
-          <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
+      <div className="mt-10 flex justify-center">
+        <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
       </div>
 
       {/* 중앙 콘텐츠 */}
@@ -92,11 +131,11 @@ function ProfileEdit() {
           {/* 입력 항목 */}
           <div className="mb-10 flex items-center">
             <label className="w-28 font-semibold text-base">지역</label>
-             <select
-                value={region}
-                onChange={e => setRegion(e.target.value)}
-                className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
-              >
+            <select
+              value={region}
+              onChange={e => setRegion(e.target.value)}
+              className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
+            >
               <option value="Baengnyeongdo">백령도</option>
               <option value="Incheon">인천</option>
               <option value="Seoul">서울</option>
@@ -118,7 +157,7 @@ function ProfileEdit() {
               <option value="Yeosu">여수</option>
               <option value="Changwon">창원</option>
               <option value="Busan">부산</option>
-              </select>
+            </select>
           </div>
           <div className="mb-10 flex items-center">
             <label className="w-28 font-semibold text-base">닉네임</label>

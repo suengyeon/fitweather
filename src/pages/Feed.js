@@ -7,7 +7,10 @@ import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
+import NotiSidebar from "../components/NotiSidebar";
+import useNotiSidebar from "../hooks/useNotiSidebar";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수 (Home, Record와 동일한 로직)
 function getWeatherEmoji(iconCode) {
@@ -32,6 +35,13 @@ function Feed() {
   const [region, setRegion] = useState(""); // 초기값 빈 문자열
   const [style, setStyle] = useState("casual"); // 스타일 필터 (기본값: 캐주얼)
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const {
+    alarmOpen, setAlarmOpen,
+    notifications, unreadCount,
+    markAllRead, handleDeleteSelected,
+    markOneRead, handleAlarmItemClick,
+  } = useNotiSidebar();
+
 
   // 날씨 정보는 저장된 데이터만 사용 (API 호출 없음)
 
@@ -209,14 +219,14 @@ function Feed() {
   const { top3, rest } = useMemo(() => {
     let top3 = [];
     let rest = outfits;
-    
+
     if (isPopular && outfits.length > 0) {
       const sorted = [...outfits].sort((a, b) => {
         const aLikes = a.likes?.length || 0;
         const bLikes = b.likes?.length || 0;
         const aDislikes = a.dislikes?.length || 0;
         const bDislikes = b.dislikes?.length || 0;
-        
+
         // 1차: 좋아요 개수 내림차순
         if (aLikes !== bLikes) {
           return bLikes - aLikes;
@@ -227,7 +237,7 @@ function Feed() {
       top3 = sorted.slice(0, 3);
       rest = sorted.slice(3);
     }
-    
+
     return { top3, rest };
   }, [outfits, isPopular]);
 
@@ -267,6 +277,16 @@ function Feed() {
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
       {/* 사이드바 */}
       <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <NotiSidebar
+        isOpen={alarmOpen}
+        onClose={() => setAlarmOpen(false)}
+        notifications={notifications}
+        onMarkAllRead={markAllRead}
+        onDeleteSelected={handleDeleteSelected}
+        onMarkOneRead={markOneRead}
+        onItemClick={handleAlarmItemClick}
+      />
+
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
@@ -276,13 +296,27 @@ function Feed() {
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">우리 동네</h2>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
-        >
-          <HomeIcon className="w-5 h-5" />
-        </button>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/")}
+            className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
+          >
+            <HomeIcon className="w-5 h-5" />
+          </button>
+          <button
+            className="relative flex items-center justify-center 
+                          bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+            onClick={() => setAlarmOpen(true)}
+            aria-label="알림 열기"
+          >
+            <BellIcon className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+            )}
+          </button>
+        </div>
       </div>
+
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex md:flex-row gap-6 h-[700px]">
         {/* 왼쪽: 지역/정렬/날씨 카드 영역 */}

@@ -62,15 +62,6 @@ export default function MenuSidebar({ isOpen, onClose }) {
                 Calendar
               </button>
               <button
-                onClick={() => handleMenuClick("/mypage_likes")}
-                className={`block w-full text-left px-3 py-2 rounded transition-colors ${isActive("/mypage_likes")
-                  ? "text-gray-700 font-bold bg-blue-200"
-                  : "text-gray-700 hover:bg-gray-300"
-                  }`}
-              >
-               내가 좋아요 한 코디
-              </button>
-              <button
                 onClick={() => handleMenuClick("/follow")}
                 className={`block w-full text-left px-3 py-2 rounded transition-colors ${isActive("/follow")
                   ? "text-gray-700 font-bold bg-blue-200"

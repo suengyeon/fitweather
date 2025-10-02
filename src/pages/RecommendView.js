@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
+import NotiSidebar from "../components/NotiSidebar";
+import useNotiSidebar from "../hooks/useNotiSidebar";
 import FeedCard from "../components/FeedCard";
 import { getAllRecords } from "../api/getAllRecords";
 import { toggleLike } from "../api/toggleLike";
@@ -16,6 +19,12 @@ function RecommendView() {
   const [outfits, setOutfits] = useState([]);
   const [filteredOutfits, setFilteredOutfits] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { alarmOpen, setAlarmOpen,
+    notifications, unreadCount,
+    markAllRead, handleDeleteSelected,
+    markOneRead, handleAlarmItemClick,
+  } = useNotiSidebar();
+
   const [userFilters, setUserFilters] = useState(null);
   const [userRegion, setUserRegion] = useState("");
   const [excludeMyRecords, setExcludeMyRecords] = useState(false);
@@ -24,7 +33,7 @@ function RecommendView() {
   // 사용자 필터 가져오기
   useEffect(() => {
     if (!user) return;
-    
+
     const fetchUserFilters = async () => {
       try {
         const userRef = doc(db, "users", user.uid);
@@ -66,7 +75,7 @@ function RecommendView() {
   // 필터 적용
   useEffect(() => {
     console.log("Filtering with:", { userFilters, userRegion, outfitsCount: outfits.length, excludeMyRecords });
-    
+
     if (!userFilters || !userRegion || outfits.length === 0) {
       console.log("Missing data for filtering:", { userFilters: !!userFilters, userRegion: !!userRegion, outfitsCount: outfits.length });
       return;
@@ -94,17 +103,17 @@ function RecommendView() {
       // 온도 필터
       const temp = record.temp || record.weather?.temp;
       const tempMatch = temp !== null && temp !== undefined &&
-                       temp >= userFilters.tempRange.min && temp <= userFilters.tempRange.max;
+        temp >= userFilters.tempRange.min && temp <= userFilters.tempRange.max;
 
       // 강수량 필터
       const rain = record.rain || record.weather?.rain;
       const rainMatch = rain !== null && rain !== undefined &&
-                       rain >= userFilters.rainRange.min && rain <= userFilters.rainRange.max;
+        rain >= userFilters.rainRange.min && rain <= userFilters.rainRange.max;
 
       // 습도 필터
       const humidity = record.humidity || record.weather?.humidity;
       const humidityMatch = humidity !== null && humidity !== undefined &&
-                           humidity >= userFilters.humidityRange.min && humidity <= userFilters.humidityRange.max;
+        humidity >= userFilters.humidityRange.min && humidity <= userFilters.humidityRange.max;
 
       console.log(`Record ${record.id}:`, {
         region: record.region,
@@ -134,7 +143,7 @@ function RecommendView() {
       const bLikes = b.likes?.length || 0;
       const aDislikes = a.dislikes?.length || 0;
       const bDislikes = b.dislikes?.length || 0;
-      
+
       // 1차: 좋아요 개수 내림차순
       if (aLikes !== bLikes) {
         return bLikes - aLikes;
@@ -155,11 +164,11 @@ function RecommendView() {
         prev.map(record =>
           record.id === recordId
             ? {
-                ...record,
-                likes: liked
-                  ? record.likes.filter(id => id !== user.uid)
-                  : [...record.likes, user.uid],
-              }
+              ...record,
+              likes: liked
+                ? record.likes.filter(id => id !== user.uid)
+                : [...record.likes, user.uid],
+            }
             : record
         )
       );
@@ -172,22 +181,44 @@ function RecommendView() {
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
       {/* 사이드바 */}
       <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+      <NotiSidebar
+        isOpen={alarmOpen}
+        onClose={() => setAlarmOpen(false)}
+        notifications={notifications}
+        onMarkAllRead={markAllRead}
+        onDeleteSelected={handleDeleteSelected}
+        onMarkOneRead={markOneRead}
+        onItemClick={handleAlarmItemClick}
+      />
+
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">추천 코디</h2>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
-        >
-          <HomeIcon className="w-5 h-5" />
-        </button>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/")}
+            className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
+          >
+            <HomeIcon className="w-5 h-5" />
+          </button>
+          <button
+            className="relative flex items-center justify-center 
+                                            bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+            onClick={() => setAlarmOpen(true)}
+            aria-label="알림 열기"
+          >
+            <BellIcon className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* 상단 버튼(상세 필터) */}

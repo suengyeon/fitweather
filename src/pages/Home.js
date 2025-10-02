@@ -2,22 +2,15 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, ArrowPathIcon } from "@heroicons/react/24/solid";
 import { BellIcon } from "@heroicons/react/24/outline";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db, logout } from "../firebase";
-
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
 import { useAuth } from "../contexts/AuthContext";
-
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
+import  useNotiSidebar from "../hooks/useNotiSidebar";
 import { getRecommendations } from "../api/getRecommendations";
-import { 
-  fetchUserNotifications, 
-  markAllNotificationsAsReadAPI, 
-  markNotificationAsReadAPI, 
-  deleteSelectedNotificationsAPI 
-} from "../api/notificationAPI";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수
 function getWeatherEmoji(iconCode) {
@@ -41,9 +34,14 @@ function Home() {
 
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [alarmOpen, setAlarmOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  
+
+  // 🔔 알림 사이드바 훅 (상태/로직 모두 훅에서 관리)
+  const {
+    alarmOpen, setAlarmOpen,
+    notifications, unreadCount,
+    markAllRead, handleDeleteSelected, markOneRead, handleAlarmItemClick
+  } = useNotiSidebar();
+
   // 추천 관련 상태
   const [recommendations, setRecommendations] = useState([]);
   const [currentRecommendationIndex, setCurrentRecommendationIndex] = useState(0);
@@ -60,18 +58,12 @@ function Home() {
   useEffect(() => {
     const fetchRecommendations = async () => {
       if (!selectedRegion) return;
-      
       setRecommendationLoading(true);
       try {
-        console.log("🔍 추천 데이터 요청:", selectedRegion);
         const data = await getRecommendations(selectedRegion, 3);
-        console.log("📊 추천 데이터 결과:", data);
         setRecommendations(data);
-        
-        // 새로고침 시 순차적 표시를 위한 인덱스 업데이트
         setCurrentRecommendationIndex(prev => {
           const newIndex = (prev + 1) % Math.max(data.length, 1);
-          console.log("🔄 추천 인덱스 변경:", prev, "->", newIndex);
           return newIndex;
         });
       } catch (error) {
@@ -81,7 +73,6 @@ function Home() {
         setRecommendationLoading(false);
       }
     };
-
     fetchRecommendations();
   }, [selectedRegion]);
 
@@ -90,164 +81,15 @@ function Home() {
     if (recommendations.length > 0) {
       setIsRefreshing(true);
       setCurrentRecommendationIndex(prev => (prev + 1) % recommendations.length);
-      
-      // 새로고침 아이콘 애니메이션 완료 후 상태 리셋
-      setTimeout(() => {
-        setIsRefreshing(false);
-      }, 1000); // 새로고침 아이콘 회전 시간
+      setTimeout(() => setIsRefreshing(false), 1000);
     }
   };
-
-  // 알림 데이터 로드 (실제 API 연동)
-  useEffect(() => {
-    const loadNotifications = async () => {
-      if (!user?.uid) {
-        console.log("❌ 사용자 ID가 없습니다:", user);
-        return;
-      }
-      
-      console.log("📱 알림 로드 시작:", user.uid);
-      
-      try {
-        const notifications = await fetchUserNotifications(user.uid);
-        console.log("📱 알림 데이터 로드 완료:", notifications.length, "개");
-        console.log("📱 알림 상세:", notifications);
-        
-        // 각 알림의 링크 확인
-        notifications.forEach((notification, index) => {
-          console.log(`📱 알림 ${index + 1}:`, {
-            type: notification.type,
-            link: notification.link,
-            message: notification.message
-          });
-        });
-        
-        setNotifications(notifications);
-      } catch (error) {
-        console.error("❌ 알림 로드 실패:", error);
-        // 에러 시 빈 배열로 초기화
-        setNotifications([]);
-      }
-    };
-
-    loadNotifications();
-  }, [user?.uid]);
-
-  // 페이지 포커스 시 알림 상태 새로고침 (다른 페이지에서 돌아왔을 때)
-  useEffect(() => {
-    const handleFocus = async () => {
-      if (!user?.uid) return;
-      
-      try {
-        const notifications = await fetchUserNotifications(user.uid);
-        setNotifications(notifications);
-        console.log("🔄 페이지 포커스 - 알림 상태 새로고침");
-      } catch (error) {
-        console.error("❌ 포커스 시 알림 로드 실패:", error);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [user?.uid]);
-
-
-
-  // 알림 API 연동 함수들
-  const markAllRead = async () => {
-    try {
-      await markAllNotificationsAsReadAPI(user.uid);
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      console.log("✅ 모든 알림 읽음 처리 완료");
-    } catch (error) {
-      console.error("❌ 알림 읽음 처리 실패:", error);
-    }
-  };
-
-  const handleDeleteSelected = async (selectedIds) => {
-    try {
-      await deleteSelectedNotificationsAPI(selectedIds, user.uid);
-      setNotifications((prev) => prev.filter((n) => !selectedIds.includes(n.id)));
-      console.log("✅ 선택된 알림 삭제 완료:", selectedIds);
-    } catch (error) {
-      console.error("❌ 알림 삭제 실패:", error);
-    }
-  };
-
-  const markOneRead = async (id) => {
-    try {
-      await markNotificationAsReadAPI(id, user.uid);
-      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-      console.log("✅ 개별 알림 읽음 처리 완료:", id);
-    } catch (error) {
-      console.error("❌ 개별 알림 읽음 처리 실패:", error);
-    }
-  };
-
-  const handleAlarmItemClick = async (n) => {
-    try {
-      console.log("🔍 알림 클릭:", { 
-        id: n.id, 
-        type: n.type, 
-        link: n.link,
-        message: n.message 
-      });
-      
-      // 개별 알림 읽음 처리
-      await markOneRead(n.id);
-      
-      // 댓글/답글 알림인 경우 내 기록인지 확인
-      if ((n.type === 'comment_on_my_post' || n.type === 'reply_to_my_comment') && n.link) {
-        // 링크에서 기록 ID 추출 (/feed-detail/ID 형태)
-        const recordId = n.link.split('/feed-detail/')[1];
-        if (recordId) {
-          try {
-            // 해당 기록의 작성자 확인
-            const recordRef = doc(db, "records", recordId);
-            const recordSnap = await getDoc(recordRef);
-            
-            if (recordSnap.exists()) {
-              const recordData = recordSnap.data();
-              // 내 기록인 경우 Record 페이지로 이동
-              if (recordData.uid === user?.uid) {
-                console.log("🔍 내 기록 감지 - Record 페이지로 이동");
-                navigate("/record", { state: { existingRecord: { id: recordId, ...recordData } } });
-                return;
-              }
-            }
-          } catch (error) {
-            console.error("❌ 기록 정보 확인 실패:", error);
-          }
-        }
-      }
-      
-      // 해당 알림의 링크로 이동
-      if (n.link) {
-        console.log("🚀 네비게이션 시작:", n.link);
-        navigate(n.link);
-      } else {
-        console.warn("⚠️ 알림에 링크가 없습니다:", n);
-      }
-    } catch (error) {
-      console.error("❌ 알림 클릭 처리 실패:", error);
-    }
-  };
-
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.read).length,
-    [notifications]
-  );
 
   const { weather, loading: weatherLoading } = useWeather(selectedRegion);
   const loading = profileLoading || weatherLoading;
 
   // 현재 표시할 추천 데이터 계산
   const currentRecommendation = useMemo(() => {
-    console.log("🎯 현재 추천 데이터 계산:", {
-      recommendations: recommendations.length,
-      currentIndex: currentRecommendationIndex,
-      current: recommendations[currentRecommendationIndex]
-    });
     if (recommendations.length === 0) return null;
     return recommendations[currentRecommendationIndex];
   }, [recommendations, currentRecommendationIndex]);
@@ -267,7 +109,6 @@ function Home() {
             onMarkOneRead={markOneRead}
             onItemClick={handleAlarmItemClick}
           />
-
           {/* 상단 네비게이션 */}
           <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
             <button
@@ -290,11 +131,12 @@ function Home() {
                 {nickname}님
               </div>
               <button
-                className="relative bg-white px-3 py-1 rounded text-gray-600 hover:bg-gray-100 transition-colors"
+                className="relative flex items-center justify-center 
+                  bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
                 onClick={() => setAlarmOpen(true)}
                 aria-label="알림 열기"
               >
-                <BellIcon className="w-5 h-5" />
+                <BellIcon className="w-5 h-5"/>
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
                 )}
@@ -381,7 +223,7 @@ function Home() {
               </div>
             ) : currentRecommendation ? (
               <div className="w-full max-w-md mt-6">
-            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
                   {/* 카드 헤더 */}
                   <div className="flex items-center justify-between mb-4">
                     <select className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none">
@@ -392,12 +234,12 @@ function Home() {
                       <option value="street">시크/스트릿</option>
                       <option value="feminine">러블리/페미닌</option>
                     </select>
-               <button 
-                 onClick={handleRefreshRecommendation}
-                 className={`p-1 text-gray-400 hover:text-gray-600 transition-colors ${isRefreshing ? 'animate-spin' : ''}`}
-               >
-                 <ArrowPathIcon className="w-4 h-4" />
-               </button>
+                    <button
+                      onClick={handleRefreshRecommendation}
+                      className={`p-1 text-gray-400 hover:text-gray-600 transition-colors ${isRefreshing ? "animate-spin" : ""}`}
+                    >
+                      <ArrowPathIcon className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* 추천 아이템 그리드 */}
@@ -501,11 +343,8 @@ function Home() {
 
                   {/* 착장 보기 링크 */}
                   <div className="flex justify-end mt-4">
-                    <button 
-                      onClick={() => {
-                        // 모든 기록은 FeedDetail로 이동 (내 기록이든 다른 사람 기록이든)
-                        navigate(`/feed-detail/${currentRecommendation.id}`);
-                      }}
+                    <button
+                      onClick={() => navigate(`/feed-detail/${currentRecommendation.id}`)}
                       className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
                     >
                       착장 보기
@@ -564,7 +403,6 @@ function Home() {
               >
                 추천보기
               </button>
-
             </div>
           </div>
         </div>
