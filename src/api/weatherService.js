@@ -26,8 +26,16 @@ export class WeatherService {
     console.log(`📡 [WeatherService] 현재 시간: ${new Date().toLocaleString()}`);
     
     try {
-      console.log(`🇰🇷 [WeatherService] 기상청 API 시도 중...`);
-      const kmaData = await this.fetchKmaWeather(region);
+      console.log(`🇰🇷 [WeatherService] 기상청 API 시도 중... (2초 타임아웃)`);
+      
+      // 기상청 API에 2초 타임아웃 설정
+      const kmaData = await Promise.race([
+        this.fetchKmaWeather(region),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('기상청 API 타임아웃 (2초)')), 2000)
+        )
+      ]);
+      
       this.lastUsedAPI = this.primaryAPI;
       console.log(`✅ [WeatherService] 기상청 API 성공!`);
       console.log(`📊 [WeatherService] 기상청 데이터:`, {
@@ -93,7 +101,11 @@ export class WeatherService {
       pty: "0",
       icon: "sunny",
       season: season,
-      weatherExpression: weatherExpression
+      weatherExpression: weatherExpression,
+      seasonColor: this.getSeasonColor(season),
+      expressionColor: this.getExpressionColor(weatherExpression),
+      fcstTime: new Date().toISOString(),
+      apiSource: 'mock'
     };
   }
 
@@ -139,8 +151,8 @@ export class WeatherService {
     const startTime = Date.now();
     
     // 임시로 API 키 직접 설정 (환경변수 문제 해결을 위해)
-    // 401 오류가 발생하므로 다른 API 키 시도
-    const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || "b6907d289e10d714a6e88b30761fae22";
+    // 새로운 유효한 API 키 사용
+    const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || "89571719c6df9df656e8a59eb44d21da";
     
     if (!API_KEY) {
       console.error(`❌ [OWM API] API 키 없음 - .env 파일에 REACT_APP_OPENWEATHER_API_KEY 설정 필요`);
@@ -376,13 +388,22 @@ export class WeatherService {
    * @returns {string} 색상
    */
   getSeasonColor(season) {
-    const colors = {
-      "봄": "#98FB98",
-      "여름": "#FFB347", 
-      "가을": "#DDA0DD",
-      "겨울": "#87CEEB"
-    };
-    return colors[season] || "#98FB98";
+    // forecastUtils.js의 색상과 동일하게 설정
+    if (season.includes("봄")) {
+      return "#8BC34A"; // 연두색
+    }
+    else if (season.includes("여름")) {
+      return "#2196F3"; // 파란색
+    }
+    else if (season.includes("가을")) {
+      return "#795548"; // 갈색
+    }
+    else if (season.includes("겨울")) {
+      return "#1A237E"; // 진한 파란색
+    }
+    else {
+      return "#795548"; // 기본값 (갈색)
+    }
   }
 
   /**

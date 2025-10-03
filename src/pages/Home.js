@@ -85,151 +85,16 @@ function Home() {
     }
   };
 
-<<<<<<< HEAD
-  // 알림 데이터 로드 (실제 API 연동)
-  useEffect(() => {
-    const loadNotifications = async () => {
-      if (!user?.uid) {
-        console.log("❌ 사용자 ID가 없습니다:", user);
-        return;
-      }
-      
-      console.log("📱 알림 로드 시작:", user.uid);
-      
-      try {
-        const notifications = await fetchUserNotifications(user.uid);
-        console.log("📱 알림 데이터 로드 완료:", notifications.length, "개");
-        console.log("📱 알림 상세:", notifications);
-        
-        // 각 알림의 링크 확인
-        notifications.forEach((notification, index) => {
-          console.log(`📱 알림 ${index + 1}:`, {
-            type: notification.type,
-            link: notification.link,
-            message: notification.message
-          });
-        });
-        
-        setNotifications(notifications);
-      } catch (error) {
-        console.error("❌ 알림 로드 실패:", error);
-        // 에러 시 빈 배열로 초기화
-        setNotifications([]);
-      }
-    };
-
-    loadNotifications();
-  }, [user?.uid]);
-
-  // 페이지 포커스 시 알림 상태 새로고침 (다른 페이지에서 돌아왔을 때)
-  useEffect(() => {
-    const handleFocus = async () => {
-      if (!user?.uid) return;
-      
-      try {
-        const notifications = await fetchUserNotifications(user.uid);
-        setNotifications(notifications);
-        console.log("🔄 페이지 포커스 - 알림 상태 새로고침");
-      } catch (error) {
-        console.error("❌ 포커스 시 알림 로드 실패:", error);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [user?.uid]);
 
 
 
-  // 알림 API 연동 함수들
-  const markAllRead = async () => {
-    try {
-      await markAllNotificationsAsReadAPI(user.uid);
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      console.log("✅ 모든 알림 읽음 처리 완료");
-    } catch (error) {
-      console.error("❌ 알림 읽음 처리 실패:", error);
-    }
-  };
 
-  const handleDeleteSelected = async (selectedIds) => {
-    try {
-      await deleteSelectedNotificationsAPI(selectedIds, user.uid);
-      setNotifications((prev) => prev.filter((n) => !selectedIds.includes(n.id)));
-      console.log("✅ 선택된 알림 삭제 완료:", selectedIds);
-    } catch (error) {
-      console.error("❌ 알림 삭제 실패:", error);
-    }
-  };
 
-  const markOneRead = async (id) => {
-    try {
-      await markNotificationAsReadAPI(id, user.uid);
-      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-      console.log("✅ 개별 알림 읽음 처리 완료:", id);
-    } catch (error) {
-      console.error("❌ 개별 알림 읽음 처리 실패:", error);
-    }
-  };
 
-  const handleAlarmItemClick = async (n) => {
-    try {
-      console.log("🔍 알림 클릭:", { 
-        id: n.id, 
-        type: n.type, 
-        link: n.link,
-        message: n.message 
-      });
-      
-      // 개별 알림 읽음 처리
-      await markOneRead(n.id);
-      
-      // 댓글/답글 알림인 경우 내 기록인지 확인
-      if ((n.type === 'comment_on_my_post' || n.type === 'reply_to_my_comment') && n.link) {
-        // 링크에서 기록 ID 추출 (/feed-detail/ID 형태)
-        const recordId = n.link.split('/feed-detail/')[1];
-        if (recordId) {
-          try {
-            // 해당 기록의 작성자 확인
-            const recordRef = doc(db, "records", recordId);
-            const recordSnap = await getDoc(recordRef);
-            
-            if (recordSnap.exists()) {
-              const recordData = recordSnap.data();
-              // 내 기록인 경우 Record 페이지로 이동
-              if (recordData.uid === user?.uid) {
-                console.log("🔍 내 기록 감지 - Record 페이지로 이동");
-                navigate("/record", { state: { existingRecord: { id: recordId, ...recordData } } });
-                return;
-              }
-            }
-          } catch (error) {
-            console.error("❌ 기록 정보 확인 실패:", error);
-          }
-        }
-      }
-      
-      // 해당 알림의 링크로 이동
-      if (n.link) {
-        console.log("🚀 네비게이션 시작:", n.link);
-        navigate(n.link);
-      } else {
-        console.warn("⚠️ 알림에 링크가 없습니다:", n);
-      }
-    } catch (error) {
-      console.error("❌ 알림 클릭 처리 실패:", error);
-    }
-  };
 
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.read).length,
-    [notifications]
-  );
 
-  const { weather, loading: weatherLoading, apiSource } = useWeather(selectedRegion);
-=======
+
   const { weather, loading: weatherLoading } = useWeather(selectedRegion);
->>>>>>> 08c8d7dd867e2a0eabf6ba9d4268a4bfebcd0cc7
   const loading = profileLoading || weatherLoading;
 
   // 현재 표시할 추천 데이터 계산
