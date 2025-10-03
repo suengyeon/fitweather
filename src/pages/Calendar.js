@@ -2,11 +2,14 @@ import React, { useEffect, useState } from "react";
 import Calendar from "react-calendar";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import { BellIcon } from "@heroicons/react/24/outline";
 import { getDocs, collection, query, where, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import { useAuth } from "../contexts/AuthContext";
 import MenuSidebar from "../components/MenuSidebar";
+import NotiSidebar from "../components/NotiSidebar";
+import useNotiSidebar from "../hooks/useNotiSidebar";
 import "react-calendar/dist/Calendar.css";
 import "../pages/Calendar.css";
 
@@ -40,6 +43,13 @@ function CalendarPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [targetUser, setTargetUser] = useState(null);
   const [isPublic, setIsPublic] = useState(false);
+  const {
+    alarmOpen, setAlarmOpen,
+    notifications, unreadCount,
+    markAllRead, handleDeleteSelected,
+    markOneRead, handleAlarmItemClick,
+  } = useNotiSidebar();
+
 
   // Record 페이지에서 전달받은 선택된 날짜가 있으면 사용, 없으면 오늘 날짜
   const selectedDateFromRecord = location.state?.selectedDate;
@@ -242,6 +252,15 @@ function CalendarPage() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <NotiSidebar
+        isOpen={alarmOpen}
+        onClose={() => setAlarmOpen(false)}
+        notifications={notifications}
+        onMarkAllRead={markAllRead}
+        onDeleteSelected={handleDeleteSelected}
+        onMarkOneRead={markOneRead}
+        onItemClick={handleAlarmItemClick}
+      />
       {/* 상단 네비게이션 */}
       <div className="relative flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         {/* 왼쪽: 햄버거 버튼 */}
@@ -257,8 +276,8 @@ function CalendarPage() {
           {isOwnCalendar ? "My Calendar" : `${targetUser?.nickname || "사용자"}님의 Calendar`}
         </h2>
 
-        {/* 오른쪽: 체크박스 + 홈버튼 */}
-        <div className="flex items-center gap-3">
+        {/* 오른쪽: 체크박스 + 홈버튼 + 알림 버튼 */}
+        <div className="flex items-center space-x-4">
           {isOwnCalendar && (
             <div className="flex items-center gap-2">
               <input
@@ -278,6 +297,17 @@ function CalendarPage() {
             className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
           >
             <HomeIcon className="w-5 h-5" />
+          </button>
+          <button
+            className="relative flex items-center justify-center 
+                  bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+            onClick={() => setAlarmOpen(true)}
+            aria-label="알림 열기"
+          >
+            <BellIcon className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+            )}
           </button>
         </div>
       </div>

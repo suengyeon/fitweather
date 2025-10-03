@@ -2,22 +2,15 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, ArrowPathIcon } from "@heroicons/react/24/solid";
 import { BellIcon } from "@heroicons/react/24/outline";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db, logout } from "../firebase";
-
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
 import { useAuth } from "../contexts/AuthContext";
-
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
+import  useNotiSidebar from "../hooks/useNotiSidebar";
 import { getRecommendations } from "../api/getRecommendations";
-import { 
-  fetchUserNotifications, 
-  markAllNotificationsAsReadAPI, 
-  markNotificationAsReadAPI, 
-  deleteSelectedNotificationsAPI 
-} from "../api/notificationAPI";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수
 function getWeatherEmoji(iconCode) {
@@ -41,9 +34,14 @@ function Home() {
 
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [alarmOpen, setAlarmOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  
+
+  // 🔔 알림 사이드바 훅 (상태/로직 모두 훅에서 관리)
+  const {
+    alarmOpen, setAlarmOpen,
+    notifications, unreadCount,
+    markAllRead, handleDeleteSelected, markOneRead, handleAlarmItemClick
+  } = useNotiSidebar();
+
   // 추천 관련 상태
   const [recommendations, setRecommendations] = useState([]);
   const [currentRecommendationIndex, setCurrentRecommendationIndex] = useState(0);
@@ -60,18 +58,12 @@ function Home() {
   useEffect(() => {
     const fetchRecommendations = async () => {
       if (!selectedRegion) return;
-      
       setRecommendationLoading(true);
       try {
-        console.log("🔍 추천 데이터 요청:", selectedRegion);
         const data = await getRecommendations(selectedRegion, 3);
-        console.log("📊 추천 데이터 결과:", data);
         setRecommendations(data);
-        
-        // 새로고침 시 순차적 표시를 위한 인덱스 업데이트
         setCurrentRecommendationIndex(prev => {
           const newIndex = (prev + 1) % Math.max(data.length, 1);
-          console.log("🔄 추천 인덱스 변경:", prev, "->", newIndex);
           return newIndex;
         });
       } catch (error) {
@@ -81,7 +73,6 @@ function Home() {
         setRecommendationLoading(false);
       }
     };
-
     fetchRecommendations();
   }, [selectedRegion]);
 
@@ -90,14 +81,11 @@ function Home() {
     if (recommendations.length > 0) {
       setIsRefreshing(true);
       setCurrentRecommendationIndex(prev => (prev + 1) % recommendations.length);
-      
-      // 새로고침 아이콘 애니메이션 완료 후 상태 리셋
-      setTimeout(() => {
-        setIsRefreshing(false);
-      }, 1000); // 새로고침 아이콘 회전 시간
+      setTimeout(() => setIsRefreshing(false), 1000);
     }
   };
 
+<<<<<<< HEAD
   // 알림 데이터 로드 (실제 API 연동)
   useEffect(() => {
     const loadNotifications = async () => {
@@ -239,15 +227,13 @@ function Home() {
   );
 
   const { weather, loading: weatherLoading, apiSource } = useWeather(selectedRegion);
+=======
+  const { weather, loading: weatherLoading } = useWeather(selectedRegion);
+>>>>>>> 08c8d7dd867e2a0eabf6ba9d4268a4bfebcd0cc7
   const loading = profileLoading || weatherLoading;
 
   // 현재 표시할 추천 데이터 계산
   const currentRecommendation = useMemo(() => {
-    console.log("🎯 현재 추천 데이터 계산:", {
-      recommendations: recommendations.length,
-      currentIndex: currentRecommendationIndex,
-      current: recommendations[currentRecommendationIndex]
-    });
     if (recommendations.length === 0) return null;
     return recommendations[currentRecommendationIndex];
   }, [recommendations, currentRecommendationIndex]);
@@ -267,7 +253,6 @@ function Home() {
             onMarkOneRead={markOneRead}
             onItemClick={handleAlarmItemClick}
           />
-
           {/* 상단 네비게이션 */}
           <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
             <button
@@ -290,11 +275,12 @@ function Home() {
                 {nickname}님
               </div>
               <button
-                className="relative bg-white px-3 py-1 rounded text-gray-600 hover:bg-gray-100 transition-colors"
+                className="relative flex items-center justify-center 
+                  bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
                 onClick={() => setAlarmOpen(true)}
                 aria-label="알림 열기"
               >
-                <BellIcon className="w-5 h-5" />
+                <BellIcon className="w-5 h-5"/>
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
                 )}
@@ -381,7 +367,7 @@ function Home() {
               </div>
             ) : currentRecommendation ? (
               <div className="w-full max-w-md mt-6">
-            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
                   {/* 카드 헤더 */}
                   <div className="flex items-center justify-between mb-4">
                     <select className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none">
@@ -392,12 +378,12 @@ function Home() {
                       <option value="street">시크/스트릿</option>
                       <option value="feminine">러블리/페미닌</option>
                     </select>
-               <button 
-                 onClick={handleRefreshRecommendation}
-                 className={`p-1 text-gray-400 hover:text-gray-600 transition-colors ${isRefreshing ? 'animate-spin' : ''}`}
-               >
-                 <ArrowPathIcon className="w-4 h-4" />
-               </button>
+                    <button
+                      onClick={handleRefreshRecommendation}
+                      className={`p-1 text-gray-400 hover:text-gray-600 transition-colors ${isRefreshing ? "animate-spin" : ""}`}
+                    >
+                      <ArrowPathIcon className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* 추천 아이템 그리드 */}
@@ -501,11 +487,8 @@ function Home() {
 
                   {/* 착장 보기 링크 */}
                   <div className="flex justify-end mt-4">
-                    <button 
-                      onClick={() => {
-                        // 모든 기록은 FeedDetail로 이동 (내 기록이든 다른 사람 기록이든)
-                        navigate(`/feed-detail/${currentRecommendation.id}`);
-                      }}
+                    <button
+                      onClick={() => navigate(`/feed-detail/${currentRecommendation.id}`)}
                       className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
                     >
                       착장 보기
@@ -564,7 +547,6 @@ function Home() {
               >
                 추천보기
               </button>
-
             </div>
           </div>
         </div>

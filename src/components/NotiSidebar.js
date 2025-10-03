@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon } from "@heroicons/react/24/solid";
 import { useNavigate } from "react-router-dom";
-import { buildTitle } from "../utils/notiTitle";
 
 // 간단한 유틸: 클래스 합치기
 const cx = (...arr) => arr.filter(Boolean).join(" ");
@@ -68,24 +67,6 @@ const timeAgo = (dateish) => {
     return `${Math.floor(diff / 86400)}d`;
 };
 
-/**
- * props
- * - isOpen: boolean
- * - onClose: () => void
- * - notifications: Array<{
- *     id: string,
- *     kind?: "like"|"comment"|"follow"|"system",
- *     title?: string,
- *     message: string,
- *     link?: string,          // 클릭 시 이동할 경로
- *     createdAt: string|Date, // 날짜
- *     read?: boolean,
- *     avatarUrl?: string      // 보낸 사람/카드 미리보기 썸네일
- *   }>
- * - onItemClick?: (n) => void      // 개별 클릭 훅(없으면 link로 navigate)
- * - onMarkAllRead?: () => void
- * - onDeleteSelected?: (ids: string[]) => void
- */
 export default function NotiSidebar({
     isOpen,
     onClose,

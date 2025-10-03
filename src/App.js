@@ -16,12 +16,10 @@ import Recommend from "./pages/Recommend";
 import RecommendView from "./pages/RecommendView";
 import RecommendFilterSettings from "./pages/RecommendFilterSettings";
 import KakaoCallback from "./pages/KakaoCallback";
-
 import Calendar from "./pages/Calendar";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import FeedDetail from "./pages/FeedDetail";
-import MyPageLikes from "./pages/MyPageLikes";
 import Follow from "./pages/Follow";
 
 
@@ -99,8 +97,6 @@ function App() {
           <Route path="/recommend-filter-settings" element={<RecommendFilterSettings />} />
           <Route path="/feed-detail/:id" element={<FeedDetail />} />
           <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
-
-          <Route path="/mypage_likes" element={<MyPageLikes />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/calendar/:uid" element={<Calendar />} />

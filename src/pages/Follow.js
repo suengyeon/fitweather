@@ -2,17 +2,24 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
-import { HeartIcon } from "@heroicons/react/24/outline";
-import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
+import { BellIcon } from "@heroicons/react/24/outline";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { toggleSubscription, checkSubscription } from "../api/subscribe";
 import MenuSidebar from "../components/MenuSidebar";
+import NotiSidebar from "../components/NotiSidebar";
+import useNotiSidebar from "../hooks/useNotiSidebar";
 
 export default function Follow() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { alarmOpen, setAlarmOpen,
+    notifications, unreadCount,
+    markAllRead, handleDeleteSelected,
+    markOneRead, handleAlarmItemClick,
+  } = useNotiSidebar();
+
   const { user } = useAuth();
   const [following, setFollowing] = useState([]);
   const [followers, setFollowers] = useState([]);
@@ -34,7 +41,7 @@ export default function Follow() {
         );
         const followingSnapshot = await getDocs(followingQuery);
         const followingList = [];
-        
+
         for (const followDoc of followingSnapshot.docs) {
           const followData = followDoc.data();
           const userDoc = await getDoc(doc(db, "users", followData.followingId));
@@ -54,7 +61,7 @@ export default function Follow() {
         );
         const followersSnapshot = await getDocs(followersQuery);
         const followersList = [];
-        
+
         for (const followDoc of followersSnapshot.docs) {
           const followData = followDoc.data();
           const userDoc = await getDoc(doc(db, "users", followData.followerId));
@@ -69,7 +76,7 @@ export default function Follow() {
 
         // 구독 상태 확인 (팔로워들과 팔로잉들에 대해)
         const subscriptionStates = {};
-        
+
         // 팔로워들 구독 상태 확인
         for (const follower of followersList) {
           try {
@@ -80,7 +87,7 @@ export default function Follow() {
             subscriptionStates[follower.id] = false;
           }
         }
-        
+
         // 팔로잉들 구독 상태 확인
         for (const following of followingList) {
           try {
@@ -91,7 +98,7 @@ export default function Follow() {
             subscriptionStates[following.id] = false;
           }
         }
-        
+
         setSubscriptionStates(subscriptionStates);
 
       } catch (error) {
@@ -107,7 +114,7 @@ export default function Follow() {
   // 구독 토글 핸들러
   const handleSubscriptionToggle = async (targetUserId) => {
     console.log("🔍 Follow 페이지 구독 버튼 클릭:", { currentUserId: user?.uid, targetUserId });
-    
+
     if (!user?.uid) {
       console.error("❌ 사용자 정보가 없습니다.");
       return;
@@ -116,13 +123,13 @@ export default function Follow() {
     try {
       console.log("📡 구독 API 호출 시작:", { followerId: user.uid, followingId: targetUserId });
       const isSubscribed = await toggleSubscription(user.uid, targetUserId);
-      
+
       // 구독 상태 업데이트
       setSubscriptionStates(prev => ({
         ...prev,
         [targetUserId]: isSubscribed
       }));
-      
+
       // 구독 취소 시 팔로잉 목록에서만 제거 (팔로워는 그대로 유지)
       if (!isSubscribed) {
         // 팔로잉 목록에서만 제거 (내가 팔로우 취소한 경우)
@@ -143,7 +150,7 @@ export default function Follow() {
         });
         console.log("📥 팔로잉 목록에 추가:", targetUserId);
       }
-      
+
       console.log("✅ 구독 토글 성공:", { targetUserId, isSubscribed });
     } catch (error) {
       console.error("❌ 구독 토글 실패:", error);
@@ -154,6 +161,15 @@ export default function Follow() {
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
       {/* 사이드바 */}
       <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <NotiSidebar
+        isOpen={alarmOpen}
+        onClose={() => setAlarmOpen(false)}
+        notifications={notifications}
+        onMarkAllRead={markAllRead}
+        onDeleteSelected={handleDeleteSelected}
+        onMarkOneRead={markOneRead}
+        onItemClick={handleAlarmItemClick}
+      />
 
       {/* 상단 네비게이션 (Feed.js와 동일 톤) */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
@@ -164,12 +180,25 @@ export default function Follow() {
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">구독</h2>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
-        >
-          <HomeIcon className="w-5 h-5" />
-        </button>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/")}
+            className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
+          >
+            <HomeIcon className="w-5 h-5" />
+          </button>
+          <button
+            className="relative flex items-center justify-center 
+                                    bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+            onClick={() => setAlarmOpen(true)}
+            aria-label="알림 열기"
+          >
+            <BellIcon className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* 콘텐츠 */}
@@ -220,7 +249,7 @@ export default function Follow() {
                     >
                       {subscriptionStates[user.id] ? "♥" : "♡"}
                     </button>
-                    <span 
+                    <span
                       className="font-semibold cursor-pointer hover:text-blue-600 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -274,7 +303,7 @@ export default function Follow() {
                     >
                       {subscriptionStates[user.id] ? "♥" : "♡"}
                     </button>
-                    <span 
+                    <span
                       className="font-semibold cursor-pointer hover:text-blue-600 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
