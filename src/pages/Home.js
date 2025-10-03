@@ -238,7 +238,7 @@ function Home() {
     [notifications]
   );
 
-  const { weather, loading: weatherLoading } = useWeather(selectedRegion);
+  const { weather, loading: weatherLoading, apiSource } = useWeather(selectedRegion);
   const loading = profileLoading || weatherLoading;
 
   // 현재 표시할 추천 데이터 계산

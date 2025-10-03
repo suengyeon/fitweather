@@ -325,4 +325,7 @@ function getExpressionColor(expression) {
     return "#03A9F4";
   }
 }
+
+// 함수들을 export
+export { getWeatherExpression, getExpressionColor };
   

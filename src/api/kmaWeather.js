@@ -46,99 +46,41 @@ export const fetchKmaForecast = async (region, date = null) => {
     const text = await res.text();
     console.log("🔍 KMA raw response:", text);
     
-    // API 오류 시 모의 데이터 반환
-    if (text.includes('SERVICE_KEY_IS_NOT_REGISTERED_ERROR') || text.includes('SERVICE ERROR')) {
-      console.log("⚠️ 기상청 API 오류, 모의 데이터 사용");
-      
-      const now = new Date();
-      const nextHour = now.getHours() + 1;
-      const fcstTime = `${nextHour.toString().padStart(2, "0")}00`;
-      
-      return [
-        {
-          category: "TMP",
-          fcstValue: "25",
-          fcstTime: fcstTime
-        },
-        {
-          category: "TAVG",
-          fcstValue: "23",
-          fcstTime: fcstTime
-        },
-        {
-          category: "RN1",
-          fcstValue: "0",
-          fcstTime: fcstTime
-        },
-        {
-          category: "REH",
-          fcstValue: "60",
-          fcstTime: fcstTime
-        },
-        {
-          category: "SKY",
-          fcstValue: "1",
-          fcstTime: fcstTime
-        },
-        {
-          category: "PTY",
-          fcstValue: "0",
-          fcstTime: fcstTime
-        }
-      ];
+    // HTTP 상태 코드 확인
+    if (!res.ok) {
+      console.error(`❌ 기상청 API HTTP 오류: ${res.status} ${res.statusText}`);
+      throw new Error(`기상청 API HTTP 오류: ${res.status} ${res.statusText}`);
     }
     
-    const json = JSON.parse(text);
+    // API 오류 시 실제 오류 던지기 (모의 데이터 사용 안함)
+    if (text.includes('SERVICE_KEY_IS_NOT_REGISTERED_ERROR') || text.includes('SERVICE ERROR')) {
+      console.error("❌ 기상청 API 오류 - 서비스 키 문제 또는 서비스 오류");
+      throw new Error(`기상청 API 오류: ${text}`);
+    }
+    
+    // JSON 파싱 시도 (500 오류 등으로 인한 비JSON 응답 처리)
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (parseError) {
+      console.error("❌ 기상청 API 응답이 JSON이 아님:", text);
+      console.error("❌ 파싱 오류:", parseError);
+      throw new Error(`기상청 API 응답 오류: ${text}`);
+    }
 
     if (json.response.header.resultCode !== "00") {
-      console.error("KMA API error:", json.response.header);
-      return null;
+      console.error("❌ KMA API 오류:", json.response.header);
+      throw new Error(`기상청 API 오류: ${json.response.header.resultMsg}`);
     }
 
     // 5) 결과 리턴 (items.item 배열)
     return json.response.body.items.item;
 
   } catch (err) {
-    console.error("fetchKmaForecast error:", err);
+    console.error("❌ fetchKmaForecast error:", err);
     
-    // 네트워크 오류나 기타 오류 시에도 모의 데이터 반환
-    console.log("⚠️ 네트워크 오류 또는 기타 오류, 모의 데이터 사용");
-    
-    const now = new Date();
-    const nextHour = now.getHours() + 1;
-    const fcstTime = `${nextHour.toString().padStart(2, "0")}00`;
-    
-    return [
-      {
-        category: "TMP",
-        fcstValue: "25",
-        fcstTime: fcstTime
-      },
-      {
-        category: "TAVG",
-        fcstValue: "23",
-        fcstTime: fcstTime
-      },
-      {
-        category: "RN1",
-        fcstValue: "0",
-        fcstTime: fcstTime
-      },
-      {
-        category: "REH",
-        fcstValue: "60",
-        fcstTime: fcstTime
-      },
-      {
-        category: "SKY",
-        fcstValue: "1",
-        fcstTime: fcstTime
-      },
-      {
-        category: "PTY",
-        fcstValue: "0",
-        fcstTime: fcstTime
-      }
-    ];
+    // 네트워크 오류나 기타 오류 시에도 실제 오류 던지기 (모의 데이터 사용 안함)
+    console.error("❌ 네트워크 오류 또는 기타 오류 - 실제 오류 전파");
+    throw new Error(`기상청 API 네트워크 오류: ${err.message}`);
   }
 };
