@@ -877,8 +877,8 @@ function Record() {
                         <select className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center">
                           <option value="" className="text-gray-500">선택</option>
                           <option value="casual">캐주얼</option>
-                          <option value="minimal">미니멀</option>
                           <option value="formal">포멀</option>
+                          <option value="basic">베이직/놈코어</option>
                           <option value="sporty">스포티/액티브</option>
                           <option value="street">시크/스트릿</option>
                           <option value="feminine">러블리/페미닌</option>

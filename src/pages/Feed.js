@@ -94,8 +94,6 @@ function Feed() {
     return `${year}-${monthStr}-${dayStr}`;
   });
 
-
-
   // 사용자 region fetch
   useEffect(() => {
     async function fetchUserRegion() {

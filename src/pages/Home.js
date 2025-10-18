@@ -237,8 +237,8 @@ function Home() {
                   <div className="flex items-center justify-between mb-4">
                     <select className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none">
                       <option value="casual">캐주얼</option>
-                      <option value="minimal">미니멀</option>
                       <option value="formal">포멀</option>
+                      <option value="Basic">베이직/놈코어</option>
                       <option value="sporty">스포티/액티브</option>
                       <option value="street">시크/스트릿</option>
                       <option value="feminine">러블리/페미닌</option>

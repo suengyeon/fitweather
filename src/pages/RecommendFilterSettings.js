@@ -1,7 +1,7 @@
 import { useAuth } from "../contexts/AuthContext";
 import { db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import MenuSidebar from "../components/MenuSidebar";

@@ -317,6 +317,7 @@ function CalendarPage() {
       <div className="flex justify-center py-6 px-4">
         <div className="w-full max-w-[900px] mx-auto px-4">
           <Calendar
+            className="w-full max-w-none m-4 p-6 rounded-lg border-2 border-gray-200 font-sans"
             value={value}
             onClickDay={handleDateClick}
             tileContent={tileContent}
@@ -325,14 +326,48 @@ function CalendarPage() {
             onActiveStartDateChange={handleActiveStartDateChange}
             tileClassName={({ date, view }) => {
               if (view !== "month") return "";
-
               const dateStr = formatDateLocal(date);
               const isOtherMonth = date.getMonth() !== calendarDate.getMonth();
               const hasRecord = !!outfitMap[dateStr];
-              if (isOtherMonth) return "hidden-date";     // 다른 달: 숨김
-              if (hasRecord) return "has-record";         // 기록 있음: 굵게 표시
-              return "";
+
+              const baseClasses = "p-2 h-[100px] align-top relative text-sm";
+              let addedClasses = "";
+
+              if (date.getDay() === 0) {
+                addedClasses += " text-red-500";
+              } else if (date.getDay() === 6) {
+                addedClasses += " text-blue-500";
+              }
+
+              if (isOtherMonth) {
+                return "invisible " + baseClasses;
+              }
+              if (hasRecord) {
+                return "font-bold " + baseClasses + addedClasses;
+              }
+              if (dateStr === todayStr) {
+                return "bg-blue-100 text-black rounded-md hover:bg-blue-300 " + baseClasses + addedClasses;
+              }
+
+              return baseClasses + addedClasses;
             }}
+            navigationLabel={({ date, label, locale, view }) => {
+              if (view === 'month') {
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                return (
+                  <div className="flex justify-center items-center gap-2 font-bold">
+                    <span>{year}년</span>
+                    <span>{month}월</span>
+                  </div>
+                );
+              }
+              return label;
+            }}
+            nextLabel=">"
+            prevLabel="<"
+            next2Label={null}
+            prev2Label={null}
           />
         </div>
       </div>
