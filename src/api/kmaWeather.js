@@ -1,6 +1,6 @@
 // src/api/kmaWeather.js
 
-import { regionGrid } from "../constants/regionGrid";
+import { regionGrid } from "../constants/regionData";
 import { getTodayYYYYMMDD, getBaseTime } from "../utils/timeUtils";
 console.log("🔑 SERVICE_KEY:", process.env.REACT_APP_KMA_SERVICE_KEY);
 console.log("🔑 SERVICE_KEY length:", process.env.REACT_APP_KMA_SERVICE_KEY?.length);

@@ -12,6 +12,8 @@ import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
 import "react-calendar/dist/Calendar.css";
 import "../pages/Calendar.css";
+import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
+
 
 function formatDateLocal(date) {
   return date.toLocaleDateString("sv-SE");
@@ -39,7 +41,6 @@ function CalendarPage() {
   const { uid } = useParams(); // URL에서 사용자 ID 가져오기
   const { user } = useAuth();
   const { profile } = useUserProfile();
-
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [targetUser, setTargetUser] = useState(null);
   const [isPublic, setIsPublic] = useState(false);
@@ -49,7 +50,6 @@ function CalendarPage() {
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
   } = useNotiSidebar();
-
 
   // Record 페이지에서 전달받은 선택된 날짜가 있으면 사용, 없으면 오늘 날짜
   const selectedDateFromRecord = location.state?.selectedDate;
@@ -207,19 +207,6 @@ function CalendarPage() {
     }
   };
 
-  const getWeatherEmoji = (iconCode) => {
-    switch (iconCode) {
-      case "sunny": return "☀️";
-      case "cloudy": return "☁️";
-      case "overcast": return "🌥️";
-      case "rain": return "🌧️";
-      case "snow": return "❄️";
-      case "snow_rain": return "🌨️";
-      case "shower": return "🌦️";
-      default: return "";
-    }
-  };
-
   // 📌 날짜 타일에 이모지 + 날짜 표시
   const tileContent = ({ date, view }) => {
     if (view !== "month") return null;
@@ -227,14 +214,8 @@ function CalendarPage() {
     const dateStr = formatDateLocal(date);
     const record = outfitMap[dateStr];
     const weatherEmoji = getWeatherEmoji(record?.weather?.icon ?? record?.icon ?? "");
-    const feelingEmoji =
-      {
-        steam: "🥟",
-        hot: "🥵",
-        nice: "👍🏻",
-        cold: "💨",
-        ice: "🥶",
-      }[record?.feeling] || "";
+    const feelingText = record?.feeling ? feelingToEmoji(record.feeling) : null;
+    const feelingEmoji = feelingText ? feelingText.split(' ')[0] : "";
 
     return (
       <div className="calendar-tile-content">

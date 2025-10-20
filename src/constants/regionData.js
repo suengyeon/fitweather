@@ -1,11 +1,5 @@
-// src/constants/regionGrid.js
-
-/**
- * 기상청 API 호출을 위한 지역별 격자좌표 매핑
- * 필요에 따라 다른 지역을 추가하세요.
- */
+// 기상청 API 호출을 위한 지역별 격자좌표 매핑
 export const regionGrid = {
-    Baengnyeongdo: { nx: 50, ny: 124 },
     Incheon: { nx: 55, ny: 124 },
     Seoul: { nx: 60, ny: 127 },
     Chuncheon: { nx: 73, ny: 134 },
@@ -19,7 +13,6 @@ export const regionGrid = {
     Daejeon: { nx: 67, ny: 100 },
     Daegu: { nx: 89, ny: 90 },
     Pohang: { nx: 102, ny: 94 },
-    Heuksando: { nx: 50, ny: 67 },
     Mokpo: { nx: 50, ny: 68 },
     Jeju: { nx: 52, ny: 38 },
     Ulsan: { nx: 102, ny: 84 },
@@ -28,4 +21,27 @@ export const regionGrid = {
     Busan: { nx: 98, ny: 76 },
     Gwangju: { nx: 58, ny: 74 },
   };
+
+  // 2. 지역별 한글 이름 매핑
+export const regionMap = {
+    Incheon: "인천",
+    Seoul: "서울",
+    Chuncheon: "춘천",
+    Gangneung: "강릉",
+    Ulleungdo: "울릉도/독도",
+    Suwon: "수원",
+    Cheongju: "청주",
+    Jeonju: "전주",
+    Daejeon: "대전",
+    Daegu: "대구",
+    Pohang: "포항",
+    Mokpo: "목포",
+    Jeju: "제주",
+    Ulsan: "울산",
+    Yeosu: "여수",
+    Busan: "부산",
+    Gwangju: "광주",
+    Hongseong: "홍성",
+    Changwon: "창원", 
+};
   

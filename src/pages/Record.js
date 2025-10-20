@@ -5,7 +5,7 @@ import { db, storage } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
 import { HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
-import { XMarkIcon, ArrowPathIcon, BellIcon } from "@heroicons/react/24/outline";
+import { BellIcon } from "@heroicons/react/24/outline";
 import { toast } from "react-toastify";
 import { collection, query, where, getDocs, addDoc, deleteDoc, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -16,64 +16,14 @@ import useNotiSidebar from "../hooks/useNotiSidebar";
 import { getPastWeatherData, fetchAndSavePastWeather, deletePastWeatherData, savePastWeatherData } from "../api/pastWeather";
 import { fetchKmaPastWeather } from "../api/kmaPastWeather";
 import { createCommentNotification, createReplyNotification } from "../api/subscribe";
-
-// 날씨 아이콘 코드에 따른 이모지 반환 함수
-function getWeatherEmoji(iconCode) {
-  switch (iconCode) {
-    case "sunny": return "☀️";
-    case "cloudy": return "☁️";
-    case "overcast": return "🌥️";
-    case "rain": return "🌧️";
-    case "snow": return "❄️";
-    case "snow_rain": return "🌨️";
-    case "shower": return "🌦️";
-    default: return "☁️";
-  }
-}
-
-function addReplyRecursively(nodes, targetId, newReply) {
-  if (!Array.isArray(nodes)) return nodes;
-  return nodes.map((node) => {
-    if (node.id === targetId) {
-      const nextReplies = Array.isArray(node.replies) ? [...node.replies, newReply] : [newReply];
-      return { ...node, replies: nextReplies };
-    }
-    if (Array.isArray(node.replies) && node.replies.length > 0) {
-      return { ...node, replies: addReplyRecursively(node.replies, targetId, newReply) };
-    }
-    return node;
-  });
-}
-
-// targetId에 해당하는 노드만 지우고, 그 노드의 자식(replies)은 같은 위치로 승격하여 보존
-function deleteNodeKeepChildren(nodes, targetId) {
-  if (!Array.isArray(nodes)) return { list: nodes, changed: false };
-
-  let changed = false;
-  const result = [];
-
-  for (const node of nodes) {
-    if (node.id === targetId) {
-      if (Array.isArray(node.replies) && node.replies.length > 0) {
-        result.push(...node.replies);
-      }
-      changed = true;
-      continue;
-    }
-
-    let nextNode = node;
-    if (Array.isArray(node.replies) && node.replies.length > 0) {
-      const { list: childList, changed: childChanged } = deleteNodeKeepChildren(node.replies, targetId);
-      if (childChanged) {
-        changed = true;
-        nextNode = { ...node, replies: childList };
-      }
-    }
-    result.push(nextNode);
-  }
-
-  return { list: result, changed };
-}
+import CommentSection from "../components/CommentSection";
+import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
+import { addReplyRecursively, deleteNodeKeepChildren, findCommentAuthor } from "../utils/commentUtils";
+import { regionMap } from "../constants/regionData";
+import { styleOptions } from "../constants/styleOptions";
+import { outfitOptionTexts } from "../constants/outfitOptionTexts";
+import { outfitOptions } from "../constants/outfitOptions";
+import { navBtnStyle, indicatorStyle, dotStyle } from "../components/ImageCarouselStyles";
 
 function Record() {
   const navigate = useNavigate();
@@ -121,6 +71,7 @@ function Record() {
     }
   }, [profile?.region, existingRecord?.region, dateStr, location.state?.selectedRegion]);
 
+  const regionOptions = Object.entries(regionMap).map(([key, value]) => ({ value: key, label: value }));
   const [imageFiles, setImageFiles] = useState([]);
   const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] });
   const [selectedItems, setSelectedItems] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" });
@@ -164,7 +115,7 @@ function Record() {
         // 저장된 데이터 확인
         const savedData = await getPastWeatherData(dateStr, selectedRegion);
         if (savedData) {
-          // 2025-09-12는 강수량 검증을 위한 강제 재생성 로직
+          // 2025-09-12는 강수량 검증을 위한 강제 재생성 로직 (유지)
           if (dateStr === "2025-09-12") {
             await deletePastWeatherData(dateStr, selectedRegion);
           } else {
@@ -250,30 +201,13 @@ function Record() {
   // 지역 변경
   const handleRegionChange = (newRegion) => setSelectedRegion(newRegion);
 
+  // regionMap 사용 (import된 상수)
   useEffect(() => {
     if (selectedRegion) {
-      const regionMap = {
-        Incheon: "인천",
-        Seoul: "서울",
-        Chuncheon: "춘천",
-        Gangneung: "강릉",
-        Ulleungdo: "울릉도/독도",
-        Suwon: "수원",
-        Cheongju: "청주",
-        Jeonju: "전주",
-        Daejeon: "대전",
-        Daegu: "대구",
-        Pohang: "포항",
-        Mokpo: "목포",
-        Jeju: "제주",
-        Ulsan: "울산",
-        Yeosu: "여수",
-        Busan: "부산",
-        Gwangju: "광주"
-      };
       setRegionName(regionMap[selectedRegion] || selectedRegion);
     }
   }, [selectedRegion]);
+
 
   useEffect(() => {
     if (existingRecord) {
@@ -378,16 +312,8 @@ function Record() {
     } else {
       const selectedValue = selectedItems[category];
       if (!selectedValue) return;
-
-      const optionTexts = {
-        outer: { jacket: "재킷", blazer: "블레이저", coat: "코트", cardigan: "가디건", hoodzipup: "후드집업", windbreak: "바람막이", jersey: "저지", padding: "패딩", jumper: "점퍼" },
-        top: { tshirt: "티셔츠", shirt: "셔츠", blouse: "블라우스", tank: "탱크톱", sweater: "스웨터" },
-        bottom: { jeans: "청바지", pants: "바지", shorts: "반바지", skirt: "치마", leggings: "레깅스" },
-        shoes: { sneakers: "스니커즈", boots: "부츠", sandals: "샌들", heels: "힐", loafers: "로퍼" },
-        acc: { bag: "가방", hat: "모자", scarf: "스카프", watch: "시계", jewelry: "액세서리" }
-      };
-
-      valueToAdd = optionTexts[category][selectedValue] || selectedValue;
+      // outfitOptionTexts 사용
+      valueToAdd = outfitOptionTexts[category][selectedValue] || selectedValue;
       setSelectedItems((prev) => ({ ...prev, [category]: "" }));
     }
 
@@ -462,7 +388,7 @@ function Record() {
 
       const recordData = {
         uid: user.uid,
-        region: profile?.region,
+        region: selectedRegion, // profile?.region 대신 selectedRegion 사용
         regionName,
         date: dateStr,
         temp: weather.temp ?? null,
@@ -670,17 +596,6 @@ function Record() {
       const commentsRef = doc(db, "comments", existingRecord.id);
       await setDoc(commentsRef, { comments: optimistic, lastUpdated: new Date() }, { merge: true });
 
-      const findCommentAuthor = (comments, commentId) => {
-        for (const comment of comments) {
-          if (comment.id === commentId) return comment.authorUid;
-          if (comment.replies && comment.replies.length > 0) {
-            const found = findCommentAuthor(comment.replies, commentId);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
       const originalCommentAuthor = findCommentAuthor(comments, replyToCommentId);
       if (originalCommentAuthor && originalCommentAuthor !== user?.uid) {
         await createReplyNotification(
@@ -700,6 +615,18 @@ function Record() {
       console.error("답글 저장 실패:", err);
     }
   };
+
+  // Select 옵션 표시를 위해 느낌표와 텍스트를 결합하는 함수
+  const getFeelingTextForOption = (feelingCode) => {
+    const result = feelingToEmoji(feelingCode);
+    // '🥟 찐만두' 형태를 '🥟 (찐만두)' 형태로 변환 (Select Box용)
+    if (result && result.includes(' ')) {
+      const [emoji, text] = result.split(' ');
+      return `${emoji} (${text})`;
+    }
+    return result;
+  };
+
 
   if (profileLoading) {
     return <div className="p-4 max-w-md mx-auto">사용자 정보를 불러오는 중...</div>;
@@ -775,23 +702,9 @@ function Record() {
                   onChange={e => handleRegionChange(e.target.value)}
                   className="w-30 px-4 py-2 border rounded bg-white text-center"
                 >
-                  <option value="Incheon">인천</option>
-                  <option value="Seoul">서울</option>
-                  <option value="Chuncheon">춘천</option>
-                  <option value="Gangneung">강릉</option>
-                  <option value="Ulleungdo">울릉도/독도</option>
-                  <option value="Suwon">수원</option>
-                  <option value="Cheongju">청주</option>
-                  <option value="Jeonju">전주</option>
-                  <option value="Daejeon">대전</option>
-                  <option value="Daegu">대구</option>
-                  <option value="Pohang">포항</option>
-                  <option value="Mokpo">목포</option>
-                  <option value="Jeju">제주</option>
-                  <option value="Ulsan">울산</option>
-                  <option value="Yeosu">여수</option>
-                  <option value="Busan">부산</option>
-                  <option value="Gwangju">광주</option>
+                  {regionOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -861,11 +774,11 @@ function Record() {
                           className="ml-auto w-32 h-9 px-3 py-1 border rounded text-sm text-center flex items-center justify-center"
                         >
                           <option value="" className="text-gray-500">선택</option>
-                          <option value="steam">🥟 (찐만두)</option>
-                          <option value="hot">🥵 (더움)</option>
-                          <option value="nice">👍🏻 (적당)</option>
-                          <option value="cold">💨 (추움)</option>
-                          <option value="ice">🥶 (동태)</option>
+                          <option value="steam">{getFeelingTextForOption("steam")}</option>
+                          <option value="hot">{getFeelingTextForOption("hot")}</option>
+                          <option value="nice">{getFeelingTextForOption("nice")}</option>
+                          <option value="cold">{getFeelingTextForOption("cold")}</option>
+                          <option value="ice">{getFeelingTextForOption("ice")}</option>
                         </select>
                       </div>
                     </div>
@@ -876,12 +789,9 @@ function Record() {
                         <span className="w-28 text-base font-semibold text-left">스타일</span>
                         <select className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center">
                           <option value="" className="text-gray-500">선택</option>
-                          <option value="casual">캐주얼</option>
-                          <option value="formal">포멀</option>
-                          <option value="basic">베이직/놈코어</option>
-                          <option value="sporty">스포티/액티브</option>
-                          <option value="street">시크/스트릿</option>
-                          <option value="feminine">러블리/페미닌</option>
+                          {styleOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -1059,7 +969,7 @@ function Record() {
                         placeholder="직접 입력하세요"
                         value={customInputs.outer}
                         onChange={(e) => handleCustomInputChange("outer", e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddSelectedItem("outer")}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSelectedItem("outer")}
                       />
                       <button
                         type="button"
@@ -1076,16 +986,11 @@ function Record() {
                       onChange={(e) => handleSelectChange("outer", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      <option value="jacket">재킷</option>
-                      <option value="jumper">점퍼</option>
-                      <option value="coat">코트</option>
-                      <option value="cardigan">가디건</option>
-                      <option value="hoodzipup">후드집업</option>
-                      <option value="blazer">블레이저</option>
-                      <option value="windbreak">바람막이</option>
-                      <option value="jersey">저지</option>
-                      <option value="padding">패딩</option>
-                      <option value="custom">직접입력</option>
+                      {outfitOptions.outer.map(value => (
+                        <option key={value} value={value}>
+                          {value === 'custom' ? '직접입력' : outfitOptionTexts.outer[value]}
+                        </option>
+                      ))}
                     </select>
                   )}
                   <button
@@ -1126,7 +1031,7 @@ function Record() {
                         placeholder="직접 입력하세요"
                         value={customInputs.top}
                         onChange={(e) => handleCustomInputChange("top", e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddSelectedItem("top")}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSelectedItem("top")}
                       />
                       <button
                         type="button"
@@ -1143,12 +1048,11 @@ function Record() {
                       onChange={(e) => handleSelectChange("top", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      <option value="tshirt">티셔츠</option>
-                      <option value="shirt">셔츠</option>
-                      <option value="blouse">블라우스</option>
-                      <option value="tank">탱크톱</option>
-                      <option value="sweater">스웨터</option>
-                      <option value="custom">직접입력</option>
+                      {outfitOptions.top.map(value => (
+                        <option key={value} value={value}>
+                          {value === 'custom' ? '직접입력' : outfitOptionTexts.top[value]}
+                        </option>
+                      ))}
                     </select>
                   )}
                   <button
@@ -1189,7 +1093,7 @@ function Record() {
                         placeholder="직접 입력하세요"
                         value={customInputs.bottom}
                         onChange={(e) => handleCustomInputChange("bottom", e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddSelectedItem("bottom")}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSelectedItem("bottom")}
                       />
                       <button
                         type="button"
@@ -1206,12 +1110,11 @@ function Record() {
                       onChange={(e) => handleSelectChange("bottom", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      <option value="jeans">청바지</option>
-                      <option value="pants">바지</option>
-                      <option value="shorts">반바지</option>
-                      <option value="skirt">치마</option>
-                      <option value="leggings">레깅스</option>
-                      <option value="custom">직접입력</option>
+                      {outfitOptions.bottom.map(value => (
+                        <option key={value} value={value}>
+                          {value === 'custom' ? '직접입력' : outfitOptionTexts.bottom[value]}
+                        </option>
+                      ))}
                     </select>
                   )}
                   <button
@@ -1252,7 +1155,7 @@ function Record() {
                         placeholder="직접 입력하세요"
                         value={customInputs.shoes}
                         onChange={(e) => handleCustomInputChange("shoes", e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddSelectedItem("shoes")}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSelectedItem("shoes")}
                       />
                       <button
                         type="button"
@@ -1269,12 +1172,11 @@ function Record() {
                       onChange={(e) => handleSelectChange("shoes", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      <option value="sneakers">스니커즈</option>
-                      <option value="boots">부츠</option>
-                      <option value="sandals">샌들</option>
-                      <option value="heels">힐</option>
-                      <option value="loafers">로퍼</option>
-                      <option value="custom">직접입력</option>
+                      {outfitOptions.shoes.map(value => (
+                        <option key={value} value={value}>
+                          {value === 'custom' ? '직접입력' : outfitOptionTexts.shoes[value]}
+                        </option>
+                      ))}
                     </select>
                   )}
                   <button
@@ -1315,7 +1217,7 @@ function Record() {
                         placeholder="직접 입력하세요"
                         value={customInputs.acc}
                         onChange={(e) => handleCustomInputChange("acc", e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddSelectedItem("acc")}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSelectedItem("acc")}
                       />
                       <button
                         type="button"
@@ -1332,12 +1234,11 @@ function Record() {
                       onChange={(e) => handleSelectChange("acc", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      <option value="bag">가방</option>
-                      <option value="hat">모자</option>
-                      <option value="scarf">스카프</option>
-                      <option value="watch">시계</option>
-                      <option value="jewelry">액세서리</option>
-                      <option value="custom">직접입력</option>
+                      {outfitOptions.acc.map(value => (
+                        <option key={value} value={value}>
+                          {value === 'custom' ? '직접입력' : outfitOptionTexts.acc[value]}
+                        </option>
+                      ))}
                     </select>
                   )}
                   <button
@@ -1383,188 +1284,5 @@ function Record() {
     </div>
   );
 }
-
-function CommentSection({
-  comments,
-  newComment,
-  setNewComment,
-  onCommentSubmit,
-  onCommentDelete,
-  onReply,
-  onClose,
-  onRefresh,
-  isRefreshing,
-  replyToCommentId,
-  replyContent,
-  setReplyContent,
-  onReplySubmit,
-  onCancelReply,
-  user,
-  author
-}) {
-  const renderComment = (comment, level = 0) => {
-    const isReply = level >= 1;
-
-    return (
-      <div key={comment.id} className={`${isReply ? 'mt-2' : 'mb-4'}`}>
-        <div className="bg-white rounded-lg p-3 border w-full">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <div className="font-semibold text-sm text-gray-800 flex items-center gap-2">
-                <span>{isReply ? `ㄴ ${comment.author}` : comment.author}</span>
-                {(comment.authorUid === author?.uid) && (
-                  <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-md font-medium">
-                    작성자
-                  </span>
-                )}
-              </div>
-              <div className="text-xs text-gray-500">{comment.timestamp}</div>
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={() => onReply(comment.id)} className="text-xs text-blue-600 hover:text-blue-800">
-                답글
-              </button>
-              {(comment.authorUid === user?.uid || author?.uid === user?.uid) && (
-                <button onClick={() => onCommentDelete(comment.id)} className="text-xs text-red-600 hover:text-red-800">
-                  삭제
-                </button>
-              )}
-            </div>
-          </div>
-
-          <p className="text-sm text-gray-700 mb-2">{comment.content}</p>
-        </div>
-
-        {/* 답글 작성 폼 */}
-        {replyToCommentId === comment.id && (
-          <div className={`mt-2 bg-gray-50 rounded-lg p-3 border`}>
-            <form onSubmit={onReplySubmit} className="space-y-2">
-              <textarea
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="답글 작성"
-                className="w-full h-16 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                maxLength={1000}
-              />
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">{replyContent.length}/1000</span>
-                <div className="flex gap-2">
-                  <button type="button" onClick={onCancelReply} className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800">
-                    취소
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!replyContent.trim()}
-                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    답글 등록
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* 대댓글 렌더링 */}
-        {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-          <div className={`mt-2 ${level === 0 ? 'ml-6' : ''}`}>
-            {comment.replies.map((r) => renderComment(r, 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="h-full flex flex-col rounded-lg overflow-hidden">
-      {/* 헤더 */}
-      <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-        <h3 className="text-lg font-semibold">댓글</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            title="댓글 새로고침"
-          >
-            <ArrowPathIcon className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
-          <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded">
-            <XMarkIcon className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-      </div>
-
-      {/* 댓글 목록 */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {comments.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">아직 댓글이 없습니다.</p>
-        ) : (
-          comments.map((comment) => renderComment(comment, 0))
-        )}
-      </div>
-
-      {/* 댓글 입력 폼 */}
-      <div className="border-t bg-gray-50 p-4">
-        <form onSubmit={onCommentSubmit} className="space-y-3">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="댓글 작성"
-            className="w-full h-20 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-            maxLength={1000}
-          />
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500">{newComment.length}/1000</span>
-            <button
-              type="submit"
-              disabled={!newComment.trim()}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
-            >
-              등록
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// --- 캐러셀 스타일 함수들 (FeedCard.js 스타일과 동일) ---
-const navBtnStyle = (side) => ({
-  position: "absolute",
-  [side]: "12px",
-  top: "50%",
-  transform: "translateY(-50%)",
-  background: "rgba(0,0,0,0.5)",
-  color: "white",
-  border: "none",
-  borderRadius: "50%",
-  width: "28px",
-  height: "28px",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  fontSize: "16px",
-  zIndex: 10
-});
-
-const indicatorStyle = {
-  position: "absolute",
-  bottom: "14px",
-  left: "50%",
-  transform: "translateX(-50%)",
-  display: "flex",
-  gap: "4px",
-  zIndex: 10
-};
-
-const dotStyle = (active) => ({
-  width: "6px",
-  height: "6px",
-  borderRadius: "50%",
-  backgroundColor: active ? "white" : "rgba(255,255,255,0.5)"
-});
 
 export default Record;

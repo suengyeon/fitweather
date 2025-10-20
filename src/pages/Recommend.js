@@ -50,7 +50,7 @@ function Recommend() {
   // ✅ 스타일 매칭 (영문/한글/복합 레이블 모두 인식)
   const styleAliases = {
     casual: ["casual", "캐주얼"],
-    minimal: ["minimal", "미니멀"],
+    basic: ["basic", "베이직/놈코어"],
     formal: ["formal", "포멀"],
     sporty: ["sporty", "스포티", "액티브", "스포티/액티브"],
     street: ["street", "시크", "스트릿", "시크/스트릿"],
@@ -472,8 +472,8 @@ function Recommend() {
             >
               <option value="">전체</option>
               <option value="casual">캐주얼</option>
-              <option value="minimal">미니멀</option>
               <option value="formal">포멀</option>
+              <option value="basic">베이직/놈코어</option>
               <option value="sporty">스포티/액티브</option>
               <option value="street">시크/스트릿</option>
               <option value="feminine">러블리/페미닌</option>

@@ -11,20 +11,9 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
-
-// 날씨 아이콘 코드에 따른 이모지 반환 함수 (Home, Record와 동일한 로직)
-function getWeatherEmoji(iconCode) {
-  switch (iconCode) {
-    case "sunny": return "☀️";        // 맑음
-    case "cloudy": return "☁️";       // 구름많음
-    case "overcast": return "🌥️";     // 흐림
-    case "rain": return "🌧️";        // 비
-    case "snow": return "❄️";        // 눈
-    case "snow_rain": return "🌨️";   // 비/눈
-    case "shower": return "🌦️";      // 소나기
-    default: return "☁️";            // 기본값: 구름
-  }
-}
+import { getWeatherEmoji } from "../utils/weatherUtils"; 
+import { regionMap } from "../constants/regionData";
+import { styleOptions } from "../constants/styleOptions"; 
 
 function Feed() {
   const { user } = useAuth();
@@ -41,7 +30,6 @@ function Feed() {
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
   } = useNotiSidebar();
-
 
   // 날씨 정보는 저장된 데이터만 사용 (API 호출 없음)
 
@@ -239,27 +227,6 @@ function Feed() {
     return { top3, rest };
   }, [outfits, isPopular]);
 
-  // regionMap for dropdown (전체 지역 목록)
-  const regionMap = {
-    Incheon: "인천",
-    Seoul: "서울",
-    Chuncheon: "춘천",
-    Gangneung: "강릉",
-    Ulleungdo: "울릉도/독도",
-    Suwon: "수원",
-    Cheongju: "청주",
-    Jeonju: "전주",
-    Daejeon: "대전",
-    Daegu: "대구",
-    Pohang: "포항",
-    Mokpo: "목포",
-    Jeju: "제주",
-    Ulsan: "울산",
-    Yeosu: "여수",
-    Busan: "부산",
-    Gwangju: "광주"
-  };
-
   // 연도, 월, 일 옵션 생성
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -270,6 +237,9 @@ function Feed() {
     return new Date(year, month, 0).getDate();
   };
   const days = Array.from({ length: getDaysInMonth(selectedYear, selectedMonth) }, (_, i) => i + 1);
+
+  // Tailwind CSS 클래스 상수는 가독성 개선을 위해 컴포넌트 내부에 정의할 수 있습니다.
+  const navButtonClasses = "bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300";
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
@@ -288,7 +258,7 @@ function Feed() {
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
-          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
+          className={navButtonClasses} // 클래스 상수 사용
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           <Bars3Icon className="w-5 h-5" />
@@ -297,7 +267,7 @@ function Feed() {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate("/")}
-            className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
+            className={navButtonClasses} // 클래스 상수 사용
           >
             <HomeIcon className="w-5 h-5" />
           </button>
@@ -354,6 +324,7 @@ function Feed() {
                 }}
                 className="w-32 px-3 py-2 rounded text-sm text-center"
               >
+                {/* regionMap의 키를 사용하여 옵션 생성 */}
                 {Object.entries(regionMap).map(([eng, kor]) => (
                   <option key={eng} value={eng}>{kor}</option>
                 ))}
@@ -385,12 +356,10 @@ function Feed() {
                 className="w-32 px-3 py-2 rounded  text-sm text-center"
               >
                 <option value="" className="text-gray-500">선택</option>
-                <option value="casual">캐주얼</option>
-                <option value="minimal">미니멀</option>
-                <option value="formal">포멀</option>
-                <option value="sporty">스포티/액티브</option>
-                <option value="street">시크/스트릿</option>
-                <option value="feminine">러블리/페미닌</option>
+                {/* 분리된 styleOptions를 사용하여 옵션 생성 */}
+                {styleOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -495,8 +464,7 @@ function Feed() {
                     onToggleLike={handleToggleLike}
                     selectedDate={selectedDate}
                     selectedYear={selectedYear}
-                    selectedMonth={selectedMonth}
-                    selectedDay={selectedDay}
+                    selectedMonth={selectedDay}
                   />
                 ))}
               </div>
