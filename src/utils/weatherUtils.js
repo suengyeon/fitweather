@@ -12,7 +12,6 @@ export function getWeatherEmoji(iconCode) {
         case "snow": return "❄️";        // 눈
         case "snow_rain": return "🌨️";   // 비/눈
         case "shower": return "🌦️";      // 소나기
-        default: return "☁️";            // 기본값: 구름
     }
 }
 

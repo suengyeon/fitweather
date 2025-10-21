@@ -22,7 +22,8 @@ export const outfitOptionTexts = {
         pants: "바지", 
         shorts: "반바지", 
         skirt: "치마", 
-        leggings: "레깅스" 
+        leggings: "레깅스",
+        slacks: "슬랙스"
     },
     shoes: { 
         sneakers: "스니커즈", 

@@ -679,10 +679,10 @@ function FeedDetail() {
                             {user && user.uid !== data.uid && (
                                 <button 
                                     onClick={() => openReportModal(id, data.uid)}
-                                    className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110 text-red-500 hover:text-red-600"
+                                    className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110 text-red-500 hover:text-red-600 font-semibold"
                                     title="신고하기"
                                 >
-                                    🚨
+                                    신고
                                 </button>
                             )}
                         </div>

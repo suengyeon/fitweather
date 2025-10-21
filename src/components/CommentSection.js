@@ -40,21 +40,21 @@ function CommentSection({
                         </div>
 
                         <div className="flex gap-2">
-                            <button onClick={() => onReply(comment.id)} className="text-xs text-blue-600 hover:text-blue-800">
-                                답글
+                            <button onClick={() => onReply(comment.id)} className="text-xs  hover:text-blue-600 border-r border-gray-500 pr-2">
+                                답글💬
                             </button>
                             {(comment.authorUid === user?.uid || author?.uid === user?.uid) && (
-                                <button onClick={() => onCommentDelete(comment.id)} className="text-xs text-red-600 hover:text-red-800">
-                                    삭제
+                                <button onClick={() => onCommentDelete(comment.id)} className="text-xs hover:text-red-600">
+                                    삭제🗑️
                                 </button>
                             )}
                             {user && comment.authorUid !== user?.uid && onReportComment && (
                                 <button 
                                     onClick={() => onReportComment(comment.id, comment.authorUid)}
-                                    className="text-xs text-red-500 hover:text-red-700"
+                                    className="text-xs hover:text-red-600"
                                     title="신고하기"
                                 >
-                                    🚨
+                                    신고🚨
                                 </button>
                             )}
                         </div>
@@ -102,7 +102,7 @@ function CommentSection({
     };
 
     return (
-        <div className="h-full flex flex-col rounded-lg overflow-hidden border">
+        <div className="h-full flex flex-col rounded-lg overflow-hidden">
             {/* 헤더 */}
             <div className="flex justify-between items-center p-4 border-b bg-gray-50">
                 <h3 className="text-lg font-semibold">댓글</h3>

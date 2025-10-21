@@ -173,7 +173,7 @@ function Admin() {
                     </button>
                     <button
                         onClick={handleAdminLogout}
-                        className="bg-red-200 px-3 py-1 rounded-md hover:bg-red-300 text-red-700"
+                        className="bg-red-200 px-3 py-1 rounded-md hover:bg-red-300 text-sm text-red-700"
                         title="관리자 로그아웃"
                     >
                         로그아웃
@@ -290,12 +290,6 @@ function Admin() {
                                                             댓글 삭제
                                                         </button>
                                                     )}
-                                                    <button
-                                                        onClick={() => handleBanUser(report.targetUserId)}
-                                                        className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                                                    >
-                                                        강제탈퇴
-                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -354,14 +348,14 @@ function Admin() {
                                                             onClick={() => handleUnbanUser(user.id)}
                                                             className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
                                                         >
-                                                            차단 해제
+                                                            취소
                                                         </button>
                                                     ) : (
                                                         <button
                                                             onClick={() => handleBanUser(user.id)}
                                                             className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
                                                         >
-                                                            차단
+                                                            강제 탈퇴
                                                         </button>
                                                     )}
                                                 </td>

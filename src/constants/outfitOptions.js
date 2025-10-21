@@ -23,6 +23,7 @@ export const outfitOptions = {
     bottom: [
         "jeans", 
         "pants", 
+        "slacks",
         "shorts", 
         "skirt", 
         "leggings", 
