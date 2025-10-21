@@ -486,7 +486,7 @@ function FeedDetail() {
         }
     };
 
-    // 신고 처리
+    // 게시물 신고 처리
     const handleReport = async (targetId, targetUserId, reason) => {
         try {
             await submitReport(user.uid, targetUserId, targetId, 'post', reason);
@@ -500,9 +500,23 @@ function FeedDetail() {
         }
     };
 
+    // 댓글 신고 처리
+    const handleReportComment = async (targetId, targetUserId, reason) => {
+        try {
+            await submitReport(user.uid, targetUserId, targetId, 'comment', reason);
+            alert('댓글 신고가 접수되었습니다.');
+        } catch (error) {
+            if (error.message.includes('이미 신고한')) {
+                alert('이미 신고한 댓글입니다.');
+            } else {
+                alert('댓글 신고 접수에 실패했습니다.');
+            }
+        }
+    };
+
     // 신고 모달 열기
-    const openReportModal = (targetId, targetUserId) => {
-        setReportTarget({ targetId, targetUserId });
+    const openReportModal = (targetId, targetUserId, targetType = 'post') => {
+        setReportTarget({ targetId, targetUserId, targetType });
         setIsReportModalOpen(true);
     };
 
@@ -605,7 +619,7 @@ function FeedDetail() {
                             setReplyContent={setReplyContent}
                             onReplySubmit={handleReplySubmit}
                             onCancelReply={handleCancelReply}
-                            onReportComment={(commentId, authorUid) => openReportModal(commentId, authorUid)}
+                            onReportComment={(commentId, authorUid) => openReportModal(commentId, authorUid, 'comment')}
                             user={user}
                             author={author}
                         />
@@ -735,8 +749,8 @@ function FeedDetail() {
             <ReportModal
                 isOpen={isReportModalOpen}
                 onClose={() => setIsReportModalOpen(false)}
-                onReport={handleReport}
-                targetType="post"
+                onReport={reportTarget?.targetType === 'comment' ? handleReportComment : handleReport}
+                targetType={reportTarget?.targetType || 'post'}
                 targetId={reportTarget?.targetId}
                 targetUserId={reportTarget?.targetUserId}
             />

@@ -16,6 +16,7 @@ function CommentSection({
     setReplyContent,
     onReplySubmit,
     onCancelReply,
+    onReportComment,
     user,
     author
 }) {
@@ -45,6 +46,15 @@ function CommentSection({
                             {(comment.authorUid === user?.uid || author?.uid === user?.uid) && (
                                 <button onClick={() => onCommentDelete(comment.id)} className="text-xs text-red-600 hover:text-red-800">
                                     삭제
+                                </button>
+                            )}
+                            {user && comment.authorUid !== user?.uid && onReportComment && (
+                                <button 
+                                    onClick={() => onReportComment(comment.id, comment.authorUid)}
+                                    className="text-xs text-red-500 hover:text-red-700"
+                                    title="신고하기"
+                                >
+                                    🚨
                                 </button>
                             )}
                         </div>
