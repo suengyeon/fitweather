@@ -119,7 +119,8 @@ export async function markAllNotificationsAsReadAPI(userId) {
       if (!data.isRead) {
         updatePromises.push(
           updateDoc(doc(db, "notifications", docSnapshot.id), {
-            isRead: true
+            isRead: true,
+            read: true // UI에서 사용하는 필드도 함께 업데이트
           })
         );
         count++;
@@ -147,7 +148,8 @@ export async function markNotificationAsReadAPI(notificationId, userId) {
     console.log("📢 개별 알림 읽음 처리 API 호출:", { notificationId, userId });
     
     await updateDoc(doc(db, "notifications", notificationId), {
-      isRead: true
+      isRead: true,
+      read: true // UI에서 사용하는 필드도 함께 업데이트
     });
     
     console.log("✅ 개별 알림 읽음 처리 완료");

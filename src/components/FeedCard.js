@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toggleLike } from "../api/toggleLike";
+import { getReactionSummary, getUserReaction, toggleThumbsUp, toggleThumbsDown } from "../api/reactions";
 import { toggleSubscription, checkSubscription } from "../api/subscribe";
 import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
+import { HandThumbUpIcon, HandThumbDownIcon } from "@heroicons/react/24/outline";
 
 function FeedCard({
   record,
@@ -46,6 +48,37 @@ function FeedCard({
 
     checkSubscriptionStatus();
   }, [currentUserUid, record.uid]);
+
+  // 초기 반응 카운트/상태 로드
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const [summary, myReaction] = await Promise.all([
+          getReactionSummary(record.id),
+          currentUserUid ? getUserReaction(record.id, currentUserUid) : Promise.resolve({ isThumbsUp: false, isThumbsDown: false })
+        ]);
+        if (!mounted) return;
+        
+        console.log('FeedCard - 반응 데이터 로드:', { summary, myReaction, recordId: record.id });
+        
+        // 새로운 API 형식에 맞게 수정
+        setThumbsUpCount(summary.thumbsUpCount || 0);
+        setThumbsDownCount(summary.thumbsDownCount || 0);
+        setIsThumbsUp(myReaction.isThumbsUp || false);
+        setIsThumbsDown(myReaction.isThumbsDown || false);
+      } catch (e) {
+        console.error("FeedCard - 반응 정보 로드 실패:", e);
+        // 오류 시 기본값 설정
+        setThumbsUpCount(0);
+        setThumbsDownCount(0);
+        setIsThumbsUp(false);
+        setIsThumbsDown(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [record.id, currentUserUid]);
 
   // 체감 이모지
   const feelingEmojiMap = {
@@ -98,43 +131,99 @@ function FeedCard({
 
   const handleThumbsUpClick = async (e) => {
     e.stopPropagation();
-    if (isThumbsDown) {
-      setIsThumbsDown(false);
-      setThumbsDownCount((p) => p - 1);
-    }
-    setIsThumbsUp(!isThumbsUp);
-    setThumbsUpCount((p) => (isThumbsUp ? p - 1 : p + 1));
+    if (!currentUserUid) return;
     
-    // TODO: 실제 좋아요 API 호출
+    console.log('FeedCard - 좋아요 클릭:', { 
+      recordId: record.id, 
+      userId: currentUserUid,
+      currentState: { isThumbsUp, thumbsUpCount, isThumbsDown, thumbsDownCount }
+    });
+    
+    const prevUp = isThumbsUp;
+    const prevDown = isThumbsDown;
+    // optimistic
+    if (prevDown) {
+      setIsThumbsDown(false);
+      setThumbsDownCount((p) => Math.max(0, p - 1));
+    }
+    setIsThumbsUp(!prevUp);
+    setThumbsUpCount((p) => (prevUp ? Math.max(0, p - 1) : p + 1));
+    
     try {
-      // await thumbsUpAPI(record.id, currentUserUid);
-      console.log("👍 좋아요 API 호출:", record.id);
+      console.log('FeedCard - toggleThumbsUp API 호출');
+      const result = await toggleThumbsUp(record.id, currentUserUid);
+      console.log('FeedCard - API 응답:', result);
+      
+      // normalize based on server result
+      if (result === "up") {
+        setIsThumbsUp(true);
+        if (prevUp) {
+          // stayed up (shouldn't happen), ensure count not double-changed
+        }
+      } else {
+        setIsThumbsUp(false);
+      }
+      if (prevDown) {
+        setIsThumbsDown(false);
+      }
+      
+      console.log('FeedCard - 상태 업데이트 완료');
     } catch (err) {
-      console.error("좋아요 API 오류:", err);
-      // 롤백
-      setIsThumbsUp(isThumbsUp);
-      setThumbsUpCount((p) => (isThumbsUp ? p + 1 : p - 1));
+      console.error("FeedCard - 반응(👍) 업데이트 실패:", err);
+      // rollback
+      setIsThumbsUp(prevUp);
+      setThumbsUpCount((p) => (prevUp ? p + 1 : Math.max(0, p - 1)));
+      if (prevDown) {
+        setIsThumbsDown(true);
+        setThumbsDownCount((p) => p + 1);
+      }
     }
   };
 
   const handleThumbsDownClick = async (e) => {
     e.stopPropagation();
-    if (isThumbsUp) {
-      setIsThumbsUp(false);
-      setThumbsUpCount((p) => p - 1);
-    }
-    setIsThumbsDown(!isThumbsDown);
-    setThumbsDownCount((p) => (isThumbsDown ? p - 1 : p + 1));
+    if (!currentUserUid) return;
     
-    // TODO: 실제 싫어요 API 호출
+    console.log('FeedCard - 싫어요 클릭:', { 
+      recordId: record.id, 
+      userId: currentUserUid,
+      currentState: { isThumbsUp, thumbsUpCount, isThumbsDown, thumbsDownCount }
+    });
+    
+    const prevUp = isThumbsUp;
+    const prevDown = isThumbsDown;
+    // optimistic
+    if (prevUp) {
+      setIsThumbsUp(false);
+      setThumbsUpCount((p) => Math.max(0, p - 1));
+    }
+    setIsThumbsDown(!prevDown);
+    setThumbsDownCount((p) => (prevDown ? Math.max(0, p - 1) : p + 1));
+    
     try {
-      // await thumbsDownAPI(record.id, currentUserUid);
-      console.log("👎 싫어요 API 호출:", record.id);
+      console.log('FeedCard - toggleThumbsDown API 호출');
+      const result = await toggleThumbsDown(record.id, currentUserUid);
+      console.log('FeedCard - API 응답:', result);
+      
+      if (result === "down") {
+        setIsThumbsDown(true);
+      } else {
+        setIsThumbsDown(false);
+      }
+      if (prevUp) {
+        setIsThumbsUp(false);
+      }
+      
+      console.log('FeedCard - 상태 업데이트 완료');
     } catch (err) {
-      console.error("싫어요 API 오류:", err);
-      // 롤백
-      setIsThumbsDown(isThumbsDown);
-      setThumbsDownCount((p) => (isThumbsDown ? p + 1 : p - 1));
+      console.error("FeedCard - 반응(👎) 업데이트 실패:", err);
+      // rollback
+      setIsThumbsDown(prevDown);
+      setThumbsDownCount((p) => (prevDown ? p + 1 : Math.max(0, p - 1)));
+      if (prevUp) {
+        setIsThumbsUp(true);
+        setThumbsUpCount((p) => p + 1);
+      }
     }
   };
 
@@ -276,7 +365,7 @@ function FeedCard({
                 }`
               }
             >
-              <span className="text-[10px] pointer-events-none select-none">👍</span>
+              <HandThumbUpIcon className={`w-4 h-4 ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`} />
               <span className="text-[9px] font-semibold pointer-events-none select-none">
                 {thumbsUpCount}
               </span>
@@ -298,7 +387,7 @@ function FeedCard({
                 }`
               }
             >
-              <span className="text-[10px] pointer-events-none select-none">👎</span>
+              <HandThumbDownIcon className={`w-4 h-4 ${isThumbsDown ? 'text-red-500' : 'text-gray-500'}`} />
               <span className="text-[9px] font-semibold pointer-events-none select-none">
                 {thumbsDownCount}
               </span>

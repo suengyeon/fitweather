@@ -1,7 +1,7 @@
 // src/App.js
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { saveOutfitRecord } from "./api/saveOutfitRecord";
 import { auth } from "./firebase";
 import Login from "./pages/Login";
@@ -21,6 +21,34 @@ import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import FeedDetail from "./pages/FeedDetail";
 import Follow from "./pages/Follow";
+import Admin from "./pages/Admin";
+import BannedUserMessage from "./components/BannedUserMessage";
+import SetAdmin from "./pages/SetAdmin";
+import AdminLogin from "./pages/AdminLogin";
+
+// 개발 환경에서만 알림 테스트 유틸리티 import
+if (process.env.NODE_ENV === 'development') {
+  import('./utils/notificationTestUtils');
+  import('./utils/notificationDebugUtils');
+  import('./utils/userHelper');
+  import('./utils/quickTest');
+  import('./utils/notificationFix');
+  import('./utils/deepDebug');
+  import('./utils/fixNotificationSender');
+  import('./utils/analyzeNotifications');
+  import('./utils/userDataDebug');
+  import('./utils/fixBongttaNotifications');
+  import('./utils/consolidateUserNames');
+  import('./utils/testFollowNotification');
+  import('./utils/quickFollowTest');
+  import('./utils/unsubscribeHelper');
+  import('./utils/debugNewPostNotification');
+  import('./utils/realRecordDebug');
+  import('./utils/debugRecommendations');
+  import('./utils/debugRecordData');
+  import('./utils/cleanupTestRecords');
+  import('./utils/checkRecordUserInfo');
+}
 
 
 // 전역 테스트 함수: 브라우저 콘솔에서 testSaveOutfitRecord() 호출
@@ -85,7 +113,22 @@ function App() {
       {/* ToastContainer를 최상단에 추가 */}
       <ToastContainer position="top-center" />
       <BrowserRouter>
-        <Routes>
+        <AppContent />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
+
+function AppContent() {
+  const { isBanned } = useAuth();
+
+  // 차단된 사용자는 차단 메시지만 표시
+  if (isBanned) {
+    return <BannedUserMessage />;
+  }
+
+  return (
+    <Routes>
           <Route path="/mypage_userinfo" element={<MyPageUserInfo />} />
           <Route path="/profile-edit" element={<ProfileEdit />} />
           <Route path="/withdraw" element={<Withdraw />} />
@@ -102,9 +145,10 @@ function App() {
           <Route path="/calendar/:uid" element={<Calendar />} />
           <Route path="/" element={<Home />} />
           <Route path="/follow" element={<Follow />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/set-admin" element={<SetAdmin />} />
         </Routes>
-      </BrowserRouter>
-    </AuthProvider>
   );
 }
 

@@ -39,6 +39,7 @@ graph TB
             UC33[댓글 수정]
             UC34[대댓글 작성]
             UC35[댓글 좋아요]
+            UC36[구독한사람 추가]
         end
         
         %% 추천 시스템 관련 유스케이스
@@ -112,6 +113,7 @@ graph TB
     User --> UC29
     User --> UC30
     User --> UC31
+    User --> UC36
     
     %% 비회원 사용자 (로그인/회원가입만 가능)
     Guest --> UC24
@@ -154,6 +156,7 @@ graph TB
     UC29 -.->|포함| UC12
     UC30 -.->|포함| UC29
     UC31 -.->|포함| UC30
+    UC36 -.->|포함| UC12
 ```
 
 ## 간소화된 핵심 유스케이스 다이어그램
@@ -218,11 +221,13 @@ graph TB
 - **날씨 예보 조회**: 미래 날씨 예보 정보 조회 (3일, 7일 예보)
 
 ### 2. 👗 착장 기록 관리
-- **착장 기록 작성**: 새로운 착장 기록 생성 (날씨, 착장 정보, 사진, 감정)
+- **착장 기록 작성**: 새로운 착장 기록 생성 (날씨, 착장 정보, 사진, 감정, 스타일)
 - **착장 기록 수정**: 기존 착장 기록 수정 (본인 기록만)
 - **착장 기록 삭제**: 착장 기록 삭제 (본인 기록만)
 - **착장 기록 조회**: 착장 기록 상세 조회 (개인/공개 기록)
 - **착장 사진 업로드**: 착장 사진 업로드 (Firebase Storage)
+- **스타일 정보 저장**: 착장 스타일 정보 저장 (캐주얼, 포멀, 스포티 등)
+- **스타일 정보 표시**: 다른 사용자 기록 조회 시 스타일 정보 표시
 
 ### 3. 💬 소셜 기능
 - **좋아요/싫어요**: 다른 사용자의 착장에 좋아요/싫어요 표시
@@ -230,6 +235,9 @@ graph TB
 - **댓글 삭제**: 본인이 작성한 댓글 삭제
 - **구독/팔로우**: 다른 사용자 구독 (알림 수신)
 - **구독 취소**: 구독 취소
+- **구독한사람 추가**: 상세 필터에서 구독한 사용자 추가 기능
+- **다른 사용자 기록 조회**: 다른 사용자의 공개된 착장 기록 조회 (스타일 정보 포함)
+- **스타일 기반 필터링**: 스타일별로 다른 사용자 기록 필터링
 
 ### 4. 🎯 추천 시스템
 - **착장 추천 받기**: 날씨 기반 착장 추천 (AI 추천 알고리즘)
@@ -246,6 +254,10 @@ graph TB
 - **지역 피드 조회**: 특정 지역의 착장 피드 조회
 - **피드 정렬**: 인기순, 최신순 정렬
 - **피드 필터링**: 스타일, 계절, 날씨 등으로 필터링
+- **스타일별 피드 조회**: 특정 스타일의 착장 피드 조회
+- **스타일 태그 표시**: 피드에서 각 기록의 스타일 태그 표시
+- **구독한 사람만 보기**: 상세 필터에서 구독한 사용자의 기록만 조회
+- **구독 필터 체크박스**: "내가 구독한 사람만" 체크박스 옵션
 
 ### 7. 👤 사용자 관리
 - **회원가입**: 새 계정 생성 (카카오 OAuth)
@@ -267,7 +279,11 @@ graph TB
 | 착장 기록 작성 | ✅ | ❌ |
 | 착장 기록 수정/삭제 | ✅ (본인만) | ❌ |
 | 착장 기록 조회 | ✅ | ❌ |
+| 스타일 정보 저장 | ✅ | ❌ |
+| 스타일 정보 조회 | ✅ | ❌ |
 | 소셜 기능 | ✅ | ❌ |
+| 구독한사람 추가 | ✅ | ❌ |
+| 구독 필터링 | ✅ | ❌ |
 | 추천 받기 | ✅ | ❌ |
 | 캘린더 조회 | ✅ | ❌ |
 | 캘린더 설정 | ✅ | ❌ |
@@ -305,6 +321,12 @@ graph TB
 - **공개 기록만**: 공개 설정된 착장에만 좋아요/댓글 가능
 - **실명 정책**: 카카오 계정 연동으로 신뢰성 확보
 - **스팸 방지**: 과도한 좋아요/댓글 제한
+- **구독 관리**: 상세 필터에서 구독한 사용자 추가/제거 가능
+- **구독 제한**: 최대 구독자 수 제한 (스팸 방지)
+- **스타일 정보 공유**: 공개 기록의 스타일 정보는 다른 사용자에게 표시
+- **스타일 필터링**: 스타일별로 다른 사용자 기록 필터링 가능
+- **구독 필터링**: 구독한 사용자의 기록만 조회하는 필터 옵션
+- **체크박스 필터**: "내가 구독한 사람만" 체크박스로 간편한 필터링
 
 ## 시스템 아키텍처 연관성
 
@@ -333,51 +355,61 @@ graph TB
     
     %% 프론트엔드
     subgraph Frontend["🖥️ Frontend (React)"]
-        Login[🔐 로그인 페이지]
-        Home[🏠 홈 페이지]
-        Record[📝 기록 페이지]
-        Feed[📱 피드 페이지]
-        Calendar[📅 캘린더 페이지]
-        Profile[👤 프로필 페이지]
+        Login[🔐 Login]
+        Home[🏠 Home]
+        Record[📝 Record]
+        Feed[📱 Feed]
+        Follow[👥 Follow]
+        Calendar[📅 Calendar]
+        Profile[👤 Profile]
     end
     
     %% 백엔드 서비스
-    subgraph Backend["⚙️ Backend Services"]
+    subgraph Backend["⚙️ Firebase Services"]
         Auth[🔑 Firebase Auth]
-        Firestore[🗄️ Firestore DB]
+        Firestore[🗄️ Firestore]
         Storage[📁 Firebase Storage]
-        FCM[🔔 Firebase Cloud Messaging]
+        FCM[🔔 Cloud Messaging]
     end
     
     %% 외부 API
     subgraph External["🌐 External APIs"]
-        KMA[🌤️ KMA 기상청 API]
-        Kakao[🔗 카카오 OAuth API]
+        KMA[🌤️ KMA API]
+        OWM[🌦️ OpenWeatherMap API]
+        GoogleOAuth[🔗 Google OAuth]
+        KakaoOAuth[🔗 Kakao OAuth]
     end
     
-    %% 관계
+    %% 라우팅
     User --> Login
     User --> Home
     User --> Record
     User --> Feed
+    User --> Follow
     User --> Calendar
     User --> Profile
-    
     Guest --> Login
     
+    %% 인증
     Login --> Auth
+    Auth --> GoogleOAuth
+    Auth --> KakaoOAuth
+    
+    %% 데이터/스토리지/알림
     Home --> Firestore
     Record --> Firestore
     Record --> Storage
     Feed --> Firestore
+    Follow --> Firestore
     Calendar --> Firestore
     Profile --> Firestore
-    
-    Auth --> Kakao
-    Home --> KMA
-    Record --> KMA
-    
     Firestore --> FCM
+    
+    %% 날씨 API 사용 위치
+    Home --> KMA
+    Home --> OWM
+    Record --> KMA
+    Record --> OWM
 ```
 
 ## 📡 API 연동 상세

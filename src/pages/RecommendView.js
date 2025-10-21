@@ -29,6 +29,8 @@ function RecommendView() {
   const [userRegion, setUserRegion] = useState("");
   const [excludeMyRecords, setExcludeMyRecords] = useState(false);
   const [onlyMyRecords, setOnlyMyRecords] = useState(false);
+  const [onlySubscribedUsers, setOnlySubscribedUsers] = useState(false);
+  const [subscribedUsers, setSubscribedUsers] = useState([]);
 
   // 사용자 필터 가져오기
   useEffect(() => {
@@ -58,6 +60,61 @@ function RecommendView() {
     fetchUserFilters();
   }, [user]);
 
+  // 구독한 사용자 목록 가져오기
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchSubscribedUsers = async () => {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          if (data.subscribedUsers) {
+            setSubscribedUsers(data.subscribedUsers);
+            console.log("Subscribed users:", data.subscribedUsers);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching subscribed users:", error);
+      }
+    };
+
+    fetchSubscribedUsers();
+  }, [user]);
+
+  // FeedDetail에서의 반응 변경 이벤트 감지
+  useEffect(() => {
+    const handleReactionUpdate = (event) => {
+      const { recordId, type, isActive } = event.detail;
+      setOutfits(prevOutfits => 
+        prevOutfits.map(outfit => {
+          if (outfit.id === recordId) {
+            const updatedOutfit = { ...outfit };
+            if (type === 'thumbsUp') {
+              if (isActive) {
+                updatedOutfit.thumbsUpCount = (updatedOutfit.thumbsUpCount || 0) + 1;
+              } else {
+                updatedOutfit.thumbsUpCount = Math.max(0, (updatedOutfit.thumbsUpCount || 0) - 1);
+              }
+            } else if (type === 'thumbsDown') {
+              if (isActive) {
+                updatedOutfit.thumbsDownCount = (updatedOutfit.thumbsDownCount || 0) + 1;
+              } else {
+                updatedOutfit.thumbsDownCount = Math.max(0, (updatedOutfit.thumbsDownCount || 0) - 1);
+              }
+            }
+            return updatedOutfit;
+          }
+          return outfit;
+        })
+      );
+    };
+
+    window.addEventListener('reactionUpdated', handleReactionUpdate);
+    return () => window.removeEventListener('reactionUpdated', handleReactionUpdate);
+  }, []);
+
   // 모든 기록 가져오기
   useEffect(() => {
     const fetchAllRecords = async () => {
@@ -74,7 +131,7 @@ function RecommendView() {
 
   // 필터 적용
   useEffect(() => {
-    console.log("Filtering with:", { userFilters, userRegion, outfitsCount: outfits.length, excludeMyRecords });
+    console.log("Filtering with:", { userFilters, userRegion, outfitsCount: outfits.length, excludeMyRecords, onlySubscribedUsers });
 
     if (!userFilters || !userRegion || outfits.length === 0) {
       console.log("Missing data for filtering:", { userFilters: !!userFilters, userRegion: !!userRegion, outfitsCount: outfits.length });
@@ -91,6 +148,12 @@ function RecommendView() {
       // 나의 기록 제외 체크박스가 체크되어 있으면 나의 기록 제외
       if (excludeMyRecords && record.uid === user?.uid) {
         console.log(`Record ${record.id} filtered out by excludeMyRecords`);
+        return false;
+      }
+
+      // 구독한 사람만 체크박스가 체크되어 있으면 구독한 사용자의 기록만 표시
+      if (onlySubscribedUsers && !subscribedUsers.includes(record.uid)) {
+        console.log(`Record ${record.id} filtered out by onlySubscribedUsers`);
         return false;
       }
 
@@ -152,7 +215,7 @@ function RecommendView() {
       return aDislikes - bDislikes;
     });
     setFilteredOutfits(filtered);
-  }, [outfits, userFilters, userRegion, excludeMyRecords, onlyMyRecords, user]);
+  }, [outfits, userFilters, userRegion, excludeMyRecords, onlyMyRecords, onlySubscribedUsers, subscribedUsers, user]);
 
   // 좋아요 토글
   const handleToggleLike = async (recordId, liked) => {
@@ -265,7 +328,10 @@ function RecommendView() {
                   checked={excludeMyRecords}
                   onChange={(e) => {
                     setExcludeMyRecords(e.target.checked);
-                    if (e.target.checked) setOnlyMyRecords(false);
+                    if (e.target.checked) {
+                      setOnlyMyRecords(false);
+                      setOnlySubscribedUsers(false);
+                    }
                   }}
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
@@ -280,12 +346,33 @@ function RecommendView() {
                   checked={onlyMyRecords}
                   onChange={(e) => {
                     setOnlyMyRecords(e.target.checked);
-                    if (e.target.checked) setExcludeMyRecords(false);
+                    if (e.target.checked) {
+                      setExcludeMyRecords(false);
+                      setOnlySubscribedUsers(false);
+                    }
                   }}
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
                 <label htmlFor="onlyMyRecords" className="ml-2 text-sm text-gray-700">
                   나의 기록만
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="onlySubscribedUsers"
+                  checked={onlySubscribedUsers}
+                  onChange={(e) => {
+                    setOnlySubscribedUsers(e.target.checked);
+                    if (e.target.checked) {
+                      setExcludeMyRecords(false);
+                      setOnlyMyRecords(false);
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="onlySubscribedUsers" className="ml-2 text-sm text-gray-700">
+                  구독한 사람만
                 </label>
               </div>
             </div>

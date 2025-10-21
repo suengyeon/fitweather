@@ -9,7 +9,8 @@
 export const NOTIFICATION_TYPES = {
   FOLLOW: 'follow',
   COMMENT_ON_MY_POST: 'comment_on_my_post',
-  REPLY_TO_MY_COMMENT: 'reply_to_my_comment'
+  REPLY_TO_MY_COMMENT: 'reply_to_my_comment',
+  NEW_POST_FROM_FOLLOWING: 'new_post_from_following'
 };
 
 /**
@@ -19,7 +20,7 @@ export const NOTIFICATION_TYPES = {
  * @property {string} recipient - 알림을 받는 사용자 ID (필수)
  * @property {Object} sender - 알림을 발생시킨 사용자 정보 (필수)
  * @property {string} sender.id - 발신자 사용자 ID
- * @property {string} sender.name - 발신자 이름/닉네임
+ * @property {string} sender.nickname - 발신자 닉네임
  * @property {string} [sender.avatarUrl] - 발신자 프로필 사진 URL
  * @property {string} type - 알림 종류 (NOTIFICATION_TYPES 중 하나, 필수)
  * @property {boolean} isRead - 읽음 여부 (기본값: false)
@@ -35,7 +36,7 @@ export const NOTIFICATION_TYPES = {
  * @property {string} recipient - 수신자 사용자 ID
  * @property {Object} sender - 발신자 정보
  * @property {string} sender.id - 발신자 ID
- * @property {string} sender.name - 발신자 이름
+ * @property {string} sender.nickname - 발신자 닉네임
  * @property {string} [sender.avatarUrl] - 발신자 프로필 사진 URL
  * @property {string} type - 알림 타입
  * @property {string} link - 이동할 경로
@@ -77,8 +78,8 @@ export function validateNotificationData(data) {
   if (!data.recipient) {
     errors.push('recipient is required');
   }
-  if (!data.sender || !data.sender.id || !data.sender.name) {
-    errors.push('sender with id and name is required');
+  if (!data.sender || !data.sender.id || !data.sender.nickname) {
+    errors.push('sender with id and nickname is required');
   }
   if (!data.type || !Object.values(NOTIFICATION_TYPES).includes(data.type)) {
     errors.push('type must be one of: ' + Object.values(NOTIFICATION_TYPES).join(', '));
@@ -98,6 +99,8 @@ export function validateNotificationData(data) {
     if (!data.message) {
       errors.push('message is required for reply notifications');
     }
+  } else if (data.type === NOTIFICATION_TYPES.NEW_POST_FROM_FOLLOWING) {
+    // 새 기록 알림은 추가 메시지 불필요
   }
 
   return {

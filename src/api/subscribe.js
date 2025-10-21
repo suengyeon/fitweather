@@ -1,5 +1,6 @@
 import { collection, addDoc, deleteDoc, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { createFollowNotification } from "../services/notificationService";
 
 // 댓글 알림 생성 함수
 export const createCommentNotification = async (commenterId, postOwnerId, postId, commentContent) => {
@@ -69,8 +70,8 @@ export const createReplyNotification = async (replierId, commentOwnerId, postId,
   }
 };
 
-// 구독 알림 생성 함수
-const createFollowNotification = async (followerId, followingId) => {
+// 구독 알림 생성 함수 (새로운 서비스 사용)
+const createFollowNotificationLocal = async (followerId, followingId) => {
   try {
     // 구독한 사람(follower)의 정보 가져오기
     const followerDoc = await getDoc(doc(db, "users", followerId));
@@ -81,23 +82,13 @@ const createFollowNotification = async (followerId, followingId) => {
 
     const followerData = followerDoc.data();
     
-    // 구독 알림 데이터 생성
-    const notificationData = {
-      recipient: followingId, // 구독받은 사람 (알림을 받을 사람)
-      sender: {
-        id: followerId,
-        nickname: followerData.nickname || followerId,
-        profilePictureUrl: followerData.profilePictureUrl || ""
-      },
-      type: "follow",
-      isRead: false,
-      link: `/calendar/${followerId}`, // 구독한 사람의 캘린더로 이동
-      message: `${followerData.nickname || followerId}이 나를 구독하기 시작했어요.`,
-      createdAt: new Date().toISOString() // ISO 문자열로 저장
-    };
-
-    // 알림 저장
-    await addDoc(collection(db, "notifications"), notificationData);
+    // 새로운 알림 서비스 사용
+    await createFollowNotification(
+      followerId,
+      followerData.nickname || followerId,
+      followingId,
+      followerData.profilePictureUrl || null
+    );
   } catch (error) {
     console.error("❌ 구독 알림 생성 실패:", error);
   }
@@ -120,7 +111,7 @@ export const subscribeUser = async (followerId, followingId) => {
     });
 
     // 구독 알림 생성
-    await createFollowNotification(followerId, followingId);
+    await createFollowNotificationLocal(followerId, followingId);
     return true;
   } catch (error) {
     console.error("❌ 구독 실패:", error);

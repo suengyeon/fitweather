@@ -78,6 +78,7 @@ function Record() {
   const [customInputMode, setCustomInputMode] = useState({ outer: false, top: false, bottom: false, shoes: false, acc: false });
   const [customInputs, setCustomInputs] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" });
   const [feeling, setFeeling] = useState("");
+  const [style, setStyle] = useState("");
   const [memo, setMemo] = useState("");
   const [isPublic, setIsPublic] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -217,6 +218,7 @@ function Record() {
 
       setOutfit(existingRecord.outfit || {});
       setFeeling(existingRecord.feeling || "");
+      setStyle(existingRecord.style || "");
       setMemo(existingRecord.memo || "");
       setIsPublic(existingRecord.isPublic || false);
       setWeatherEmojis(existingRecord.weatherEmojis || []);
@@ -402,6 +404,7 @@ function Record() {
         },
         outfit,
         feeling,
+        style,
         memo,
         isPublic,
         imageUrls,
@@ -787,7 +790,11 @@ function Record() {
                     <div className="flex justify-center">
                       <div className="flex items-center w-60">
                         <span className="w-28 text-base font-semibold text-left">스타일</span>
-                        <select className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center">
+                        <select 
+                          value={style}
+                          onChange={(e) => setStyle(e.target.value)}
+                          className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center"
+                        >
                           <option value="" className="text-gray-500">선택</option>
                           {styleOptions.map(option => (
                             <option key={option.value} value={option.value}>{option.label}</option>

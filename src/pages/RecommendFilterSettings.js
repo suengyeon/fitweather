@@ -33,6 +33,7 @@ function RecommendFilterSettings() {
         if (data.filters) {
           setFilters(data.filters);
         }
+        
       }
     };
     fetchProfile();
@@ -238,6 +239,7 @@ function RecommendFilterSettings() {
               </div>
             </>
           )}
+
 
           <div className="flex justify-center gap-6 mt-6 mb-2">
             <button

@@ -458,6 +458,17 @@ service cloud.firestore {
                        request.auth.uid == resource.data.uid;
     }
     
+    // 반응(reactions) 보안
+    // 문서 키: {recordId}_{uid}
+    // 필드: recordId, uid, type in ["up","down"], createdAt
+    match /reactions/{reactionId} {
+      allow read: if true; // 공개 읽기(집계용). 필요 시 제한 가능
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.uid;
+      allow update, delete: if request.auth != null && 
+                              request.auth.uid == resource.data.uid;
+    }
+    
     // 팔로우 보안
     match /follows/{followId} {
       allow read, write: if request.auth != null && 

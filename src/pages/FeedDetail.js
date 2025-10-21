@@ -8,6 +8,21 @@ import { useAuth } from "../contexts/AuthContext";
 import CommentSection from "../components/CommentSection";
 import { addReplyRecursively, deleteNodeKeepChildren, findCommentAuthor } from "../utils/commentUtils";
 import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
+import ReportModal from "../components/ReportModal";
+import { submitReport } from "../api/reportAPI";
+import { getReactionSummary, getUserReaction, toggleThumbsUp, toggleThumbsDown } from "../api/reactions";
+
+function styleToLabel(style) {
+    const map = {
+        casual: "캐주얼",
+        minimal: "미니멀",
+        formal: "포멀",
+        sporty: "스포티/액티브",
+        street: "시크/스트릿",
+        feminine: "러블리/페미닌",
+    };
+    return map[style] || style || "-";
+}
 
 function FeedDetail() {
     const { id } = useParams();
@@ -69,6 +84,74 @@ function FeedDetail() {
         if (data?.uid) checkSubscriptionStatus();
     }, [user?.uid, data?.uid]);
 
+    // 반응 상태 로드
+    useEffect(() => {
+        const loadReactionData = async () => {
+            if (!user || !id) return;
+            console.log('FeedDetail - 반응 데이터 로드 시작:', { userId: user.uid, recordId: id });
+            
+            try {
+                const [summary, userReaction] = await Promise.all([
+                    getReactionSummary(id),
+                    getUserReaction(id, user.uid)
+                ]);
+                
+                console.log('FeedDetail - API 응답:', { summary, userReaction });
+                
+                // NaN 방지 및 기본값 설정
+                const upCount = summary.thumbsUpCount || 0;
+                const downCount = summary.thumbsDownCount || 0;
+                const isUp = userReaction.isThumbsUp || false;
+                const isDown = userReaction.isThumbsDown || false;
+                
+                console.log('FeedDetail - 설정할 값:', { upCount, downCount, isUp, isDown });
+                
+                setThumbsUpCount(upCount);
+                setThumbsDownCount(downCount);
+                setIsThumbsUp(isUp);
+                setIsThumbsDown(isDown);
+                
+                // localStorage에 상태 저장 (새로고침 후 유지)
+                const reactionData = {
+                    thumbsUpCount: upCount,
+                    thumbsDownCount: downCount,
+                    isThumbsUp: isUp,
+                    isThumbsDown: isDown,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(`reaction_${id}_${user.uid}`, JSON.stringify(reactionData));
+                console.log('FeedDetail - localStorage 저장:', reactionData);
+            } catch (error) {
+                console.error("FeedDetail - 반응 데이터 로드 실패:", error);
+                // localStorage에서 저장된 상태 복원
+                const savedData = localStorage.getItem(`reaction_${id}_${user.uid}`);
+                console.log('FeedDetail - localStorage에서 복원 시도:', savedData);
+                if (savedData) {
+                    try {
+                        const parsed = JSON.parse(savedData);
+                        console.log('FeedDetail - 파싱된 데이터:', parsed);
+                        // 1시간 이내 데이터만 사용
+                        if (Date.now() - parsed.timestamp < 3600000) {
+                            setThumbsUpCount(parsed.thumbsUpCount || 0);
+                            setThumbsDownCount(parsed.thumbsDownCount || 0);
+                            setIsThumbsUp(parsed.isThumbsUp || false);
+                            setIsThumbsDown(parsed.isThumbsDown || false);
+                            console.log('FeedDetail - localStorage에서 복원됨');
+                        }
+                    } catch (e) {
+                        console.error("저장된 반응 데이터 파싱 실패:", e);
+                    }
+                }
+                // 오류 시 기본값 설정
+                setThumbsUpCount(0);
+                setThumbsDownCount(0);
+                setIsThumbsUp(false);
+                setIsThumbsDown(false);
+            }
+        };
+        loadReactionData();
+    }, [user, id]);
+
     // 댓글 뷰 상태
     const [isCommentViewVisible, setIsCommentViewVisible] = useState(false);
     const [newComment, setNewComment] = useState("");
@@ -79,6 +162,10 @@ function FeedDetail() {
     // 댓글 데이터
     const [comments, setComments] = useState([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // 신고 모달 상태
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [reportTarget, setReportTarget] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -167,6 +254,12 @@ function FeedDetail() {
         e.stopPropagation();
         if (!user) return;
 
+        console.log('FeedDetail - 좋아요 클릭:', { 
+            currentState: { isThumbsUp, thumbsUpCount, isThumbsDown, thumbsDownCount },
+            userId: user.uid, 
+            recordId: id 
+        });
+
         const prev = isThumbsUp;
         setIsThumbsUp(!isThumbsUp);
         setThumbsUpCount((p) => (isThumbsUp ? p - 1 : p + 1));
@@ -175,7 +268,40 @@ function FeedDetail() {
             setIsThumbsDown(false);
             setThumbsDownCount((p) => p - 1);
         }
-        // TODO: 서버 반영 필요 시 추가
+
+        try {
+            console.log('FeedDetail - API 호출 시작: toggleThumbsUp');
+            await toggleThumbsUp(id, user.uid);
+            console.log('FeedDetail - API 호출 성공');
+            
+            // localStorage 업데이트
+            const newUpCount = isThumbsUp ? thumbsUpCount - 1 : thumbsUpCount + 1;
+            const newDownCount = isThumbsDown ? thumbsDownCount - 1 : thumbsDownCount;
+            const reactionData = {
+                thumbsUpCount: newUpCount,
+                thumbsDownCount: newDownCount,
+                isThumbsUp: !isThumbsUp,
+                isThumbsDown: false,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(`reaction_${id}_${user.uid}`, JSON.stringify(reactionData));
+            console.log('FeedDetail - localStorage 업데이트:', reactionData);
+            
+            // 다른 페이지에 상태 변경 알림
+            window.dispatchEvent(new CustomEvent('reactionUpdated', {
+                detail: { recordId: id, type: 'thumbsUp', isActive: !isThumbsUp }
+            }));
+            console.log('FeedDetail - 다른 페이지에 이벤트 전송');
+        } catch (error) {
+            console.error('FeedDetail - 좋아요 처리 실패:', error);
+            // 실패 시 상태 복원
+            setIsThumbsUp(prev);
+            setThumbsUpCount((p) => (prev ? p + 1 : p - 1));
+            if (isThumbsDown) {
+                setIsThumbsDown(true);
+                setThumbsDownCount((p) => p + 1);
+            }
+        }
     };
 
     const handleThumbsDown = async (e) => {
@@ -190,7 +316,36 @@ function FeedDetail() {
             setIsThumbsUp(false);
             setThumbsUpCount((p) => p - 1);
         }
-        // TODO: 서버 반영 필요 시 추가
+
+        try {
+            await toggleThumbsDown(id, user.uid);
+            
+            // localStorage 업데이트
+            const newUpCount = isThumbsUp ? thumbsUpCount - 1 : thumbsUpCount;
+            const newDownCount = isThumbsDown ? thumbsDownCount - 1 : thumbsDownCount + 1;
+            const reactionData = {
+                thumbsUpCount: newUpCount,
+                thumbsDownCount: newDownCount,
+                isThumbsUp: false,
+                isThumbsDown: !isThumbsDown,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(`reaction_${id}_${user.uid}`, JSON.stringify(reactionData));
+            
+            // 다른 페이지에 상태 변경 알림
+            window.dispatchEvent(new CustomEvent('reactionUpdated', {
+                detail: { recordId: id, type: 'thumbsDown', isActive: !isThumbsDown }
+            }));
+        } catch (error) {
+            console.error('싫어요 처리 실패:', error);
+            // 실패 시 상태 복원
+            setIsThumbsDown(prev);
+            setThumbsDownCount((p) => (prev ? p + 1 : p - 1));
+            if (isThumbsUp) {
+                setIsThumbsUp(true);
+                setThumbsUpCount((p) => p + 1);
+            }
+        }
     };
 
     // 댓글 뷰 토글
@@ -331,6 +486,26 @@ function FeedDetail() {
         }
     };
 
+    // 신고 처리
+    const handleReport = async (targetId, targetUserId, reason) => {
+        try {
+            await submitReport(user.uid, targetUserId, targetId, 'post', reason);
+            alert('신고가 접수되었습니다.');
+        } catch (error) {
+            if (error.message.includes('이미 신고한')) {
+                alert('이미 신고한 게시물입니다.');
+            } else {
+                alert('신고 접수에 실패했습니다.');
+            }
+        }
+    };
+
+    // 신고 모달 열기
+    const openReportModal = (targetId, targetUserId) => {
+        setReportTarget({ targetId, targetUserId });
+        setIsReportModalOpen(true);
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col">
             {/* 상단 네비게이션 */}
@@ -401,6 +576,13 @@ function FeedDetail() {
                                         <span className="text-gray-800">{feelingToEmoji(feeling)}</span>
                                     </div>
                                 </div>
+
+                                <div className="flex items-center w-60">
+                                    <span className="w-28 text-base font-semibold text-left">스타일</span>
+                                    <div className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center bg-white">
+                                        <span className="text-gray-800">{styleToLabel(data?.style)}</span>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="flex justify-center items-center pt-32">
@@ -423,6 +605,7 @@ function FeedDetail() {
                             setReplyContent={setReplyContent}
                             onReplySubmit={handleReplySubmit}
                             onCancelReply={handleCancelReply}
+                            onReportComment={(commentId, authorUid) => openReportModal(commentId, authorUid)}
                             user={user}
                             author={author}
                         />
@@ -462,17 +645,32 @@ function FeedDetail() {
                             {author ? `${author.nickname || author.uid}님의 기록` : ""}
                         </button>
 
-                        {/* 좋아요/싫어요 */}
+                        {/* 좋아요/싫어요/신고 */}
                         <div className="flex items-center gap-2 ml-auto">
                             <button onClick={handleThumbsUp} className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110">
                                 <HandThumbUpIcon className={`w-5 h-5 ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`} />
-                                <span className={`text-sm font-semibold ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`}>{thumbsUpCount}</span>
+                                <span className={`text-sm font-semibold ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`}>
+                                    {isNaN(thumbsUpCount) ? 0 : thumbsUpCount}
+                                </span>
                             </button>
 
                             <button onClick={handleThumbsDown} className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110">
                                 <HandThumbDownIcon className={`w-5 h-5 ${isThumbsDown ? 'text-red-500' : 'text-gray-500'}`} />
-                                <span className={`text-sm font-semibold ${isThumbsDown ? 'text-red-500' : 'text-gray-500'}`}>{thumbsDownCount}</span>
+                                <span className={`text-sm font-semibold ${isThumbsDown ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {isNaN(thumbsDownCount) ? 0 : thumbsDownCount}
+                                </span>
                             </button>
+
+                            {/* 신고 버튼 */}
+                            {user && user.uid !== data.uid && (
+                                <button 
+                                    onClick={() => openReportModal(id, data.uid)}
+                                    className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110 text-red-500 hover:text-red-600"
+                                    title="신고하기"
+                                >
+                                    🚨
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -532,6 +730,16 @@ function FeedDetail() {
                     )}
                 </div>
             </div>
+
+            {/* 신고 모달 */}
+            <ReportModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                onReport={handleReport}
+                targetType="post"
+                targetId={reportTarget?.targetId}
+                targetUserId={reportTarget?.targetUserId}
+            />
         </div>
     );
 }

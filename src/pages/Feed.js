@@ -182,6 +182,38 @@ function Feed() {
     }
   }, [region]);
 
+  // FeedDetail에서의 반응 변경 이벤트 감지
+  useEffect(() => {
+    const handleReactionUpdate = (event) => {
+      const { recordId, type, isActive } = event.detail;
+      setOutfits(prevOutfits => 
+        prevOutfits.map(outfit => {
+          if (outfit.id === recordId) {
+            const updatedOutfit = { ...outfit };
+            if (type === 'thumbsUp') {
+              if (isActive) {
+                updatedOutfit.thumbsUpCount = (updatedOutfit.thumbsUpCount || 0) + 1;
+              } else {
+                updatedOutfit.thumbsUpCount = Math.max(0, (updatedOutfit.thumbsUpCount || 0) - 1);
+              }
+            } else if (type === 'thumbsDown') {
+              if (isActive) {
+                updatedOutfit.thumbsDownCount = (updatedOutfit.thumbsDownCount || 0) + 1;
+              } else {
+                updatedOutfit.thumbsDownCount = Math.max(0, (updatedOutfit.thumbsDownCount || 0) - 1);
+              }
+            }
+            return updatedOutfit;
+          }
+          return outfit;
+        })
+      );
+    };
+
+    window.addEventListener('reactionUpdated', handleReactionUpdate);
+    return () => window.removeEventListener('reactionUpdated', handleReactionUpdate);
+  }, []);
+
   // 좋아요 토글 함수 (Firestore + UI 동기화)
   const handleToggleLike = async (recordId, liked) => {
     if (!user) return;

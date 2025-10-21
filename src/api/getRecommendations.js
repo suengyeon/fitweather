@@ -17,7 +17,7 @@ export async function getRecommendations(region, limitCount = 3) {
     
     // 해당 지역의 오늘 기록들을 가져오기
     const q = query(
-      collection(db, "records"),
+      collection(db, "outfits"),
       where("region", "==", region),
       where("date", "==", todayStr),
       where("isPublic", "==", true),

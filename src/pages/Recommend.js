@@ -29,6 +29,8 @@ function Recommend() {
   const [excludeMyRecords, setExcludeMyRecords] = useState(false);
   const [onlyMyRecords, setOnlyMyRecords] = useState(false);
   const [likedOnly, setLikedOnly] = useState(false);
+  const [onlySubscribedUsers, setOnlySubscribedUsers] = useState(false);
+  const [subscribedUsers, setSubscribedUsers] = useState([]);
 
   // ✅ 계절 코드↔한글 레이블 매핑 (레코드가 한글, 셀렉트는 코드여도 매칭 가능)
   const seasonMap = {
@@ -132,6 +134,31 @@ function Recommend() {
     fetchAllRecords();
   }, []);
 
+  // 구독한 사용자 목록 가져오기
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchSubscribedUsers = async () => {
+      try {
+        const { doc, getDoc } = await import("firebase/firestore");
+        const { db } = await import("../firebase");
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          if (data.subscribedUsers) {
+            setSubscribedUsers(data.subscribedUsers);
+            console.log("Subscribed users:", data.subscribedUsers);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching subscribed users:", error);
+      }
+    };
+
+    fetchSubscribedUsers();
+  }, [user]);
+
   // 다른 페이지에서 전달된 필터 적용 (region/feeling만 유지하던 기존 로직)
   useEffect(() => {
     if (location.state?.userFilters && location.state?.userRegion) {
@@ -155,6 +182,38 @@ function Recommend() {
     }
   }, [location.state]);
 
+  // FeedDetail에서의 반응 변경 이벤트 감지
+  useEffect(() => {
+    const handleReactionUpdate = (event) => {
+      const { recordId, type, isActive } = event.detail;
+      setOutfits(prevOutfits => 
+        prevOutfits.map(outfit => {
+          if (outfit.id === recordId) {
+            const updatedOutfit = { ...outfit };
+            if (type === 'thumbsUp') {
+              if (isActive) {
+                updatedOutfit.thumbsUpCount = (updatedOutfit.thumbsUpCount || 0) + 1;
+              } else {
+                updatedOutfit.thumbsUpCount = Math.max(0, (updatedOutfit.thumbsUpCount || 0) - 1);
+              }
+            } else if (type === 'thumbsDown') {
+              if (isActive) {
+                updatedOutfit.thumbsDownCount = (updatedOutfit.thumbsDownCount || 0) + 1;
+              } else {
+                updatedOutfit.thumbsDownCount = Math.max(0, (updatedOutfit.thumbsDownCount || 0) - 1);
+              }
+            }
+            return updatedOutfit;
+          }
+          return outfit;
+        })
+      );
+    };
+
+    window.addEventListener('reactionUpdated', handleReactionUpdate);
+    return () => window.removeEventListener('reactionUpdated', handleReactionUpdate);
+  }, []);
+
   // 필터 적용
   useEffect(() => {
     // 필터 활성 여부
@@ -165,7 +224,8 @@ function Recommend() {
       !!filters.style ||
       excludeMyRecords ||
       onlyMyRecords ||
-      likedOnly;
+      likedOnly ||
+      onlySubscribedUsers;
     setHasActiveFilters(hasFilters);
 
     let filtered = [...outfits];
@@ -183,6 +243,12 @@ function Recommend() {
         if (!user?.uid) return false;
         const likesArr = Array.isArray(record.likes) ? record.likes : [];
         if (!likesArr.includes(user.uid)) return false;
+      }
+
+      // 구독한 사람만
+      if (onlySubscribedUsers) {
+        if (!user?.uid) return false;
+        if (!subscribedUsers.includes(record.uid)) return false;
       }
 
       // 지역
@@ -233,6 +299,8 @@ function Recommend() {
     excludeMyRecords,
     onlyMyRecords,
     likedOnly,
+    onlySubscribedUsers,
+    subscribedUsers,
     user,
   ]);
 
@@ -274,6 +342,7 @@ function Recommend() {
     setExcludeMyRecords(false);
     setOnlyMyRecords(false);
     setLikedOnly(false);
+    setOnlySubscribedUsers(false);
   };
 
   return (
@@ -394,12 +463,33 @@ function Recommend() {
                   if (checked) {
                     setOnlyMyRecords(false);
                     setExcludeMyRecords(false);
+                    setOnlySubscribedUsers(false);
                   }
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />
               <label htmlFor="likedOnly" className="ml-2 text-sm text-gray-700">
                 내가 좋아요 한 코디
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="onlySubscribedUsers"
+                checked={onlySubscribedUsers}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setOnlySubscribedUsers(checked);
+                  if (checked) {
+                    setOnlyMyRecords(false);
+                    setExcludeMyRecords(false);
+                    setLikedOnly(false);
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="onlySubscribedUsers" className="ml-2 text-sm text-gray-700">
+                내가 구독한 사람만
               </label>
             </div>
           </div>

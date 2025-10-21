@@ -1,19 +1,26 @@
 import React, { useMemo, useState } from "react";
-import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon, PhotoIcon, UserPlusIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/solid";
 import { useNavigate } from "react-router-dom";
 
 // 간단한 유틸: 클래스 합치기
 const cx = (...arr) => arr.filter(Boolean).join(" ");
 
+// 사용자 이름 가져오기 (nickname 사용)
+const getUserName = (sender) => {
+  return sender?.nickname || '알 수 없음';
+};
+
 // 알림 제목 생성 함수
 const getNotificationTitle = (notification) => {
   switch (notification.type) {
     case 'follow':
-      return `${notification.sender?.nickname || '알 수 없음'}님이 구독을 시작했어요`;
+      return `${getUserName(notification.sender)}님이 구독을 시작했어요`;
     case 'comment_on_my_post':
       return '내 기록에 댓글이 달렸어요';
     case 'reply_to_my_comment':
       return '내 댓글에 답글이 달렸어요';
+    case 'new_post_from_following':
+      return `${getUserName(notification.sender)}님이 새 기록을 올렸어요`;
     default:
       return notification.title || '새 알림';
   }
@@ -23,13 +30,30 @@ const getNotificationTitle = (notification) => {
 const getNotificationMessage = (notification) => {
   switch (notification.type) {
     case 'follow':
-      return `${notification.sender?.nickname || '알 수 없음'}이 나를 구독하기 시작했어요.`;
+      return `${getUserName(notification.sender)}이 나를 구독하기 시작했어요.`;
     case 'comment_on_my_post':
-      return `${notification.sender?.nickname || '알 수 없음'}: '${notification.message || '댓글 내용'}'`;
+      return `${getUserName(notification.sender)}: '${notification.message || '댓글 내용'}'`;
     case 'reply_to_my_comment':
       return `답글: '${notification.message || '답글 내용'}'`;
+    case 'new_post_from_following':
+      return '새로운 착장 기록을 확인해보세요!';
     default:
       return notification.message || '';
+  }
+};
+
+// 알림 타입별 아이콘 반환 함수
+const getNotificationIcon = (type) => {
+  switch (type) {
+    case 'follow':
+      return <UserPlusIcon className="w-4 h-4 text-blue-600" />;
+    case 'comment_on_my_post':
+    case 'reply_to_my_comment':
+      return <ChatBubbleLeftIcon className="w-4 h-4 text-green-600" />;
+    case 'new_post_from_following':
+      return <PhotoIcon className="w-4 h-4 text-purple-600" />;
+    default:
+      return <BellIcon className="w-4 h-4 text-gray-700" />;
   }
 };
 
@@ -211,8 +235,8 @@ export default function NotiSidebar({
                                                 </div>
                                             )}
                                             {/* 썸네일 */}
-                                            <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center">
-                                                <BellIcon className="w-4 h-4 text-gray-700" />
+                                            <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center">
+                                                {getNotificationIcon(n.type)}
                                             </div>
                                             {/* 본문 */}
                                             <div className="min-w-0 flex-1">
@@ -258,7 +282,7 @@ function EmptyState() {
         <div className="h-full flex flex-col items-center justify-center text-gray-600">
             <BellIcon className="w-10 h-10 mb-2" />
             <p className="font-semibold">새로운 알림이 없어요</p>
-            <p className="text-sm">댓글, 구독 알림이 여기에 표시됩니다.</p>
+            <p className="text-sm">댓글, 구독, 새 기록 알림이 여기에 표시됩니다.</p>
         </div>
     );
 }
