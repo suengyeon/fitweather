@@ -13,9 +13,23 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
-import { getWeatherEmoji } from "../utils/weatherUtils"; 
 import { regionMap } from "../constants/regionData";
-import { styleOptions } from "../constants/styleOptions"; 
+import { styleOptions } from "../constants/styleOptions";
+import useWeather from "../hooks/useWeather";
+
+// 날씨 아이콘 코드에 따른 이모지 반환 함수 (홈화면과 동일)
+function getWeatherEmoji(iconCode) {
+  switch (iconCode) {
+    case "sunny": return "☀️";
+    case "cloudy": return "☁️";
+    case "overcast": return "🌥️";
+    case "rain": return "🌧️";
+    case "snow": return "❄️";
+    case "snow_rain": return "🌨️";
+    case "shower": return "🌦️";
+    default: return "☁️";
+  }
+} 
 
 function Feed() {
   const { user } = useAuth();
@@ -33,7 +47,8 @@ function Feed() {
     markOneRead, handleAlarmItemClick,
   } = useNotiSidebar();
 
-  // 날씨 정보는 저장된 데이터만 사용 (API 호출 없음)
+  // 날씨 정보 가져오기 (홈화면과 동일한 방식)
+  const { weather, loading: weatherLoading } = useWeather(region);
 
   // 세션스토리지에서 저장된 지역 정보 가져오기
   const getStoredRegion = () => {
@@ -409,22 +424,24 @@ function Feed() {
         <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded-lg h-[700px]">
           <h3 className="text-lg font-semibold mb-3">{regionMap[region] || region}</h3>
 
-          {/* 날씨 일러스트 */}
+          {/* 날씨 아이콘만 표시 */}
           <div className="flex justify-center items-center mb-6" style={{ minHeight: 120 }}>
-            {outfits.length > 0 && outfits[0].weather ? (
-              // 저장된 날씨 정보 표시 (API 호출 없음)
-              <div className="flex flex-col items-center">
+            {weather ? (
+              // 날씨 아이콘과 온도만 표시 (기존 스타일 유지)
+              <div className="flex flex-col items-center gap-2">
                 <div className="w-60 h-60 bg-gray-200 rounded flex items-center justify-center text-6xl relative overflow-hidden">
-                  <div className="absolute text-8xl">
-                    {getWeatherEmoji(outfits[0].weather.icon)}
+                  <div className="absolute text-8xl animate-bounce">
+                    {getWeatherEmoji(weather.icon)}
                   </div>
                 </div>
                 <div className="mt-2 text-sm text-gray-600">
-                  {outfits[0].weather.temp}°C
+                  {weather.temp}°C
                 </div>
               </div>
+            ) : weatherLoading ? (
+              <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
             ) : (
-              <p className="text-sm text-gray-500">해당 날짜의 날씨 정보가 없습니다.</p>
+              <p className="text-sm text-gray-500">날씨 정보를 가져올 수 없습니다.</p>
             )}
           </div>
 
