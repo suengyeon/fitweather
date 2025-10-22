@@ -390,7 +390,7 @@ function Admin() {
                                                     )}
                                                 </div>
                                                 <div className="flex gap-2 ml-4">
-                                                    {report.targetType === 'comment' && (
+                                                    {report.targetType === 'comment' && !report.isDeleted && (
                                                         <button
                                                             onClick={() => handleDeleteComment(report.targetId, report.targetUserId)}
                                                             className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
@@ -398,13 +398,18 @@ function Admin() {
                                                             댓글 삭제
                                                         </button>
                                                     )}
-                                                    {report.targetType === 'post' && (
+                                                    {report.targetType === 'post' && !report.isDeleted && (
                                                         <button
                                                             onClick={() => handleDeleteRecord(report.targetId)}
                                                             className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                                                         >
                                                             기록 삭제
                                                         </button>
+                                                    )}
+                                                    {(report.isDeleted || report.hasError) && (
+                                                        <span className="px-3 py-1 bg-gray-300 text-gray-600 text-sm rounded cursor-not-allowed">
+                                                            {report.isDeleted ? '이미 삭제됨' : '삭제 불가'}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
