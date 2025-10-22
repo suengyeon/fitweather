@@ -168,6 +168,15 @@ function FeedCard({
       }
       
       console.log('FeedCard - 상태 업데이트 완료');
+      
+      // 다른 페이지에 반응 변경 이벤트 전송
+      window.dispatchEvent(new CustomEvent('reactionUpdated', {
+        detail: { 
+          recordId: record.id, 
+          type: 'thumbsUp', 
+          isActive: result === "up" 
+        }
+      }));
     } catch (err) {
       console.error("FeedCard - 반응(👍) 업데이트 실패:", err);
       // rollback
@@ -215,6 +224,15 @@ function FeedCard({
       }
       
       console.log('FeedCard - 상태 업데이트 완료');
+      
+      // 다른 페이지에 반응 변경 이벤트 전송
+      window.dispatchEvent(new CustomEvent('reactionUpdated', {
+        detail: { 
+          recordId: record.id, 
+          type: 'thumbsDown', 
+          isActive: result === "down" 
+        }
+      }));
     } catch (err) {
       console.error("FeedCard - 반응(👎) 업데이트 실패:", err);
       // rollback

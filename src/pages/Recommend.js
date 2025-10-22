@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import FeedCard from "../components/FeedCard";
 import { getAllRecords } from "../api/getAllRecords";
 import { toggleLike } from "../api/toggleLike";
+import { sortRecords } from "../utils/sortingUtils";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
@@ -277,22 +278,9 @@ function Recommend() {
       return true;
     });
 
-    // 정렬: 1차 좋아요 내림차순, 2차 싫어요 오름차순
-    filtered.sort((a, b) => {
-      const aLikes = a.likes?.length || 0;
-      const bLikes = b.likes?.length || 0;
-      const aDislikes = a.dislikes?.length || 0;
-      const bDislikes = b.dislikes?.length || 0;
-
-      // 1차: 좋아요 개수 내림차순
-      if (aLikes !== bLikes) {
-        return bLikes - aLikes;
-      }
-      // 2차: 싫어요 개수 오름차순 (적은 순서대로)
-      return aDislikes - bDislikes;
-    });
-
-    setFilteredOutfits(filtered);
+    // 정렬 유틸리티 사용
+    const sortedFiltered = sortRecords(filtered, "popular");
+    setFilteredOutfits(sortedFiltered);
   }, [
     outfits,
     filters,

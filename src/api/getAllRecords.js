@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
+import { sortRecords } from "../utils/sortingUtils";
 
 export const getAllRecords = async () => {
   try {
@@ -22,22 +23,8 @@ export const getAllRecords = async () => {
       });
     });
     
-    // 정렬: 1차 좋아요 내림차순, 2차 싫어요 오름차순
-    records.sort((a, b) => {
-      const aLikes = a.likes?.length || 0;
-      const bLikes = b.likes?.length || 0;
-      const aDislikes = a.dislikes?.length || 0;
-      const bDislikes = b.dislikes?.length || 0;
-      
-      // 1차: 좋아요 개수 내림차순
-      if (aLikes !== bLikes) {
-        return bLikes - aLikes;
-      }
-      // 2차: 싫어요 개수 오름차순 (적은 순서대로)
-      return aDislikes - bDislikes;
-    });
-    
-    return records;
+    // 정렬 유틸리티 사용
+    return sortRecords(records, "popular");
   } catch (error) {
     console.error("Error fetching all records:", error);
     return [];

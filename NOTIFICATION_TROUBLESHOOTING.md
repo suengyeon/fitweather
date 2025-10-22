@@ -136,3 +136,4 @@ window.testNotificationSystem.testNewPostNotification("사용자ID");
 - 사용자 ID들 (기록 작성자, 구독자)
 - 기록 ID
 
+

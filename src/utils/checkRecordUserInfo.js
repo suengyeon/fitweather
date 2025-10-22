@@ -156,3 +156,4 @@ if (process.env.NODE_ENV === 'development') {
   window.checkRecordUserInfo = checkRecordUserInfo;
 }
 
+

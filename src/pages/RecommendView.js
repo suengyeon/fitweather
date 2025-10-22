@@ -11,6 +11,7 @@ import { getAllRecords } from "../api/getAllRecords";
 import { toggleLike } from "../api/toggleLike";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { sortRecords } from "../utils/sortingUtils";
 
 function RecommendView() {
   const { user } = useAuth();
@@ -200,21 +201,9 @@ function RecommendView() {
     console.log("Filtered results:", filtered.length);
     console.log("Sample filtered record:", filtered[0]);
 
-    // 정렬: 1차 좋아요 내림차순, 2차 싫어요 오름차순
-    filtered.sort((a, b) => {
-      const aLikes = a.likes?.length || 0;
-      const bLikes = b.likes?.length || 0;
-      const aDislikes = a.dislikes?.length || 0;
-      const bDislikes = b.dislikes?.length || 0;
-
-      // 1차: 좋아요 개수 내림차순
-      if (aLikes !== bLikes) {
-        return bLikes - aLikes;
-      }
-      // 2차: 싫어요 개수 오름차순 (적은 순서대로)
-      return aDislikes - bDislikes;
-    });
-    setFilteredOutfits(filtered);
+    // 정렬 유틸리티 사용
+    const sortedFiltered = sortRecords(filtered, "popular");
+    setFilteredOutfits(sortedFiltered);
   }, [outfits, userFilters, userRegion, excludeMyRecords, onlyMyRecords, onlySubscribedUsers, subscribedUsers, user]);
 
   // 좋아요 토글

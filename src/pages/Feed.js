@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import FeedCard from "../components/FeedCard";
 import { getRecords } from "../api/getRecords";
 import { toggleLike } from "../api/toggleLike";
+import { getReactionSummary } from "../api/reactions";
+import { sortRecords } from "../utils/sortingUtils";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -182,10 +184,18 @@ function Feed() {
     }
   }, [region]);
 
+  // 인기순일 때 TOP3 분리 (useMemo로 자동 재정렬)
+  const isPopular = order === "popular";
+  const [sortedOutfits, setSortedOutfits] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   // FeedDetail에서의 반응 변경 이벤트 감지
   useEffect(() => {
     const handleReactionUpdate = (event) => {
       const { recordId, type, isActive } = event.detail;
+      console.log('반응 업데이트 이벤트 수신:', { recordId, type, isActive });
+      
+      // outfits 상태 업데이트
       setOutfits(prevOutfits => 
         prevOutfits.map(outfit => {
           if (outfit.id === recordId) {
@@ -208,11 +218,40 @@ function Feed() {
           return outfit;
         })
       );
+
+      // sortedOutfits 상태도 업데이트 (인기순일 때)
+      if (isPopular) {
+        setSortedOutfits(prevSorted => {
+          const updatedSorted = prevSorted.map(outfit => {
+            if (outfit.id === recordId) {
+              const updatedOutfit = { ...outfit };
+              if (type === 'thumbsUp') {
+                if (isActive) {
+                  updatedOutfit.thumbsUpCount = (updatedOutfit.thumbsUpCount || 0) + 1;
+                } else {
+                  updatedOutfit.thumbsUpCount = Math.max(0, (updatedOutfit.thumbsUpCount || 0) - 1);
+                }
+              } else if (type === 'thumbsDown') {
+                if (isActive) {
+                  updatedOutfit.thumbsDownCount = (updatedOutfit.thumbsDownCount || 0) + 1;
+                } else {
+                  updatedOutfit.thumbsDownCount = Math.max(0, (updatedOutfit.thumbsDownCount || 0) - 1);
+                }
+              }
+              return updatedOutfit;
+            }
+            return outfit;
+          });
+          
+          // 정렬 유틸리티 사용
+          return sortRecords(updatedSorted, "popular", { useThumbsCount: true });
+        });
+      }
     };
 
     window.addEventListener('reactionUpdated', handleReactionUpdate);
     return () => window.removeEventListener('reactionUpdated', handleReactionUpdate);
-  }, []);
+  }, [isPopular]);
 
   // 좋아요 토글 함수 (Firestore + UI 동기화)
   const handleToggleLike = async (recordId, liked) => {
@@ -232,32 +271,79 @@ function Feed() {
     );
   };
 
-  // 인기순일 때 TOP3 분리 (useMemo로 자동 재정렬)
-  const isPopular = order === "popular";
+  // 인기순 정렬을 위한 반응 데이터 로드
+  useEffect(() => {
+    if (isPopular && outfits.length > 0) {
+      setIsLoading(true);
+      const loadReactionData = async () => {
+        try {
+          const outfitsWithReactions = await Promise.all(
+            outfits.map(async (outfit) => {
+              try {
+                const reactionSummary = await getReactionSummary(outfit.id);
+                return {
+                  ...outfit,
+                  thumbsUpCount: reactionSummary.thumbsUpCount || 0,
+                  thumbsDownCount: reactionSummary.thumbsDownCount || 0
+                };
+              } catch (error) {
+                console.error(`반응 데이터 로드 실패 (${outfit.id}):`, error);
+                return {
+                  ...outfit,
+                  thumbsUpCount: 0,
+                  thumbsDownCount: 0
+                };
+              }
+            })
+          );
+
+          // 정렬: 1차 좋아요 내림차순, 2차 싫어요 오름차순, 3차 기록 시간 오름차순
+          const sorted = outfitsWithReactions.sort((a, b) => {
+            const aLikes = a.thumbsUpCount || 0;
+            const bLikes = b.thumbsUpCount || 0;
+            const aDislikes = a.thumbsDownCount || 0;
+            const bDislikes = b.thumbsDownCount || 0;
+
+            // 1차: 좋아요 개수 내림차순
+            if (aLikes !== bLikes) {
+              return bLikes - aLikes;
+            }
+            // 2차: 싫어요 개수 오름차순 (적은 순서대로)
+            if (aDislikes !== bDislikes) {
+              return aDislikes - bDislikes;
+            }
+            // 3차: 기록 시간 오름차순 (빠른 순서대로)
+            const aTime = new Date(a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt);
+            const bTime = new Date(b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt);
+            return aTime - bTime;
+          });
+
+          setSortedOutfits(sorted);
+        } catch (error) {
+          console.error("반응 데이터 로드 실패:", error);
+          setSortedOutfits(outfits);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadReactionData();
+    } else {
+      setSortedOutfits(outfits);
+    }
+  }, [outfits, isPopular]);
+
   const { top3, rest } = useMemo(() => {
     let top3 = [];
-    let rest = outfits;
+    let rest = sortedOutfits;
 
-    if (isPopular && outfits.length > 0) {
-      const sorted = [...outfits].sort((a, b) => {
-        const aLikes = a.likes?.length || 0;
-        const bLikes = b.likes?.length || 0;
-        const aDislikes = a.dislikes?.length || 0;
-        const bDislikes = b.dislikes?.length || 0;
-
-        // 1차: 좋아요 개수 내림차순
-        if (aLikes !== bLikes) {
-          return bLikes - aLikes;
-        }
-        // 2차: 싫어요 개수 오름차순 (적은 순서대로)
-        return aDislikes - bDislikes;
-      });
-      top3 = sorted.slice(0, 3);
-      rest = sorted.slice(3);
+    if (isPopular && sortedOutfits.length > 0) {
+      top3 = sortedOutfits.slice(0, 3);
+      rest = sortedOutfits.slice(3);
     }
 
     return { top3, rest };
-  }, [outfits, isPopular]);
+  }, [sortedOutfits, isPopular]);
 
   // 연도, 월, 일 옵션 생성
   const currentYear = new Date().getFullYear();

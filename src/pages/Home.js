@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, ArrowPathIcon } from "@heroicons/react/24/solid";
@@ -11,6 +13,7 @@ import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import  useNotiSidebar from "../hooks/useNotiSidebar";
 import { getRecommendations } from "../api/getRecommendations";
+import { getSmartRecommendations } from "../utils/recommendationAlgorithm";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수
 function getWeatherEmoji(iconCode) {
@@ -47,6 +50,7 @@ function Home() {
   const [currentRecommendationIndex, setCurrentRecommendationIndex] = useState(0);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState("casual");
 
   useEffect(() => {
     if (profile?.region) {
@@ -60,7 +64,23 @@ function Home() {
       if (!selectedRegion) return;
       setRecommendationLoading(true);
       try {
-        const data = await getRecommendations(selectedRegion, 3);
+        console.log("🔍 추천 데이터 가져오기 시작:", { selectedRegion, selectedStyle });
+        
+        // 새로운 스마트 추천 로직 사용
+        let data = [];
+        console.log("스마트 추천 시도");
+        data = await getSmartRecommendations(selectedRegion, selectedStyle);
+        console.log("스마트 추천 결과:", data.length, "개");
+        console.log("스마트 추천 상세:", data.map(item => ({ id: item.id, style: item.style, region: item.region })));
+        
+        // 스마트 추천이 없으면 기존 추천 로직 사용
+        if (data.length === 0) {
+          console.log("스마트 추천 없음, 기존 추천 로직 사용");
+          data = await getRecommendations(selectedRegion, 3);
+          console.log("기존 추천 결과:", data.length, "개");
+        }
+        
+        console.log("최종 추천 데이터:", data);
         setRecommendations(data);
         setCurrentRecommendationIndex(prev => {
           const newIndex = (prev + 1) % Math.max(data.length, 1);
@@ -74,7 +94,7 @@ function Home() {
       }
     };
     fetchRecommendations();
-  }, [selectedRegion]);
+  }, [selectedRegion, selectedStyle]);
 
   // 새로고침 버튼 클릭 핸들러
   const handleRefreshRecommendation = () => {
@@ -235,10 +255,14 @@ function Home() {
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
                   {/* 카드 헤더 */}
                   <div className="flex items-center justify-between mb-4">
-                    <select className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none">
+                    <select 
+                      value={selectedStyle}
+                      onChange={(e) => setSelectedStyle(e.target.value)}
+                      className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none border border-gray-300 rounded px-2 py-1"
+                    >
                       <option value="casual">캐주얼</option>
                       <option value="formal">포멀</option>
-                      <option value="Basic">베이직/놈코어</option>
+                      <option value="basic">베이직/놈코어</option>
                       <option value="sporty">스포티/액티브</option>
                       <option value="street">시크/스트릿</option>
                       <option value="feminine">러블리/페미닌</option>
@@ -364,8 +388,25 @@ function Home() {
             ) : (
               <div className="w-full max-w-md mt-6">
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+                  {/* 스타일 선택 드롭다운 */}
+                  <div className="flex items-center justify-center mb-4">
+                    <select 
+                      value={selectedStyle}
+                      onChange={(e) => setSelectedStyle(e.target.value)}
+                      className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none border border-gray-300 rounded px-2 py-1"
+                    >
+                      <option value="casual">캐주얼</option>
+                      <option value="formal">포멀</option>
+                      <option value="basic">베이직/놈코어</option>
+                      <option value="sporty">스포티/액티브</option>
+                      <option value="street">시크/스트릿</option>
+                      <option value="feminine">러블리/페미닌</option>
+                    </select>
+                  </div>
+                  
                   <div className="text-center text-gray-500">
                     <p>오늘의 추천 착장이 없습니다.</p>
+                    <p className="text-sm mt-2">스타일을 선택하여 다른 추천을 찾아보세요.</p>
                   </div>
                 </div>
               </div>

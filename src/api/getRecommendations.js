@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
+import { sortRecords } from "../utils/sortingUtils";
 
 /**
  * 추천 데이터를 가져오는 함수
@@ -16,7 +17,7 @@ export async function getRecommendations(region, limitCount = 3) {
     console.log("🔍 getRecommendations 요청:", { region, todayStr, limitCount });
     
     // 해당 지역의 오늘 기록들을 가져오기
-    const q = query(
+    let q = query(
       collection(db, "outfits"),
       where("region", "==", region),
       where("date", "==", todayStr),
@@ -24,45 +25,77 @@ export async function getRecommendations(region, limitCount = 3) {
       limit(100) // 최대 100개까지 가져오기
     );
     
-    const querySnapshot = await getDocs(q);
-    const records = [];
-    
-    console.log("📊 Firestore 쿼리 결과:", querySnapshot.size, "개 문서");
+    let querySnapshot = await getDocs(q);
+    let records = [];
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      console.log("📄 레코드 데이터:", { id: doc.id, outfit: data.outfit, likes: data.likes?.length });
       records.push({
         id: doc.id,
         ...data
       });
     });
     
-    console.log("📋 전체 레코드:", records.length, "개");
+    console.log("📊 지역 일치 오늘 기록:", records.length, "개");
     
-    // 정렬: 1차 좋아요 내림차순, 2차 싫어요 오름차순
-    records.sort((a, b) => {
-      const aLikes = a.likes?.length || 0;
-      const bLikes = b.likes?.length || 0;
-      const aDislikes = a.dislikes?.length || 0;
-      const bDislikes = b.dislikes?.length || 0;
+    // 지역 일치 기록이 없으면 모든 오늘 기록에서 추천
+    if (records.length === 0) {
+      console.log("지역 일치 기록 없음, 모든 오늘 기록에서 추천");
+      q = query(
+        collection(db, "outfits"),
+        where("date", "==", todayStr),
+        where("isPublic", "==", true),
+        limit(100)
+      );
       
-      // 1차: 좋아요 개수 내림차순
-      if (aLikes !== bLikes) {
-        return bLikes - aLikes;
-      }
-      // 2차: 싫어요 개수 오름차순 (적은 순서대로)
-      return aDislikes - bDislikes;
-    });
+      querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        records.push({
+          id: doc.id,
+          ...data
+        });
+      });
+      
+      console.log("📊 전체 오늘 기록:", records.length, "개");
+    }
     
-    console.log("🏆 정렬 후 상위 3개:", records.slice(0, limitCount).map(r => ({ 
+    console.log("📋 최종 레코드:", records.length, "개");
+    
+    // 오늘 기록이 없으면 과거 기록에서 추천
+    if (records.length === 0) {
+      console.log("오늘 기록 없음, 과거 기록에서 추천");
+      
+      // 인덱스 없이도 작동하도록 단순한 쿼리 사용
+      q = query(
+        collection(db, "outfits"),
+        where("isPublic", "==", true),
+        limit(100)
+      );
+      
+      querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        records.push({
+          id: doc.id,
+          ...data
+        });
+      });
+      
+      console.log("📊 과거 기록:", records.length, "개");
+    }
+    
+    // 정렬 유틸리티 사용
+    const sortedRecords = sortRecords(records, "popular");
+    
+    console.log("🏆 정렬 후 상위 3개:", sortedRecords.slice(0, limitCount).map(r => ({ 
       id: r.id, 
       likes: r.likes?.length, 
       outfit: r.outfit 
     })));
     
     // 상위 limitCount개만 반환
-    return records.slice(0, limitCount);
+    return sortedRecords.slice(0, limitCount);
     
   } catch (error) {
     console.error("Error fetching recommendations:", error);
