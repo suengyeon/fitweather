@@ -52,13 +52,70 @@ export async function getReports() {
       if (report.targetType === 'comment') {
         try {
           // 댓글 문서에서 게시물 ID 찾기
-          const commentsRef = doc(db, 'comments', report.targetUserId);
+          const commentsRef = doc(db, 'comments', report.targetId);
           const commentsSnap = await getDoc(commentsRef);
+          
           if (commentsSnap.exists()) {
-            report.recordId = report.targetUserId; // 댓글이 속한 게시물 ID
+            // 댓글 문서가 존재하면 댓글이 포함된 게시물
+            report.recordId = report.targetId; // 댓글 문서 ID = 게시물 ID
+            console.log('댓글 신고 - 게시물 ID 설정:', {
+              commentId: report.targetId,
+              postId: report.recordId,
+              commentExists: true
+            });
+          } else {
+            // 댓글 문서가 없으면 댓글이 삭제되었을 가능성
+            console.warn('댓글 문서가 존재하지 않습니다 (삭제됨):', report.targetId);
+            report.recordId = report.targetId; // 댓글 ID 유지
+            report.isDeleted = true; // 삭제된 댓글 표시
+            console.log('삭제된 댓글 신고 처리:', {
+              commentId: report.targetId,
+              postId: report.recordId,
+              isDeleted: true
+            });
           }
         } catch (error) {
           console.error('댓글 게시물 ID 찾기 실패:', error);
+          report.recordId = report.targetId;
+          report.hasError = true; // 에러 상태 표시
+        }
+      }
+    }
+
+    // 게시물 신고의 경우 삭제 상태 확인
+    for (let report of reports) {
+      if (report.targetType === 'post') {
+        try {
+          // 먼저 records 컬렉션에서 확인
+          let recordRef = doc(db, 'records', report.targetId);
+          let recordSnap = await getDoc(recordRef);
+          
+          if (recordSnap.exists()) {
+            report.recordId = report.targetId;
+            console.log('게시물 신고 - records 컬렉션에서 발견:', report.targetId);
+          } else {
+            // records에 없으면 outfits 컬렉션에서 확인
+            recordRef = doc(db, 'outfits', report.targetId);
+            recordSnap = await getDoc(recordRef);
+            
+            if (recordSnap.exists()) {
+              report.recordId = report.targetId;
+              console.log('게시물 신고 - outfits 컬렉션에서 발견:', report.targetId);
+            } else {
+              // 두 컬렉션 모두에 없으면 삭제된 게시물
+              console.warn('게시물이 존재하지 않습니다 (삭제됨):', report.targetId);
+              report.recordId = report.targetId;
+              report.isDeleted = true; // 삭제된 게시물 표시
+              console.log('삭제된 게시물 신고 처리:', {
+                postId: report.targetId,
+                isDeleted: true
+              });
+            }
+          }
+        } catch (error) {
+          console.error('게시물 삭제 상태 확인 실패:', error);
+          report.recordId = report.targetId;
+          report.hasError = true; // 에러 상태 표시
         }
       }
     }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { HomeIcon, ArrowLeftIcon, BellIcon } from '@heroicons/react/24/outline';
 import { getReports, getAllUsers, banUser, unbanUser, deleteComment, isAdmin } from '../api/reportAPI';
+import { deleteAnyRecord } from '../api/deleteOutfitRecord';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -130,6 +131,48 @@ function Admin() {
         }
     };
 
+    // 기록 삭제
+    const handleDeleteRecord = async (recordId) => {
+        if (!window.confirm('정말로 이 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+
+        try {
+            // 먼저 기록 데이터를 가져와서 이미지 URL 확인
+            let recordData = null;
+            try {
+                const outfitRef = doc(db, "outfits", recordId);
+                const outfitSnap = await getDoc(outfitRef);
+                if (outfitSnap.exists()) {
+                    recordData = outfitSnap.data();
+                }
+            } catch (error) {
+                console.log("outfits 컬렉션에서 데이터 조회 실패, records 컬렉션에서 시도");
+                try {
+                    const recordRef = doc(db, "records", recordId);
+                    const recordSnap = await getDoc(recordRef);
+                    if (recordSnap.exists()) {
+                        recordData = recordSnap.data();
+                    }
+                } catch (recordError) {
+                    console.error("records 컬렉션에서도 데이터 조회 실패:", recordError);
+                }
+            }
+
+            const imageUrls = recordData?.imageUrls || [];
+            console.log("삭제할 이미지 URL들:", imageUrls);
+
+            // 기록 삭제 (이미지 포함)
+            await deleteAnyRecord(recordId, imageUrls);
+            alert('기록이 삭제되었습니다.');
+            
+            // 데이터 새로고침
+            const reportsData = await getReports();
+            setReports(reportsData);
+        } catch (error) {
+            console.error('기록 삭제 실패:', error);
+            alert('기록 삭제에 실패했습니다.');
+        }
+    };
+
     // 관리자 로그아웃
     const handleAdminLogout = () => {
         sessionStorage.removeItem('adminLoggedIn');
@@ -238,8 +281,16 @@ function Admin() {
                                                         <span className="text-sm font-medium">
                                                             신고 대상: {report.targetUserId}
                                                         </span>
-                                                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                                        <span className={`text-xs px-2 py-1 rounded ${
+                                                            report.isDeleted 
+                                                                ? 'bg-red-100 text-red-600' 
+                                                                : report.hasError
+                                                                ? 'bg-yellow-100 text-yellow-600'
+                                                                : 'bg-gray-100'
+                                                        }`}>
                                                             {report.targetType === 'post' ? '게시물' : '댓글'}
+                                                            {report.isDeleted && ' (삭제됨)'}
+                                                            {report.hasError && ' (오류)'}
                                                         </span>
                                                         {report.reportCount >= 3 && (
                                                             <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
@@ -259,10 +310,33 @@ function Admin() {
                                                     {/* 게시물 보기 링크 */}
                                                     {report.targetType === 'post' ? (
                                                         <button
-                                                            onClick={() => {
-                                                                const url = `/feed-detail/${report.targetId}`;
-                                                                console.log('게시물 보기 클릭:', url);
-                                                                navigate(url);
+                                                            onClick={async () => {
+                                                                try {
+                                                                    console.log('게시물 보기 클릭:', {
+                                                                        reportId: report.id,
+                                                                        targetId: report.targetId,
+                                                                        recordId: report.recordId,
+                                                                        isDeleted: report.isDeleted,
+                                                                        hasError: report.hasError
+                                                                    });
+                                                                    
+                                                                    if (report.isDeleted) {
+                                                                        alert('해당 게시물이 삭제되어 더 이상 볼 수 없습니다.');
+                                                                        return;
+                                                                    }
+                                                                    
+                                                                    if (report.hasError) {
+                                                                        alert('게시물 정보를 불러올 수 없습니다.');
+                                                                        return;
+                                                                    }
+                                                                    
+                                                                    const url = `/feed-detail/${report.recordId || report.targetId}`;
+                                                                    console.log('게시물 ID로 이동:', url);
+                                                                    navigate(url);
+                                                                } catch (error) {
+                                                                    console.error('게시물 조회 실패:', error);
+                                                                    alert('게시물을 불러올 수 없습니다.');
+                                                                }
                                                             }}
                                                             className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                                                         >
@@ -270,10 +344,44 @@ function Admin() {
                                                         </button>
                                                     ) : (
                                                         <button
-                                                            onClick={() => {
-                                                                const url = `/feed-detail/${report.recordId || report.targetUserId}`;
-                                                                console.log('댓글 게시물 보기 클릭:', url);
-                                                                navigate(url);
+                                                            onClick={async () => {
+                                                                try {
+                                                                    console.log('댓글 게시물 보기 클릭:', {
+                                                                        reportId: report.id,
+                                                                        targetId: report.targetId,
+                                                                        recordId: report.recordId,
+                                                                        targetUserId: report.targetUserId,
+                                                                        targetType: report.targetType,
+                                                                        isDeleted: report.isDeleted,
+                                                                        hasError: report.hasError
+                                                                    });
+                                                                    
+                                                                    const { doc, getDoc } = await import('firebase/firestore');
+                                                                    const { db } = await import('../firebase');
+                                                                    
+                                                                    // 댓글 문서 확인
+                                                                    const commentRef = doc(db, 'comments', report.targetId);
+                                                                    const commentSnap = await getDoc(commentRef);
+                                                                    
+                                                                    if (commentSnap.exists()) {
+                                                                        // 댓글 문서가 존재하면 댓글이 포함된 게시물
+                                                                        const commentData = commentSnap.data();
+                                                                        const originalPostId = report.targetId; // 댓글 문서 ID = 게시물 ID
+                                                                        const url = `/feed-detail/${originalPostId}`;
+                                                                        
+                                                                        console.log('댓글 원본 게시물 ID:', originalPostId);
+                                                                        console.log('댓글 데이터:', commentData);
+                                                                        
+                                                                        navigate(url);
+                                                                    } else {
+                                                                        // 댓글 문서가 없으면 삭제된 댓글
+                                                                        console.log('댓글이 삭제되었습니다:', report.targetId);
+                                                                        alert('해당 댓글이 삭제되어 게시물을 찾을 수 없습니다.');
+                                                                    }
+                                                                } catch (error) {
+                                                                    console.error('댓글 게시물 조회 실패:', error);
+                                                                    alert('댓글 게시물을 불러올 수 없습니다.');
+                                                                }
                                                             }}
                                                             className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                                                         >
@@ -288,6 +396,14 @@ function Admin() {
                                                             className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
                                                         >
                                                             댓글 삭제
+                                                        </button>
+                                                    )}
+                                                    {report.targetType === 'post' && (
+                                                        <button
+                                                            onClick={() => handleDeleteRecord(report.targetId)}
+                                                            className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                                                        >
+                                                            기록 삭제
                                                         </button>
                                                     )}
                                                 </div>
