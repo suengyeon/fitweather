@@ -23,6 +23,8 @@ import { regionMap } from "../constants/regionData";
 import { styleOptions } from "../constants/styleOptions";
 import { outfitOptionTexts } from "../constants/outfitOptionTexts";
 import { outfitOptions } from "../constants/outfitOptions";
+import { weatherService } from "../api/weatherService";
+import { getStyleLabel, getStyleCode } from "../utils/styleUtils";
 import { navBtnStyle, indicatorStyle, dotStyle } from "../components/ImageCarouselStyles";
 
 function Record() {
@@ -71,6 +73,20 @@ function Record() {
     }
   }, [profile?.region, existingRecord?.region, dateStr, location.state?.selectedRegion]);
 
+  // 기존 기록이 있을 때 스타일 설정
+  useEffect(() => {
+    if (existingRecord?.style) {
+      const styleCode = getStyleCode(existingRecord.style);
+      console.log("📝 기존 기록에서 스타일 불러오기:", { 
+        original: existingRecord.style, 
+        converted: styleCode 
+      });
+      console.log("🔍 styleOptions 확인:", styleOptions.map(opt => ({ value: opt.value, label: opt.label })));
+      console.log("🎯 설정할 style 값:", styleCode);
+      setStyle(styleCode);
+    }
+  }, [existingRecord?.style]);
+
   const regionOptions = Object.entries(regionMap).map(([key, value]) => ({ value: key, label: value }));
   const [imageFiles, setImageFiles] = useState([]);
   const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] });
@@ -79,6 +95,11 @@ function Record() {
   const [customInputs, setCustomInputs] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" });
   const [feeling, setFeeling] = useState("");
   const [style, setStyle] = useState("");
+  
+  // style 상태 변경 감지
+  useEffect(() => {
+    console.log("🎨 style 상태 변경:", style);
+  }, [style]);
   const [memo, setMemo] = useState("");
   const [isPublic, setIsPublic] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -218,7 +239,7 @@ function Record() {
 
       setOutfit(existingRecord.outfit || {});
       setFeeling(existingRecord.feeling || "");
-      setStyle(existingRecord.style || "");
+      // setStyle은 useEffect에서 처리 (한글 → 영문 변환)
       setMemo(existingRecord.memo || "");
       setIsPublic(existingRecord.isPublic || false);
       setWeatherEmojis(existingRecord.weatherEmojis || []);
@@ -388,6 +409,9 @@ function Record() {
         })
       );
 
+      const convertedStyle = getStyleLabel(style);
+      console.log("🎨 스타일 변환:", { original: style, converted: convertedStyle });
+      
       const recordData = {
         uid: user.uid,
         region: selectedRegion, // profile?.region 대신 selectedRegion 사용
@@ -401,10 +425,11 @@ function Record() {
           rain: weather.rain ?? null,
           humidity: weather.humidity ?? null,
           icon: weather.icon ?? null,
+          season: weatherService.getSeason(weather.temp, dateObj),
         },
         outfit,
         feeling,
-        style,
+        style: convertedStyle, // 스타일을 한글로 변환하여 저장
         memo,
         isPublic,
         imageUrls,
@@ -415,16 +440,21 @@ function Record() {
         recordedTime: new Date().toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' }),
         recordedAt: new Date(),
       };
+      
+      console.log("💾 저장할 recordData:", recordData);
+      console.log("🎯 저장할 style 필드:", recordData.style);
 
       if (isEditMode && recordId) {
         const updateData = { ...recordData };
         delete updateData.createdAt;
         await updateDoc(doc(db, "records", recordId), updateData);
+        console.log("✅ 기록 업데이트 성공:", { recordId, style: updateData.style });
         toast.success("기록이 수정되었어요!", { position: "top-center", autoClose: 1200 });
       } else {
         recordData.createdAt = new Date();
         recordData.likes = [];
-        await addDoc(collection(db, "records"), recordData);
+        const docRef = await addDoc(collection(db, "records"), recordData);
+        console.log("✅ 기록 저장 성공:", { id: docRef.id, style: recordData.style });
         toast.success("기록이 저장되었어요!", { position: "top-center", autoClose: 1200 });
       }
 

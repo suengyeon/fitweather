@@ -12,8 +12,7 @@ import { useAuth } from "../contexts/AuthContext";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import  useNotiSidebar from "../hooks/useNotiSidebar";
-import { getRecommendations } from "../api/getRecommendations";
-import { getSmartRecommendations } from "../utils/recommendationAlgorithm";
+import { getHomeRecommendations, getRandomHomeRecommendations } from "../utils/homeRecommendationUtils";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수
 function getWeatherEmoji(iconCode) {
@@ -50,7 +49,10 @@ function Home() {
   const [currentRecommendationIndex, setCurrentRecommendationIndex] = useState(0);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedStyle, setSelectedStyle] = useState("casual");
+  const [selectedStyle, setSelectedStyle] = useState(""); // 기본값: 전체
+
+  // 날씨 정보 가져오기 (weather 변수 선언을 먼저)
+  const { weather, loading: weatherLoading } = useWeather(selectedRegion);
 
   useEffect(() => {
     if (profile?.region) {
@@ -66,19 +68,9 @@ function Home() {
       try {
         console.log("🔍 추천 데이터 가져오기 시작:", { selectedRegion, selectedStyle });
         
-        // 새로운 스마트 추천 로직 사용
-        let data = [];
-        console.log("스마트 추천 시도");
-        data = await getSmartRecommendations(selectedRegion, selectedStyle);
-        console.log("스마트 추천 결과:", data.length, "개");
-        console.log("스마트 추천 상세:", data.map(item => ({ id: item.id, style: item.style, region: item.region })));
-        
-        // 스마트 추천이 없으면 기존 추천 로직 사용
-        if (data.length === 0) {
-          console.log("스마트 추천 없음, 기존 추천 로직 사용");
-          data = await getRecommendations(selectedRegion, 3);
-          console.log("기존 추천 결과:", data.length, "개");
-        }
+        // 홈화면 추천 로직 사용 (계절별 + 스타일 필터링, 지역 무관)
+        const data = await getHomeRecommendations(selectedStyle, weather?.season);
+        console.log("추천 결과:", data.length, "개");
         
         console.log("최종 추천 데이터:", data);
         setRecommendations(data);
@@ -94,13 +86,27 @@ function Home() {
       }
     };
     fetchRecommendations();
-  }, [selectedRegion, selectedStyle]);
+  }, [selectedRegion, selectedStyle, weather?.season]);
 
   // 새로고침 버튼 클릭 핸들러
-  const handleRefreshRecommendation = () => {
-    if (recommendations.length > 0) {
-      setIsRefreshing(true);
-      setCurrentRecommendationIndex(prev => (prev + 1) % recommendations.length);
+  const handleRefreshRecommendation = async () => {
+    if (!selectedRegion) return;
+    
+    setIsRefreshing(true);
+    try {
+      console.log("🔄 새로고침 추천 요청:", { selectedRegion, selectedStyle });
+      
+      // 랜덤 추천 로직 사용 (지역 무관)
+      const newData = await getRandomHomeRecommendations(selectedStyle, weather?.season);
+      console.log("새로고침 추천 결과:", newData.length, "개");
+      
+      if (newData.length > 0) {
+        setRecommendations(newData);
+        setCurrentRecommendationIndex(0); // 첫 번째 추천으로 설정
+      }
+    } catch (error) {
+      console.error("새로고침 추천 실패:", error);
+    } finally {
       setTimeout(() => setIsRefreshing(false), 1000);
     }
   };
@@ -114,7 +120,6 @@ function Home() {
 
 
 
-  const { weather, loading: weatherLoading } = useWeather(selectedRegion);
   const loading = profileLoading || weatherLoading;
 
   // 현재 표시할 추천 데이터 계산
@@ -260,6 +265,7 @@ function Home() {
                       onChange={(e) => setSelectedStyle(e.target.value)}
                       className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none border border-gray-300 rounded px-2 py-1"
                     >
+                      <option value="">전체</option>
                       <option value="casual">캐주얼</option>
                       <option value="formal">포멀</option>
                       <option value="basic">베이직/놈코어</option>
@@ -395,6 +401,7 @@ function Home() {
                       onChange={(e) => setSelectedStyle(e.target.value)}
                       className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none border border-gray-300 rounded px-2 py-1"
                     >
+                      <option value="">전체</option>
                       <option value="casual">캐주얼</option>
                       <option value="formal">포멀</option>
                       <option value="basic">베이직/놈코어</option>

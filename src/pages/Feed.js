@@ -15,6 +15,7 @@ import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
 import { regionMap } from "../constants/regionData";
 import { styleOptions } from "../constants/styleOptions";
+import { getStyleLabel } from "../utils/styleUtils";
 import useWeather from "../hooks/useWeather";
 
 // 날씨 아이콘 코드에 따른 이모지 반환 함수 (홈화면과 동일)
@@ -182,7 +183,19 @@ function Feed() {
       const filteredRecords = records.filter(record => {
         // 스타일이 설정되지 않은 기록은 모든 스타일에 포함
         if (!record.style) return true;
-        return record.style === style;
+        
+        // 저장된 스타일(한글)과 필터 스타일(영문) 비교
+        const recordStyleLabel = record.style; // '캐주얼'
+        const filterStyleLabel = getStyleLabel(style); // 'casual' → '캐주얼'
+        
+        console.log("🔍 스타일 필터링:", { 
+          recordStyle: recordStyleLabel, 
+          filterStyle: style, 
+          filterStyleLabel: filterStyleLabel,
+          matches: recordStyleLabel === filterStyleLabel 
+        });
+        
+        return recordStyleLabel === filterStyleLabel;
       });
       setOutfits(filteredRecords);
     });
@@ -312,26 +325,8 @@ function Feed() {
             })
           );
 
-          // 정렬: 1차 좋아요 내림차순, 2차 싫어요 오름차순, 3차 기록 시간 오름차순
-          const sorted = outfitsWithReactions.sort((a, b) => {
-            const aLikes = a.thumbsUpCount || 0;
-            const bLikes = b.thumbsUpCount || 0;
-            const aDislikes = a.thumbsDownCount || 0;
-            const bDislikes = b.thumbsDownCount || 0;
-
-            // 1차: 좋아요 개수 내림차순
-            if (aLikes !== bLikes) {
-              return bLikes - aLikes;
-            }
-            // 2차: 싫어요 개수 오름차순 (적은 순서대로)
-            if (aDislikes !== bDislikes) {
-              return aDislikes - bDislikes;
-            }
-            // 3차: 기록 시간 오름차순 (빠른 순서대로)
-            const aTime = new Date(a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt);
-            const bTime = new Date(b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt);
-            return aTime - bTime;
-          });
+          // 정렬 유틸리티 사용 (thumbsUpCount/thumbsDownCount 사용)
+          const sorted = sortRecords(outfitsWithReactions, "popular");
 
           setSortedOutfits(sorted);
         } catch (error) {

@@ -357,18 +357,14 @@ export class WeatherService {
   }
 
   /**
-   * 계절 구분
+   * 계절 구분 (온도와 절기를 고려한 정확한 계산)
    * @param {number} temperature - 온도
    * @param {Date} date - 날짜
    * @returns {string} 계절
    */
   getSeason(temperature, date) {
-    const month = date.getMonth() + 1;
-    
-    if (month >= 3 && month <= 5) return "봄";
-    if (month >= 6 && month <= 8) return "여름";
-    if (month >= 9 && month <= 11) return "가을";
-    return "겨울";
+    // forecastUtils.js의 정확한 getSeason 함수 사용
+    return getSeason(temperature.toString(), date);
   }
 
   /**

@@ -171,81 +171,76 @@ function FeedDetail() {
         const fetchData = async () => {
             console.log("🔍 FeedDetail - 데이터 조회 시작:", id);
             
-            // 먼저 records 컬렉션에서 시도
-            let ref = doc(db, "records", id);
-            let snapshot = await getDoc(ref);
-            
-            console.log("📊 records 컬렉션 조회 결과:", snapshot.exists());
-            
-            // records에 없으면 outfits 컬렉션에서 시도
-            if (!snapshot.exists()) {
-                console.log("records 컬렉션에서 데이터를 찾을 수 없음, outfits 컬렉션에서 시도");
-                ref = doc(db, "outfits", id);
-                snapshot = await getDoc(ref);
-                console.log("📊 outfits 컬렉션 조회 결과:", snapshot.exists());
-            }
-            
-            if (snapshot.exists()) {
-                const record = snapshot.data();
-                console.log("✅ 데이터 조회 성공:", record);
-                setData(record);
-
-                if (record.date) {
-                    const [year, month, day] = record.date.split('-').map(Number);
-                    let dateString = `${year}년 ${month}월 ${day}일`;
-                    if (record.recordedTime) dateString += ` ${record.recordedTime}`;
-                    setFormattedDate(dateString);
-                }
-
-                // 작성자 정보
-                const userRef = doc(db, "users", record.uid);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) {
-                    setAuthor({ ...userSnap.data(), uid: record.uid });
-                } else {
-                    setAuthor({ nickname: record.uid, uid: record.uid });
-                }
-            } else {
-                console.error("❌ 데이터를 찾을 수 없습니다:", id);
+            try {
+                // 1단계: outfits 컬렉션에서 데이터 조회
+                const outfitsRef = doc(db, "outfits", id);
+                const outfitsSnapshot = await getDoc(outfitsRef);
                 
-                // 디버깅: 모든 컬렉션에서 해당 ID 검색
-                console.log("🔍 디버깅: 모든 컬렉션에서 ID 검색 중...");
+                console.log("📊 outfits 컬렉션 조회 결과:", outfitsSnapshot.exists());
                 
-                // outfits 컬렉션의 모든 문서 ID 확인
-                try {
-                    const { collection, getDocs } = await import('firebase/firestore');
-                    const outfitsSnapshot = await getDocs(collection(db, 'outfits'));
-                    const outfitsIds = [];
-                    outfitsSnapshot.forEach(doc => {
-                        outfitsIds.push(doc.id);
-                    });
-                    console.log("📋 outfits 컬렉션의 모든 ID:", outfitsIds.slice(0, 5), "...");
-                    
-                    // records 컬렉션의 모든 문서 ID 확인
-                    const recordsSnapshot = await getDocs(collection(db, 'records'));
-                    const recordsIds = [];
-                    recordsSnapshot.forEach(doc => {
-                        recordsIds.push(doc.id);
-                    });
-                    console.log("📋 records 컬렉션의 모든 ID:", recordsIds.slice(0, 5), "...");
-                    
-                    // 유사한 ID 찾기
-                    const similarOutfits = outfitsIds.filter(id => id.includes(id.substring(0, 8)));
-                    const similarRecords = recordsIds.filter(id => id.includes(id.substring(0, 8)));
-                    console.log("🔍 유사한 ID (outfits):", similarOutfits);
-                    console.log("🔍 유사한 ID (records):", similarRecords);
-                    
-                    // 사용자에게 명확한 메시지 표시
-                    console.log("💡 해결 방안:");
-                    console.log("1. 해당 기록이 이미 삭제되었을 수 있습니다.");
-                    console.log("2. 신고 시스템에서 잘못된 ID가 생성되었을 수 있습니다.");
-                    console.log("3. 데이터베이스에 실제로 데이터가 없습니다.");
-                    
-                } catch (debugError) {
-                    console.error("디버깅 중 오류:", debugError);
+                if (outfitsSnapshot.exists()) {
+                    const record = outfitsSnapshot.data();
+                    console.log("✅ outfits에서 데이터 조회 성공:", record);
+                    setData(record);
+
+                    if (record.date) {
+                        const [year, month, day] = record.date.split('-').map(Number);
+                        let dateString = `${year}년 ${month}월 ${day}일`;
+                        if (record.recordedTime) dateString += ` ${record.recordedTime}`;
+                        setFormattedDate(dateString);
+                    }
+
+                    // 작성자 정보
+                    const userRef = doc(db, "users", record.uid);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        setAuthor({ ...userSnap.data(), uid: record.uid });
+                    } else {
+                        setAuthor({ nickname: record.uid, uid: record.uid });
+                    }
+                    setLoading(false);
+                    return;
                 }
+
+                // 2단계: records 컬렉션에서 데이터 조회
+                console.log("🔄 records 컬렉션에서 조회 시도...");
+                const recordsRef = doc(db, "records", id);
+                const recordsSnapshot = await getDoc(recordsRef);
+                
+                console.log("📊 records 컬렉션 조회 결과:", recordsSnapshot.exists());
+                
+                if (recordsSnapshot.exists()) {
+                    const record = recordsSnapshot.data();
+                    console.log("✅ records에서 데이터 조회 성공:", record);
+                    setData(record);
+
+                    if (record.date) {
+                        const [year, month, day] = record.date.split('-').map(Number);
+                        let dateString = `${year}년 ${month}월 ${day}일`;
+                        if (record.recordedTime) dateString += ` ${record.recordedTime}`;
+                        setFormattedDate(dateString);
+                    }
+
+                    // 작성자 정보
+                    const userRef = doc(db, "users", record.uid);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        setAuthor({ ...userSnap.data(), uid: record.uid });
+                    } else {
+                        setAuthor({ nickname: record.uid, uid: record.uid });
+                    }
+                    setLoading(false);
+                    return;
+                }
+
+                // 3단계: 두 컬렉션 모두에서 찾을 수 없음
+                console.error("❌ 두 컬렉션 모두에서 데이터를 찾을 수 없습니다:", id);
+                setLoading(false);
+                
+            } catch (error) {
+                console.error("❌ 데이터 조회 중 오류:", error);
+                setLoading(false);
             }
-            setLoading(false);
         };
         fetchData();
     }, [id, user]);
@@ -617,6 +612,16 @@ function FeedDetail() {
                             </div>
 
                             <div className="flex flex-col gap-4 items-center">
+                                {/* 계절 정보 */}
+                                <div className="flex items-center w-60">
+                                    <span className="w-28 text-base font-semibold text-left">계절</span>
+                                    <div className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center bg-white">
+                                        <span className="text-gray-800">
+                                            {data?.weather?.season ?? data?.season ?? '-'}
+                                        </span>
+                                    </div>
+                                </div>
+
                                 <div className="flex items-center w-60">
                                     <span className="w-28 text-base font-semibold text-left">온도</span>
                                     <div className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center bg-white">

@@ -1,6 +1,6 @@
 // 절기 기반 추천 시스템
 
-import { getSeasonInfo, getFeelingTemperature, STYLE_TAGS, CLOTHING_CATEGORIES } from './seasonUtils';
+import { getSeasonInfo, getFeelingTemperature, CLOTHING_CATEGORIES } from './seasonUtils';
 
 /**
  * 절기와 날씨 조건에 따른 옷 추천 규칙

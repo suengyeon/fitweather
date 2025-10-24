@@ -87,19 +87,7 @@ export function getFeelingTemperature(temp, humidity = 50, windSpeed = 0) {
   }
 }
 
-/**
- * 스타일 태그 정의
- */
-export const STYLE_TAGS = {
-  casual: { label: '일상', emoji: '👕', color: '#98FB98' },
-  formal: { label: '포멀', emoji: '👔', color: '#4169E1' },
-  sport: { label: '운동', emoji: '🏃', color: '#FF6347' },
-  date: { label: '데이트', emoji: '💕', color: '#FF69B4' },
-  work: { label: '출근', emoji: '💼', color: '#2F4F4F' },
-  travel: { label: '여행', emoji: '✈️', color: '#20B2AA' },
-  party: { label: '파티', emoji: '🎉', color: '#FFD700' },
-  home: { label: '집', emoji: '🏠', color: '#DDA0DD' }
-};
+// 스타일 관련 함수들은 styleUtils.js로 이동
 
 /**
  * 옷 카테고리 정규화

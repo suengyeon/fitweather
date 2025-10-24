@@ -3,6 +3,8 @@
  * 과거 날짜에만 사용하는 전용 API
  */
 
+import { getSeason } from "../utils/forecastUtils";
+
 // 기상청 API 키
 const SERVICE_KEY = "StCI4VD0mNM52wrGGdkJqHlAh12auErOmKgzJtma0l%2FLsc%2B5QvM10mvkeUpgXxk%2BD7u7scjZjBMEjJfKXOxzWg%3D%3D";
 
@@ -100,7 +102,7 @@ export const fetchKmaPastWeather = async (date, region) => {
         sky: getSkyFromWeather(item.avgTa, item.sumRn), // 하늘 상태 추정
         pty: getPtyFromRain(item.sumRn), // 강수 형태 추정
         iconCode: getIconFromData(item.avgTa, item.sumRn),
-        season: getSeasonFromTemp(item.avgTa || item.ta)
+        season: getSeason(item.avgTa || item.ta, new Date(date))
       };
       
       console.log("✅ 기상청 과거 날씨 데이터 추출 완료:", weatherData);
@@ -156,34 +158,3 @@ function getIconFromData(temp, rain) {
   }
 }
 
-/**
- * 기온을 기반으로 계절 결정
- */
-function getSeasonFromTemp(temp) {
-  const temperature = parseFloat(temp) || 20;
-  const currentMonth = new Date().getMonth() + 1;
-  
-  const isRisingSeason = currentMonth >= 2 && currentMonth <= 7;
-  
-  if (isRisingSeason) {
-    if (temperature <= -5) return "늦겨울";
-    if (temperature <= 0) return "겨울";
-    if (temperature <= 5) return "초겨울";
-    if (temperature <= 10) return "늦가을";
-    if (temperature <= 15) return "가을";
-    if (temperature <= 20) return "초가을";
-    if (temperature < 25) return "늦봄";
-    if (temperature < 28) return "초여름";
-    return "여름";
-  } else {
-    if (temperature >= 28) return "늦여름";
-    if (temperature >= 25) return "여름";
-    if (temperature >= 20) return "초여름";
-    if (temperature >= 15) return "늦봄";
-    if (temperature >= 10) return "봄";
-    if (temperature >= 5) return "초봄";
-    if (temperature > 0) return "늦겨울";
-    if (temperature > -5) return "겨울";
-    return "늦겨울";
-  }
-}

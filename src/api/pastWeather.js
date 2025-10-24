@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { collection, doc, getDoc, setDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { fetchKmaForecast } from "./kmaWeather";
 import { fetchKmaPastWeather } from "./kmaPastWeather";
+import { getSeason } from "../utils/forecastUtils";
 
 /**
  * 과거 날씨 데이터를 Firestore에 저장하는 함수
@@ -248,8 +249,8 @@ export const fetchAndSavePastWeather = async (date, region) => {
     // 아이콘 코드 생성
     const iconCode = getWeatherIconFromCodes(sky, pty);
     
-    // 계절 계산 (평균 기온 기반)
-    const season = getSeasonFromTemp(parseFloat(avgTemp));
+    // 계절 계산 (절기 + 온도 기반, 홈화면과 동일한 로직)
+    const season = getSeason(avgTemp, new Date(date));
     
     const weatherData = {
       avgTemp: avgTemp,
@@ -313,40 +314,3 @@ function getWeatherIconFromCodes(sky, pty) {
   return "cloudy";      // 기본값: 구름 - ☁️
 }
 
-/**
- * 평균 기온을 기반으로 계절을 계산하는 함수
- * @param {number} avgTemp - 평균 기온
- * @returns {string} - 계절명
- */
-function getSeasonFromTemp(avgTemp) {
-  const currentMonth = new Date().getMonth() + 1; // 1-12월
-  
-  // 올라가는 시기 (2~7월)와 내려가는 시기 (8~1월) 구분
-  const isRisingSeason = currentMonth >= 2 && currentMonth <= 7;
-  
-  // 올라가는 시기 (2~7월)
-  if (isRisingSeason) {
-    if (avgTemp <= -5) return "늦겨울";
-    if (avgTemp <= 0) return "겨울";
-    if (avgTemp <= 5) return "초겨울";
-    if (avgTemp <= 10) return "늦가을";
-    if (avgTemp <= 15) return "가을";
-    if (avgTemp <= 20) return "초가을";
-    if (avgTemp < 25) return "늦봄";
-    if (avgTemp < 28) return "초여름";
-    return "여름";
-  }
-  
-  // 내려가는 시기 (8~1월)
-  else {
-    if (avgTemp >= 28) return "늦여름";
-    if (avgTemp >= 25) return "여름";
-    if (avgTemp >= 20) return "초여름";
-    if (avgTemp >= 15) return "늦봄";
-    if (avgTemp >= 10) return "봄";
-    if (avgTemp >= 5) return "초봄";
-    if (avgTemp > 0) return "늦겨울";
-    if (avgTemp > -5) return "겨울";
-    return "늦겨울";
-  }
-}

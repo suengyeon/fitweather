@@ -13,7 +13,7 @@
  * @returns {Array} 정렬된 배열
  */
 export function sortByPopularity(records, options = {}) {
-  const { useThumbsCount = false } = options;
+  const { useThumbsCount = true } = options;
   
   return [...records].sort((a, b) => {
     // 좋아요 수 비교

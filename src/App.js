@@ -25,30 +25,8 @@ import Admin from "./pages/Admin";
 import BannedUserMessage from "./components/BannedUserMessage";
 import SetAdmin from "./pages/SetAdmin";
 import AdminLogin from "./pages/AdminLogin";
+import UpdateBasicStyle from "./pages/UpdateBasicStyle";
 
-// 개발 환경에서만 알림 테스트 유틸리티 import
-if (process.env.NODE_ENV === 'development') {
-  import('./utils/notificationTestUtils');
-  import('./utils/notificationDebugUtils');
-  import('./utils/userHelper');
-  import('./utils/quickTest');
-  import('./utils/notificationFix');
-  import('./utils/deepDebug');
-  import('./utils/fixNotificationSender');
-  import('./utils/analyzeNotifications');
-  import('./utils/userDataDebug');
-  import('./utils/fixBongttaNotifications');
-  import('./utils/consolidateUserNames');
-  import('./utils/testFollowNotification');
-  import('./utils/quickFollowTest');
-  import('./utils/unsubscribeHelper');
-  import('./utils/debugNewPostNotification');
-  import('./utils/realRecordDebug');
-  import('./utils/debugRecommendations');
-  import('./utils/debugRecordData');
-  import('./utils/cleanupTestRecords');
-  import('./utils/checkRecordUserInfo');
-}
 
 
 // 전역 테스트 함수: 브라우저 콘솔에서 testSaveOutfitRecord() 호출
@@ -148,6 +126,7 @@ function AppContent() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/set-admin" element={<SetAdmin />} />
+          <Route path="/update-basic-style" element={<UpdateBasicStyle />} />
         </Routes>
   );
 }

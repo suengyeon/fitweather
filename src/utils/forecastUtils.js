@@ -91,109 +91,36 @@ function getWeatherIcon(sky, pty) {
 }
 
 /**
- * 절기와 온도를 조합한 계절 판별 함수
+ * 절기 기반 세부 계절 구분 (solar-term 대체)
  * @param {string} tavg - 일평균 기온
  * @param {Date} date - 날짜 객체 (기본값: 현재 날짜)
  * @returns {string} - 계절명
  */
-function getSeason(tavg, date = new Date()) {
+export function getSeason(tavg, date = new Date()) {
   const temperature = parseFloat(tavg);
-  const currentMonth = date.getMonth() + 1; // 1-12월
-  
-  // 1차 기준: 절기로 큰 계절 구분
-  const seasonBySolarTerm = getSeasonBySolarTerm(date);
-  
-  // 2차 기준: 온도 세부 구분
-  const isRisingSeason = currentMonth >= 2 && currentMonth <= 7;
-  
-  // 해당 계절 구간 안에서 온도 세부 구분 적용
-  if (seasonBySolarTerm === "봄") {
-    return getDetailedSeason(temperature, isRisingSeason, "봄");
-  } else if (seasonBySolarTerm === "여름") {
-    return getDetailedSeason(temperature, isRisingSeason, "여름");
-  } else if (seasonBySolarTerm === "가을") {
-    return getDetailedSeason(temperature, isRisingSeason, "가을");
-  } else if (seasonBySolarTerm === "겨울") {
-    return getDetailedSeason(temperature, isRisingSeason, "겨울");
-  }
-  
-  // 예외 처리
-  return getDetailedSeason(temperature, isRisingSeason, "겨울");
-}
+  const y = date.getFullYear();
 
-/**
- * 절기를 기준으로 큰 계절을 판별하는 함수
- * @param {Date} date - 날짜 객체
- * @returns {string} - 큰 계절 (봄/여름/가을/겨울)
- */
-function getSeasonBySolarTerm(date) {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  
-  // 2024년 절기 날짜 (음력 기준)
-  const solarTerms = getSolarTerms(year);
-  
-  // 현재 날짜를 YYYY-MM-DD 형식으로 변환
-  const currentDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-  
-  // 절기별 계절 구분
-  if (currentDate >= solarTerms.입동 && currentDate < solarTerms.입춘) {
-    return "겨울";
-  } else if (currentDate >= solarTerms.입춘 && currentDate < solarTerms.입하) {
-    return "봄";
-  } else if (currentDate >= solarTerms.입하 && currentDate < solarTerms.입추) {
-    return "여름";
-  } else if (currentDate >= solarTerms.입추 && currentDate < solarTerms.입동) {
-    return "가을";
-  } else {
-    // 연말/연초 처리 (입동 이후 ~ 입춘 이전)
-    return "겨울";
-  }
-}
-
-/**
- * 해당 연도의 주요 절기 날짜를 반환하는 함수
- * @param {number} year - 연도
- * @returns {Object} - 절기 날짜 객체
- */
-function getSolarTerms(year) {
-  // 실제 절기 날짜는 천문학적 계산이 필요하지만, 
-  // 여기서는 대략적인 양력 날짜로 근사치를 사용
-  const terms = {
-    2024: {
-      입동: "2024-11-07",  // 입동 (11월 7일경)
-      입춘: "2025-02-04",  // 입춘 (2월 4일경)
-      입하: "2024-05-05",  // 입하 (5월 5일경)
-      입추: "2024-08-07"   // 입추 (8월 7일경)
-    },
-    2025: {
-      입동: "2025-11-07",
-      입춘: "2026-02-04",
-      입하: "2025-05-05",
-      입추: "2025-08-07"
-    },
-    2026: {
-      입동: "2026-11-07",
-      입춘: "2027-02-04",
-      입하: "2026-05-05",
-      입추: "2026-08-07"
-    }
+  // 절기 기준일 (매년 약 ±1일 오차, 평균값 사용)
+  const solarTerms = {
+    입춘: new Date(y, 1, 4),  // 2월 4일
+    입하: new Date(y, 4, 6),  // 5월 6일
+    입추: new Date(y, 7, 8),  // 8월 8일
+    입동: new Date(y, 10, 7), // 11월 7일
   };
-  
-  return terms[year] || terms[2024]; // 기본값으로 2024년 사용
-}
 
-/**
- * 온도와 계절 구간을 고려한 세부 계절 판별 함수
- * @param {number} temperature - 온도
- * @param {boolean} isRisingSeason - 올라가는 시기 여부
- * @param {string} baseSeason - 기본 계절 (봄/여름/가을/겨울)
- * @returns {string} - 세부 계절명
- */
-function getDetailedSeason(temperature, isRisingSeason, baseSeason) {
-  // 올라가는 시기 (2~7월)
-  if (isRisingSeason) {
+  // 계절 기본 분류
+  let baseSeason = "";
+  if (date >= solarTerms.입춘 && date < solarTerms.입하) baseSeason = "봄";
+  else if (date >= solarTerms.입하 && date < solarTerms.입추) baseSeason = "여름";
+  else if (date >= solarTerms.입추 && date < solarTerms.입동) baseSeason = "가을";
+  else baseSeason = "겨울";
+
+  // 월 기준으로 상승기(2~7월), 하강기(8~1월) 구분
+  const month = date.getMonth() + 1;
+  const isRising = month >= 2 && month <= 7;
+
+  // 세부 계절 구분
+  if (isRising) {
     if (temperature <= -5) return "늦겨울";
     if (temperature <= 0) return "겨울";
     if (temperature <= 5) return "초겨울";
@@ -203,21 +130,20 @@ function getDetailedSeason(temperature, isRisingSeason, baseSeason) {
     if (temperature < 25) return "늦봄";
     if (temperature < 28) return "초여름";
     return "여름";
-  }
-  
-  // 내려가는 시기 (8~1월)
-  else {
+  } else {
     if (temperature >= 28) return "늦여름";
     if (temperature >= 25) return "여름";
     if (temperature >= 20) return "초여름";
     if (temperature >= 15) return "늦봄";
-    if (temperature >= 10) return "봄";
-    if (temperature >= 5) return "초봄";
-    if (temperature > 0) return "늦겨울";
+    if (temperature >= 10) return "가을";
+    if (temperature >= 5) return "늦가을";
+    if (temperature > 0) return "초겨울";
     if (temperature > -5) return "겨울";
     return "늦겨울";
   }
 }
+
+
 
 /**
  * 계절에 따른 감성적인 날씨 표현을 반환하는 함수
