@@ -91,56 +91,53 @@ function getWeatherIcon(sky, pty) {
 }
 
 /**
- * 절기 기반 세부 계절 구분 (solar-term 대체)
- * @param {string} tavg - 일평균 기온
+ * 절기 기준 세부 계절 판별
+ * (24절기 기반, 온도 미사용)
+ */
+export function getDetailedSeasonByLunar(date = new Date()) {
+  const y = date.getFullYear();
+
+  // 평균 절기 날짜 (±1일 오차)
+  const terms = {
+    입춘: new Date(y, 1, 4),
+    춘분: new Date(y, 2, 21),
+    입하: new Date(y, 4, 6),
+    하지: new Date(y, 5, 21),
+    소서: new Date(y, 6, 7),
+    대서: new Date(y, 6, 22),
+    입추: new Date(y, 7, 8),
+    추분: new Date(y, 8, 23),
+    한로: new Date(y, 9, 8),
+    입동: new Date(y, 10, 7),
+    대설: new Date(y, 11, 7),
+    동지: new Date(y, 11, 22),
+  };
+
+  // 순차적 비교
+  if (date >= terms.입춘 && date < terms.춘분) return "초봄";
+  if (date >= terms.춘분 && date < terms.입하) return "봄";
+  if (date >= terms.입하 && date < terms.하지) return "늦봄";
+  if (date >= terms.하지 && date < terms.소서) return "초여름";
+  if (date >= terms.소서 && date < terms.대서) return "여름";
+  if (date >= terms.대서 && date < terms.입추) return "늦여름";
+  if (date >= terms.입추 && date < terms.추분) return "초가을";
+  if (date >= terms.추분 && date < terms.한로) return "가을";
+  if (date >= terms.한로 && date < terms.입동) return "늦가을";
+  if (date >= terms.입동 && date < terms.대설) return "초겨울";
+  if (date >= terms.대설 && date < terms.동지) return "겨울";
+  if (date >= terms.동지 || date < terms.입춘) return "늦겨울";
+
+  return "가을"; // fallback
+}
+
+/**
+ * 절기 기반 세부 계절 구분 (기존 함수 호환성 유지)
+ * @param {string} tavg - 일평균 기온 (사용하지 않음)
  * @param {Date} date - 날짜 객체 (기본값: 현재 날짜)
  * @returns {string} - 계절명
  */
 export function getSeason(tavg, date = new Date()) {
-  const temperature = parseFloat(tavg);
-  const y = date.getFullYear();
-
-  // 절기 기준일 (매년 약 ±1일 오차, 평균값 사용)
-  const solarTerms = {
-    입춘: new Date(y, 1, 4),  // 2월 4일
-    입하: new Date(y, 4, 6),  // 5월 6일
-    입추: new Date(y, 7, 8),  // 8월 8일
-    입동: new Date(y, 10, 7), // 11월 7일
-  };
-
-  // 계절 기본 분류
-  let baseSeason = "";
-  if (date >= solarTerms.입춘 && date < solarTerms.입하) baseSeason = "봄";
-  else if (date >= solarTerms.입하 && date < solarTerms.입추) baseSeason = "여름";
-  else if (date >= solarTerms.입추 && date < solarTerms.입동) baseSeason = "가을";
-  else baseSeason = "겨울";
-
-  // 월 기준으로 상승기(2~7월), 하강기(8~1월) 구분
-  const month = date.getMonth() + 1;
-  const isRising = month >= 2 && month <= 7;
-
-  // 세부 계절 구분
-  if (isRising) {
-    if (temperature <= -5) return "늦겨울";
-    if (temperature <= 0) return "겨울";
-    if (temperature <= 5) return "초겨울";
-    if (temperature <= 10) return "늦가을";
-    if (temperature <= 15) return "가을";
-    if (temperature <= 20) return "초가을";
-    if (temperature < 25) return "늦봄";
-    if (temperature < 28) return "초여름";
-    return "여름";
-  } else {
-    if (temperature >= 28) return "늦여름";
-    if (temperature >= 25) return "여름";
-    if (temperature >= 20) return "초여름";
-    if (temperature >= 15) return "늦봄";
-    if (temperature >= 10) return "가을";
-    if (temperature >= 5) return "늦가을";
-    if (temperature > 0) return "초겨울";
-    if (temperature > -5) return "겨울";
-    return "늦겨울";
-  }
+  return getDetailedSeasonByLunar(date);
 }
 
 

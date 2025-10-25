@@ -12,12 +12,18 @@ import { getSeason, getWeatherExpression, getExpressionColor } from '../utils/fo
 export class WeatherService {
   constructor() {
     this.primaryAPI = 'kma';
-    this.fallbackAPI = 'openweathermap';
+    this.fallbackAPIs = [
+      'openweathermap',
+      'accuweather', 
+      'weatherapi',
+      'visualcrossing'
+    ];
     this.lastUsedAPI = null;
+    this.currentFallbackIndex = 0;
   }
 
   /**
-   * 날씨 데이터 조회 (기상청 우선, 실패 시 OpenWeatherMap)
+   * 날씨 데이터 조회 (기상청 우선, 실패 시 여러 대체 API 시도)
    * @param {string} region - 지역명
    * @returns {Promise<Object>} 날씨 데이터
    */
@@ -47,30 +53,60 @@ export class WeatherService {
       return kmaData;
     } catch (error) {
       console.warn(`⚠️ [WeatherService] 기상청 API 실패: ${error.message}`);
-      console.log(`🔄 [WeatherService] OpenWeatherMap API로 대체 시도 중...`);
+      return await this.tryFallbackAPIs(region);
+    }
+  }
+
+  /**
+   * 대체 API들을 순차적으로 시도
+   * @param {string} region - 지역명
+   * @returns {Promise<Object>} 날씨 데이터
+   */
+  async tryFallbackAPIs(region) {
+    for (let i = 0; i < this.fallbackAPIs.length; i++) {
+      const apiName = this.fallbackAPIs[i];
+      console.log(`🔄 [WeatherService] ${apiName} API로 대체 시도 중... (${i + 1}/${this.fallbackAPIs.length})`);
       
       try {
-        const owmData = await this.fetchOpenWeatherMap(region);
-        this.lastUsedAPI = this.fallbackAPI;
-        console.log(`✅ [WeatherService] OpenWeatherMap API 성공!`);
-        console.log(`📊 [WeatherService] OpenWeatherMap 데이터:`, {
-          온도: owmData.temp,
-          계절: owmData.season,
-          표현: owmData.weatherExpression,
-          아이콘: owmData.icon
-        });
-        return owmData;
-      } catch (fallbackError) {
-        console.error(`❌ [WeatherService] OpenWeatherMap API도 실패: ${fallbackError.message}`);
-        console.log(`🔄 [WeatherService] 임시 모의 데이터 사용`);
+        let data;
+        switch (apiName) {
+          case 'openweathermap':
+            data = await this.fetchOpenWeatherMap(region);
+            break;
+          case 'accuweather':
+            data = await this.fetchAccuWeather(region);
+            break;
+          case 'weatherapi':
+            data = await this.fetchWeatherAPI(region);
+            break;
+          case 'visualcrossing':
+            data = await this.fetchVisualCrossing(region);
+            break;
+          default:
+            continue;
+        }
         
-        // 모든 API가 실패한 경우 임시 모의 데이터 반환
-        const mockData = this.getMockWeatherData(region);
-        this.lastUsedAPI = 'mock';
-        console.log(`📊 [WeatherService] 모의 데이터:`, mockData);
-        return mockData;
+        this.lastUsedAPI = apiName;
+        console.log(`✅ [WeatherService] ${apiName} API 성공!`);
+        console.log(`📊 [WeatherService] ${apiName} 데이터:`, {
+          온도: data.temp,
+          계절: data.season,
+          표현: data.weatherExpression,
+          아이콘: data.icon
+        });
+        return data;
+      } catch (apiError) {
+        console.warn(`⚠️ [WeatherService] ${apiName} API 실패: ${apiError.message}`);
+        continue;
       }
     }
+    
+    // 모든 API가 실패한 경우
+    console.error(`❌ [WeatherService] 모든 API 실패 - 임시 모의 데이터 사용`);
+    const mockData = this.getMockWeatherData(region);
+    this.lastUsedAPI = 'mock';
+    console.log(`📊 [WeatherService] 모의 데이터:`, mockData);
+    return mockData;
   }
 
   /**
@@ -150,13 +186,11 @@ export class WeatherService {
     console.log(`🌍 [OWM API] OpenWeatherMap API 호출 시작 - 지역: ${region}`);
     const startTime = Date.now();
     
-    // 임시로 API 키 직접 설정 (환경변수 문제 해결을 위해)
-    // 새로운 유효한 API 키 사용
-    const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || "89571719c6df9df656e8a59eb44d21da";
+    const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY;
     
     if (!API_KEY) {
       console.error(`❌ [OWM API] API 키 없음 - .env 파일에 REACT_APP_OPENWEATHER_API_KEY 설정 필요`);
-      throw new Error('OpenWeatherMap API 키가 설정되지 않았습니다. .env 파일에 REACT_APP_OPENWEATHER_API_KEY를 추가하세요.');
+      throw new Error('OpenWeatherMap API 키가 설정되지 않았습니다.');
     }
     
     console.log(`🔑 [OWM API] API 키 확인: ${API_KEY.substring(0, 8)}...`);
@@ -189,6 +223,157 @@ export class WeatherService {
       console.error(`❌ [OWM API] OpenWeatherMap API 실패 - 소요시간: ${endTime - startTime}ms`);
       console.error(`❌ [OWM API] 오류 상세:`, error);
       throw new Error(`OpenWeatherMap API 호출 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * AccuWeather API 호출
+   * @param {string} region - 지역명
+   * @returns {Promise<Object>} AccuWeather 날씨 데이터
+   */
+  async fetchAccuWeather(region) {
+    console.log(`🌤️ [AW API] AccuWeather API 호출 시작 - 지역: ${region}`);
+    const startTime = Date.now();
+    
+    const API_KEY = process.env.REACT_APP_ACCUWEATHER_API_KEY;
+    
+    if (!API_KEY) {
+      console.error(`❌ [AW API] API 키 없음 - .env 파일에 REACT_APP_ACCUWEATHER_API_KEY 설정 필요`);
+      throw new Error('AccuWeather API 키가 설정되지 않았습니다.');
+    }
+    
+    console.log(`🔑 [AW API] API 키 확인: ${API_KEY.substring(0, 8)}...`);
+
+    try {
+      // 1단계: 지역 키 조회
+      const locationKey = await this.getAccuWeatherLocationKey(region, API_KEY);
+      if (!locationKey) {
+        throw new Error('AccuWeather 지역 키를 찾을 수 없습니다.');
+      }
+      
+      // 2단계: 현재 날씨 조회
+      const url = `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${API_KEY}&details=true`;
+      console.log(`🌐 [AW API] 요청 URL: ${url.replace(API_KEY, '***API_KEY***')}`);
+      
+      const response = await fetch(url);
+      const endTime = Date.now();
+      
+      if (!response.ok) {
+        console.error(`❌ [AW API] HTTP 오류 - 소요시간: ${endTime - startTime}ms`);
+        console.error(`❌ [AW API] 상태: ${response.status} ${response.statusText}`);
+        throw new Error(`AccuWeather API 오류: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`✅ [AW API] AccuWeather API 응답 성공 - 소요시간: ${endTime - startTime}ms`);
+      console.log(`📊 [AW API] 원본 데이터:`, data);
+      
+      const convertedData = this.convertAccuWeatherToKmaFormat(data[0]);
+      console.log(`🔄 [AW API] KMA 형식으로 변환 완료:`, convertedData);
+      return convertedData;
+    } catch (error) {
+      const endTime = Date.now();
+      console.error(`❌ [AW API] AccuWeather API 실패 - 소요시간: ${endTime - startTime}ms`);
+      console.error(`❌ [AW API] 오류 상세:`, error);
+      throw new Error(`AccuWeather API 호출 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * WeatherAPI 호출
+   * @param {string} region - 지역명
+   * @returns {Promise<Object>} WeatherAPI 날씨 데이터
+   */
+  async fetchWeatherAPI(region) {
+    console.log(`🌦️ [WA API] WeatherAPI 호출 시작 - 지역: ${region}`);
+    const startTime = Date.now();
+    
+    const API_KEY = process.env.REACT_APP_WEATHERAPI_KEY;
+    
+    if (!API_KEY) {
+      console.error(`❌ [WA API] API 키 없음 - .env 파일에 REACT_APP_WEATHERAPI_KEY 설정 필요`);
+      throw new Error('WeatherAPI 키가 설정되지 않았습니다.');
+    }
+    
+    console.log(`🔑 [WA API] API 키 확인: ${API_KEY.substring(0, 8)}...`);
+
+    // 한국 지역명을 영어로 변환
+    const englishRegion = this.convertRegionToEnglish(region);
+    const url = `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${englishRegion}&aqi=no`;
+    
+    console.log(`🌐 [WA API] 요청 URL: ${url.replace(API_KEY, '***API_KEY***')}`);
+    
+    try {
+      const response = await fetch(url);
+      const endTime = Date.now();
+      
+      if (!response.ok) {
+        console.error(`❌ [WA API] HTTP 오류 - 소요시간: ${endTime - startTime}ms`);
+        console.error(`❌ [WA API] 상태: ${response.status} ${response.statusText}`);
+        throw new Error(`WeatherAPI 오류: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`✅ [WA API] WeatherAPI 응답 성공 - 소요시간: ${endTime - startTime}ms`);
+      console.log(`📊 [WA API] 원본 데이터:`, data);
+      
+      const convertedData = this.convertWeatherAPIToKmaFormat(data);
+      console.log(`🔄 [WA API] KMA 형식으로 변환 완료:`, convertedData);
+      return convertedData;
+    } catch (error) {
+      const endTime = Date.now();
+      console.error(`❌ [WA API] WeatherAPI 실패 - 소요시간: ${endTime - startTime}ms`);
+      console.error(`❌ [WA API] 오류 상세:`, error);
+      throw new Error(`WeatherAPI 호출 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * Visual Crossing API 호출
+   * @param {string} region - 지역명
+   * @returns {Promise<Object>} Visual Crossing 날씨 데이터
+   */
+  async fetchVisualCrossing(region) {
+    console.log(`🌍 [VC API] Visual Crossing API 호출 시작 - 지역: ${region}`);
+    const startTime = Date.now();
+    
+    const API_KEY = process.env.REACT_APP_VISUALCROSSING_API_KEY;
+    
+    if (!API_KEY) {
+      console.error(`❌ [VC API] API 키 없음 - .env 파일에 REACT_APP_VISUALCROSSING_API_KEY 설정 필요`);
+      throw new Error('Visual Crossing API 키가 설정되지 않았습니다.');
+    }
+    
+    console.log(`🔑 [VC API] API 키 확인: ${API_KEY.substring(0, 8)}...`);
+
+    // 한국 지역명을 영어로 변환
+    const englishRegion = this.convertRegionToEnglish(region);
+    const url = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${englishRegion}?unitGroup=metric&key=${API_KEY}&contentType=json`;
+    
+    console.log(`🌐 [VC API] 요청 URL: ${url.replace(API_KEY, '***API_KEY***')}`);
+    
+    try {
+      const response = await fetch(url);
+      const endTime = Date.now();
+      
+      if (!response.ok) {
+        console.error(`❌ [VC API] HTTP 오류 - 소요시간: ${endTime - startTime}ms`);
+        console.error(`❌ [VC API] 상태: ${response.status} ${response.statusText}`);
+        throw new Error(`Visual Crossing API 오류: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`✅ [VC API] Visual Crossing API 응답 성공 - 소요시간: ${endTime - startTime}ms`);
+      console.log(`📊 [VC API] 원본 데이터:`, data);
+      
+      const convertedData = this.convertVisualCrossingToKmaFormat(data);
+      console.log(`🔄 [VC API] KMA 형식으로 변환 완료:`, convertedData);
+      return convertedData;
+    } catch (error) {
+      const endTime = Date.now();
+      console.error(`❌ [VC API] Visual Crossing API 실패 - 소요시간: ${endTime - startTime}ms`);
+      console.error(`❌ [VC API] 오류 상세:`, error);
+      throw new Error(`Visual Crossing API 호출 실패: ${error.message}`);
     }
   }
 
@@ -259,6 +444,111 @@ export class WeatherService {
       expressionColor: this.getExpressionColor(this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature)),
       fcstTime: new Date().toISOString(),
       apiSource: 'openweathermap'
+    };
+  }
+
+  /**
+   * AccuWeather 지역 키 조회
+   * @param {string} region - 지역명
+   * @param {string} apiKey - API 키
+   * @returns {Promise<string>} 지역 키
+   */
+  async getAccuWeatherLocationKey(region, apiKey) {
+    const englishRegion = this.convertRegionToEnglish(region);
+    const url = `https://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${englishRegion}&country=KR`;
+    
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`AccuWeather 지역 검색 실패: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data && data.length > 0) {
+        return data[0].Key;
+      }
+      return null;
+    } catch (error) {
+      console.error(`❌ [AW API] 지역 키 조회 실패:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * AccuWeather 데이터를 기상청 형식으로 변환
+   * @param {Object} awData - AccuWeather 데이터
+   * @returns {Object} 변환된 날씨 데이터
+   */
+  convertAccuWeatherToKmaFormat(awData) {
+    const temperature = Math.round(awData.Temperature.Metric.Value);
+    const weatherCode = awData.WeatherIcon;
+
+    return {
+      temp: temperature,
+      tavg: temperature,
+      rain: awData.Precip1hr?.Metric?.Value || 0,
+      humidity: awData.RelativeHumidity,
+      sky: this.convertAccuWeatherToSky(weatherCode),
+      pty: this.convertAccuWeatherToPty(weatherCode),
+      icon: this.convertAccuWeatherToIcon(weatherCode),
+      season: this.getSeason(temperature, new Date()),
+      weatherExpression: this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature),
+      seasonColor: this.getSeasonColor(this.getSeason(temperature, new Date())),
+      expressionColor: this.getExpressionColor(this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature)),
+      fcstTime: new Date().toISOString(),
+      apiSource: 'accuweather'
+    };
+  }
+
+  /**
+   * WeatherAPI 데이터를 기상청 형식으로 변환
+   * @param {Object} waData - WeatherAPI 데이터
+   * @returns {Object} 변환된 날씨 데이터
+   */
+  convertWeatherAPIToKmaFormat(waData) {
+    const { current } = waData;
+    const temperature = Math.round(current.temp_c);
+
+    return {
+      temp: temperature,
+      tavg: temperature,
+      rain: current.precip_mm || 0,
+      humidity: current.humidity,
+      sky: this.convertWeatherAPIToSky(current.condition.code),
+      pty: this.convertWeatherAPIToPty(current.condition.code),
+      icon: this.convertWeatherAPIToIcon(current.condition.code),
+      season: this.getSeason(temperature, new Date()),
+      weatherExpression: this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature),
+      seasonColor: this.getSeasonColor(this.getSeason(temperature, new Date())),
+      expressionColor: this.getExpressionColor(this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature)),
+      fcstTime: new Date().toISOString(),
+      apiSource: 'weatherapi'
+    };
+  }
+
+  /**
+   * Visual Crossing 데이터를 기상청 형식으로 변환
+   * @param {Object} vcData - Visual Crossing 데이터
+   * @returns {Object} 변환된 날씨 데이터
+   */
+  convertVisualCrossingToKmaFormat(vcData) {
+    const current = vcData.currentConditions;
+    const temperature = Math.round(current.temp);
+
+    return {
+      temp: temperature,
+      tavg: temperature,
+      rain: current.precip || 0,
+      humidity: current.humidity,
+      sky: this.convertVisualCrossingToSky(current.conditions),
+      pty: this.convertVisualCrossingToPty(current.conditions),
+      icon: this.convertVisualCrossingToIcon(current.conditions),
+      season: this.getSeason(temperature, new Date()),
+      weatherExpression: this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature),
+      seasonColor: this.getSeasonColor(this.getSeason(temperature, new Date())),
+      expressionColor: this.getExpressionColor(this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature)),
+      fcstTime: new Date().toISOString(),
+      apiSource: 'visualcrossing'
     };
   }
 
@@ -410,6 +700,83 @@ export class WeatherService {
   getExpressionColor(expression) {
     // 원래 forecastUtils.js의 getExpressionColor 함수 사용
     return getExpressionColor(expression);
+  }
+
+  // AccuWeather 변환 함수들
+  convertAccuWeatherToSky(weatherCode) {
+    if (weatherCode >= 1 && weatherCode <= 5) return "1";  // 맑음
+    if (weatherCode >= 6 && weatherCode <= 11) return "3"; // 구름많음
+    if (weatherCode >= 12 && weatherCode <= 18) return "4"; // 흐림
+    return "3";
+  }
+
+  convertAccuWeatherToPty(weatherCode) {
+    if (weatherCode >= 12 && weatherCode <= 18) return "1"; // 비
+    if (weatherCode >= 19 && weatherCode <= 23) return "3"; // 눈
+    if (weatherCode >= 24 && weatherCode <= 29) return "1"; // 뇌우
+    return "0";
+  }
+
+  convertAccuWeatherToIcon(weatherCode) {
+    if (weatherCode >= 1 && weatherCode <= 5) return "sunny";
+    if (weatherCode >= 6 && weatherCode <= 11) return "cloudy";
+    if (weatherCode >= 12 && weatherCode <= 18) return "rainy";
+    if (weatherCode >= 19 && weatherCode <= 23) return "snow";
+    if (weatherCode >= 24 && weatherCode <= 29) return "thunder";
+    return "cloudy";
+  }
+
+  // WeatherAPI 변환 함수들
+  convertWeatherAPIToSky(conditionCode) {
+    if (conditionCode === 1000) return "1";  // 맑음
+    if (conditionCode >= 1003 && conditionCode <= 1006) return "3"; // 구름많음
+    if (conditionCode >= 1007 && conditionCode <= 1009) return "4"; // 흐림
+    return "3";
+  }
+
+  convertWeatherAPIToPty(conditionCode) {
+    if (conditionCode >= 1063 && conditionCode <= 1201) return "1"; // 비
+    if (conditionCode >= 1204 && conditionCode <= 1237) return "3"; // 눈
+    if (conditionCode >= 1240 && conditionCode <= 1282) return "1"; // 뇌우
+    return "0";
+  }
+
+  convertWeatherAPIToIcon(conditionCode) {
+    if (conditionCode === 1000) return "sunny";
+    if (conditionCode >= 1003 && conditionCode <= 1006) return "cloudy";
+    if (conditionCode >= 1007 && conditionCode <= 1009) return "overcast";
+    if (conditionCode >= 1063 && conditionCode <= 1201) return "rainy";
+    if (conditionCode >= 1204 && conditionCode <= 1237) return "snow";
+    if (conditionCode >= 1240 && conditionCode <= 1282) return "thunder";
+    return "cloudy";
+  }
+
+  // Visual Crossing 변환 함수들
+  convertVisualCrossingToSky(conditions) {
+    const lowerConditions = conditions.toLowerCase();
+    if (lowerConditions.includes('clear') || lowerConditions.includes('sunny')) return "1";
+    if (lowerConditions.includes('partly cloudy') || lowerConditions.includes('mostly clear')) return "3";
+    if (lowerConditions.includes('cloudy') || lowerConditions.includes('overcast')) return "4";
+    return "3";
+  }
+
+  convertVisualCrossingToPty(conditions) {
+    const lowerConditions = conditions.toLowerCase();
+    if (lowerConditions.includes('rain') || lowerConditions.includes('shower')) return "1";
+    if (lowerConditions.includes('snow')) return "3";
+    if (lowerConditions.includes('thunder') || lowerConditions.includes('storm')) return "1";
+    return "0";
+  }
+
+  convertVisualCrossingToIcon(conditions) {
+    const lowerConditions = conditions.toLowerCase();
+    if (lowerConditions.includes('clear') || lowerConditions.includes('sunny')) return "sunny";
+    if (lowerConditions.includes('partly cloudy') || lowerConditions.includes('mostly clear')) return "cloudy";
+    if (lowerConditions.includes('cloudy') || lowerConditions.includes('overcast')) return "overcast";
+    if (lowerConditions.includes('rain') || lowerConditions.includes('shower')) return "rainy";
+    if (lowerConditions.includes('snow')) return "snow";
+    if (lowerConditions.includes('thunder') || lowerConditions.includes('storm')) return "thunder";
+    return "cloudy";
   }
 }
 

@@ -23,7 +23,7 @@ export function getSeasonInfo(date = new Date()) {
     
     // 가을 (9-11월)
     9: { season: 'autumn', period: 'early', label: '초가을', emoji: '🍂' },
-    10: { season: 'autumn', period: 'mid', label: '늦가을', emoji: '🍁' },
+    10: { season: 'autumn', period: 'early', label: '초가을', emoji: '🍂' },
     11: { season: 'autumn', period: 'late', label: '늦가을', emoji: '🍁' },
     
     // 겨울 (12-2월)
