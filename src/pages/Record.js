@@ -1,14 +1,14 @@
 // src/pages/Record.js
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { db, storage } from "../firebase";
+import { db } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
 import { HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { toast } from "react-toastify";
 import { collection, query, where, getDocs, addDoc, deleteDoc, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// Firebase Storage 제거 - Base64 인코딩 사용
 import { useAuth } from "../contexts/AuthContext";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
@@ -26,6 +26,39 @@ import { outfitOptions } from "../constants/outfitOptions";
 import { weatherService } from "../api/weatherService";
 import { getStyleLabel, getStyleCode } from "../utils/styleUtils";
 import { navBtnStyle, indicatorStyle, dotStyle } from "../components/ImageCarouselStyles";
+
+// 이미지 압축 함수 (더 강력한 압축)
+const compressImage = (file, maxWidth = 600, quality = 0.6) => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // 원본 비율 유지하면서 크기 조정 (더 작게)
+      const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      
+      // 이미지 그리기
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // 압축된 Base64 반환 (품질 낮춤)
+      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      
+      // 만약 여전히 크다면 더 강하게 압축
+      if (compressedBase64.length > 400 * 1024) { // 400KB 초과시
+        const strongerCompressed = canvas.toDataURL('image/jpeg', 0.4);
+        resolve(strongerCompressed);
+      } else {
+        resolve(compressedBase64);
+      }
+    };
+    
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+};
 
 function Record() {
   const navigate = useNavigate();
@@ -375,10 +408,7 @@ function Record() {
       toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
       return;
     }
-    if (!storage) {
-      toast.error("스토리지 인스턴스가 올바르지 않습니다. 새로고침 후 다시 시도해 주세요.");
-      return;
-    }
+    // Storage 체크 제거 - Base64 인코딩 사용
 
     setSubmitLoading(true);
 
@@ -398,16 +428,41 @@ function Record() {
         }
       }
 
-      // 이미지 업로드 (신규 파일만)
+      // 이미지 처리 (Base64 인코딩으로 Firestore에 직접 저장)
+      console.log("📸 이미지 처리 시작:", { 
+        imageFilesCount: imageFiles.length, 
+        imageFiles: imageFiles.map(f => ({ name: f.name, isUrl: f.isUrl }))
+      });
+      
       const imageUrls = await Promise.all(
-        imageFiles.map(async (file) => {
-          if (file.isUrl) return file.name; // 기존 URL
+        imageFiles.map(async (file, index) => {
+          console.log(`📸 이미지 ${index + 1} 처리 중:`, { name: file.name, isUrl: file.isUrl });
+          if (file.isUrl) {
+            console.log(`📸 기존 URL 사용: ${file.name}`);
+            return file.name; // 기존 URL
+          }
           if (!file || !file.name) throw new Error("잘못된 파일입니다.");
-          const imageRef = ref(storage, `records/${user.uid}/${Date.now()}_${file.name}`);
-          await uploadBytes(imageRef, file);
-          return await getDownloadURL(imageRef);
+          
+          try {
+            // 이미지 압축 후 Base64로 인코딩
+            const compressedBase64 = await compressImage(file);
+            
+            // 압축 후 크기 체크 (Firestore 문서 크기 제한 고려)
+            const maxSize = 500 * 1024; // 500KB
+            if (compressedBase64.length > maxSize) {
+              throw new Error(`압축 후에도 파일이 너무 큽니다. 더 작은 이미지를 선택해주세요. (압축 후: ${(compressedBase64.length / 1024).toFixed(2)}KB)`);
+            }
+            
+            console.log(`📸 압축된 Base64 인코딩 완료: ${file.name} (${compressedBase64.length} chars)`);
+            return compressedBase64;
+          } catch (error) {
+            console.error(`📸 이미지 압축 실패:`, error);
+            throw new Error(`이미지 처리 실패: ${error.message}`);
+          }
         })
       );
+      
+      console.log("📸 최종 imageUrls:", imageUrls);
 
       const convertedStyle = getStyleLabel(style);
       console.log("🎨 스타일 변환:", { original: style, converted: convertedStyle });
@@ -443,6 +498,7 @@ function Record() {
       
       console.log("💾 저장할 recordData:", recordData);
       console.log("🎯 저장할 style 필드:", recordData.style);
+      console.log("📸 저장할 imageUrls:", recordData.imageUrls);
 
       if (isEditMode && recordId) {
         const updateData = { ...recordData };

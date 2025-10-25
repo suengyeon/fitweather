@@ -6,7 +6,7 @@ console.log("🔑 SERVICE_KEY:", process.env.REACT_APP_KMA_SERVICE_KEY);
 console.log("🔑 SERVICE_KEY length:", process.env.REACT_APP_KMA_SERVICE_KEY?.length);
 console.log("🔑 SERVICE_KEY type:", typeof process.env.REACT_APP_KMA_SERVICE_KEY);
 // CRA 환경변수는 process.env.REACT_APP_… 로 불러옵니다.
-const SERVICE_KEY = process.env.REACT_APP_KMA_SERVICE_KEY;
+const SERVICE_KEY = process.env.REACT_APP_KMA_SERVICE_KEY || "your_actual_kma_api_key_here";
 
 /**
  * 주어진 지역(region)으로 격자(nx, ny)를 찾아

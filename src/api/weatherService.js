@@ -33,6 +33,7 @@ export class WeatherService {
     
     try {
       console.log(`🇰🇷 [WeatherService] 기상청 API 시도 중... (2초 타임아웃)`);
+      console.log(`🔑 [WeatherService] 기상청 API 키 확인:`, process.env.REACT_APP_KMA_SERVICE_KEY ? '설정됨' : '없음');
       
       // 기상청 API에 2초 타임아웃 설정
       const kmaData = await Promise.race([
@@ -53,6 +54,7 @@ export class WeatherService {
       return kmaData;
     } catch (error) {
       console.warn(`⚠️ [WeatherService] 기상청 API 실패: ${error.message}`);
+      console.warn(`⚠️ [WeatherService] 기상청 API 오류 상세:`, error);
       return await this.tryFallbackAPIs(region);
     }
   }
@@ -186,10 +188,14 @@ export class WeatherService {
     console.log(`🌍 [OWM API] OpenWeatherMap API 호출 시작 - 지역: ${region}`);
     const startTime = Date.now();
     
-    const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY;
+    const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || "89571719c6df9df656e8a59eb44d21da";
     
     if (!API_KEY) {
       console.error(`❌ [OWM API] API 키 없음 - .env 파일에 REACT_APP_OPENWEATHER_API_KEY 설정 필요`);
+      console.error(`❌ [OWM API] 현재 환경변수:`, {
+        REACT_APP_OPENWEATHER_API_KEY: process.env.REACT_APP_OPENWEATHER_API_KEY,
+        NODE_ENV: process.env.NODE_ENV
+      });
       throw new Error('OpenWeatherMap API 키가 설정되지 않았습니다.');
     }
     
@@ -202,12 +208,25 @@ export class WeatherService {
     console.log(`🌐 [OWM API] 요청 URL: ${url.replace(API_KEY, '***API_KEY***')}`);
     
     try {
+      console.log(`🌐 [OWM API] 실제 요청 URL: ${url}`);
       const response = await fetch(url);
       const endTime = Date.now();
+      
+      console.log(`📡 [OWM API] 응답 상태: ${response.status} ${response.statusText}`);
+      console.log(`📡 [OWM API] 응답 헤더:`, Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         console.error(`❌ [OWM API] HTTP 오류 - 소요시간: ${endTime - startTime}ms`);
         console.error(`❌ [OWM API] 상태: ${response.status} ${response.statusText}`);
+        
+        // 응답 본문도 확인
+        try {
+          const errorText = await response.text();
+          console.error(`❌ [OWM API] 오류 응답 본문:`, errorText);
+        } catch (e) {
+          console.error(`❌ [OWM API] 오류 응답 본문 읽기 실패:`, e);
+        }
+        
         throw new Error(`OpenWeatherMap API 오류: ${response.status} ${response.statusText}`);
       }
       
@@ -222,6 +241,7 @@ export class WeatherService {
       const endTime = Date.now();
       console.error(`❌ [OWM API] OpenWeatherMap API 실패 - 소요시간: ${endTime - startTime}ms`);
       console.error(`❌ [OWM API] 오류 상세:`, error);
+      console.error(`❌ [OWM API] 오류 스택:`, error.stack);
       throw new Error(`OpenWeatherMap API 호출 실패: ${error.message}`);
     }
   }
@@ -235,10 +255,11 @@ export class WeatherService {
     console.log(`🌤️ [AW API] AccuWeather API 호출 시작 - 지역: ${region}`);
     const startTime = Date.now();
     
+    // AccuWeather는 API 키가 없으면 건너뛰기
     const API_KEY = process.env.REACT_APP_ACCUWEATHER_API_KEY;
     
     if (!API_KEY) {
-      console.error(`❌ [AW API] API 키 없음 - .env 파일에 REACT_APP_ACCUWEATHER_API_KEY 설정 필요`);
+      console.warn(`⚠️ [AW API] API 키 없음 - AccuWeather 건너뛰기`);
       throw new Error('AccuWeather API 키가 설정되지 않았습니다.');
     }
     
@@ -288,10 +309,11 @@ export class WeatherService {
     console.log(`🌦️ [WA API] WeatherAPI 호출 시작 - 지역: ${region}`);
     const startTime = Date.now();
     
+    // WeatherAPI는 API 키가 없으면 건너뛰기
     const API_KEY = process.env.REACT_APP_WEATHERAPI_KEY;
     
     if (!API_KEY) {
-      console.error(`❌ [WA API] API 키 없음 - .env 파일에 REACT_APP_WEATHERAPI_KEY 설정 필요`);
+      console.warn(`⚠️ [WA API] API 키 없음 - WeatherAPI 건너뛰기`);
       throw new Error('WeatherAPI 키가 설정되지 않았습니다.');
     }
     
@@ -337,10 +359,11 @@ export class WeatherService {
     console.log(`🌍 [VC API] Visual Crossing API 호출 시작 - 지역: ${region}`);
     const startTime = Date.now();
     
+    // Visual Crossing은 API 키가 없으면 건너뛰기
     const API_KEY = process.env.REACT_APP_VISUALCROSSING_API_KEY;
     
     if (!API_KEY) {
-      console.error(`❌ [VC API] API 키 없음 - .env 파일에 REACT_APP_VISUALCROSSING_API_KEY 설정 필요`);
+      console.warn(`⚠️ [VC API] API 키 없음 - Visual Crossing 건너뛰기`);
       throw new Error('Visual Crossing API 키가 설정되지 않았습니다.');
     }
     

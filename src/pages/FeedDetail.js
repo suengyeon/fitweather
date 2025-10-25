@@ -284,6 +284,17 @@ function FeedDetail() {
     if (!data) return <div className="p-6 text-red-500">게시물을 찾을 수 없습니다.</div>;
 
     const { weather, outfit, memo, imageUrls, feeling } = data;
+    
+    // Base64 이미지 처리 함수
+    const getImageSrc = (imageUrl) => {
+        if (!imageUrl) return null;
+        // Base64 데이터인지 확인 (data:image로 시작)
+        if (imageUrl.startsWith('data:image/')) {
+            return imageUrl;
+        }
+        // 일반 URL인 경우
+        return imageUrl;
+    };
 
     // 구독 토글
     const handleSubscribe = async () => {
@@ -753,7 +764,7 @@ function FeedDetail() {
                         <div className="w-full md:w-1/2 flex flex-col items-center justify-center pl-16">
                             {imageUrls?.length > 0 && (
                                 <div className="w-72 aspect-[3/4] relative rounded overflow-hidden border bg-gray-100 mb-4">
-                                    <img src={imageUrls[imagePreviewIdx]} alt="outfit" className="w-full h-full object-cover" />
+                                    <img src={getImageSrc(imageUrls[imagePreviewIdx])} alt="outfit" className="w-full h-full object-cover" />
                                     {imageUrls.length > 1 && (
                                         <div className="absolute bottom-2 left-0 right-0 flex justify-between px-2">
                                             <button
