@@ -1,8 +1,3 @@
-/**
- * 기상청 과거 날씨 관측 데이터 API
- * 과거 날짜에만 사용하는 전용 API
- */
-
 import { getSeason } from "../utils/forecastUtils";
 
 // 기상청 API 키

@@ -1,5 +1,3 @@
-// src/api/pastWeather.js
-
 import { db } from "../firebase";
 import { collection, doc, getDoc, setDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { fetchKmaForecast } from "./kmaWeather";

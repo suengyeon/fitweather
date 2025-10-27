@@ -2,14 +2,14 @@ import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 /**
- * 기록을 삭제합니다. (outfits 컬렉션만 - Base64 이미지는 자동 삭제)
+ * 기록 삭제 (outfits 컬렉션만 - Base64 이미지는 자동 삭제)
  * @param {string} recordId - 기록 ID
- * @param {Array} imageUrls - 삭제할 이미지 URL 배열 (Base64는 자동 삭제됨)
+ * @param {Array} imageUrls - 삭제할 이미지 URL 배열 (Base64는 자동 삭제)
  * @returns {Promise<void>}
  */
 export async function deleteOutfitRecord(recordId, imageUrls = []) {
   try {
-    // Base64 이미지는 Firestore 문서와 함께 자동 삭제됨
+    // Base64 이미지 : Firestore 문서와 함께 자동 삭제
     console.log("📸 Base64 이미지는 Firestore 문서와 함께 자동 삭제됩니다.");
 
     // Firestore에서 outfits 문서 삭제
@@ -24,14 +24,14 @@ export async function deleteOutfitRecord(recordId, imageUrls = []) {
 }
 
 /**
- * 기록을 삭제합니다. (records 컬렉션만 - Base64 이미지는 자동 삭제)
+ * 기록 삭제 (records 컬렉션만 - Base64 이미지는 자동 삭제)
  * @param {string} recordId - 기록 ID
- * @param {Array} imageUrls - 삭제할 이미지 URL 배열 (Base64는 자동 삭제됨)
+ * @param {Array} imageUrls - 삭제할 이미지 URL 배열 (Base64는 자동 삭제)
  * @returns {Promise<void>}
  */
 export async function deleteRecordRecord(recordId, imageUrls = []) {
   try {
-    // Base64 이미지는 Firestore 문서와 함께 자동 삭제됨
+    // Base64 이미지 : Firestore 문서와 함께 자동 삭제
     console.log("📸 Base64 이미지는 Firestore 문서와 함께 자동 삭제됩니다.");
 
     // Firestore에서 records 문서 삭제
@@ -53,7 +53,7 @@ export async function deleteRecordRecord(recordId, imageUrls = []) {
  */
 export async function deleteAnyRecord(recordId, imageUrls = []) {
   try {
-    // Base64 이미지는 Firestore 문서와 함께 자동 삭제됨
+    // Base64 이미지 : Firestore 문서와 함께 자동 삭제
     console.log("📸 Base64 이미지는 Firestore 문서와 함께 자동 삭제됩니다.");
 
     // Firestore에서 문서 삭제 (outfits 먼저 시도, 없으면 records 시도)

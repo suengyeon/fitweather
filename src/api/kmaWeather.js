@@ -1,16 +1,12 @@
-// src/api/kmaWeather.js
-
 import { regionGrid } from "../constants/regionData";
 import { getTodayYYYYMMDD, getBaseTime } from "../utils/timeUtils";
 console.log("🔑 SERVICE_KEY:", process.env.REACT_APP_KMA_SERVICE_KEY);
 console.log("🔑 SERVICE_KEY length:", process.env.REACT_APP_KMA_SERVICE_KEY?.length);
 console.log("🔑 SERVICE_KEY type:", typeof process.env.REACT_APP_KMA_SERVICE_KEY);
-// CRA 환경변수는 process.env.REACT_APP_… 로 불러옵니다.
 const SERVICE_KEY = process.env.REACT_APP_KMA_SERVICE_KEY || "your_actual_kma_api_key_here";
 
 /**
- * 주어진 지역(region)으로 격자(nx, ny)를 찾아
- * 기상청 단기예보 API를 호출하는 함수
+ * 주어진 지역(region)으로 격자(nx, ny) 찾아 기상청 단기예보 API 호출
  * @param {string} region - "Seoul", "Busan" 등
  * @param {string} date - 날짜 (YYYY-MM-DD 형식, 선택사항)
  * @returns {Promise<object[]|null>} API에서 받은 예보 item 배열
@@ -52,7 +48,7 @@ export const fetchKmaForecast = async (region, date = null) => {
       throw new Error(`기상청 API HTTP 오류: ${res.status} ${res.statusText}`);
     }
     
-    // API 오류 시 실제 오류 던지기 (모의 데이터 사용 안함)
+    // API 오류 시 실제 오류 던지기 
     if (text.includes('SERVICE_KEY_IS_NOT_REGISTERED_ERROR') || text.includes('SERVICE ERROR')) {
       console.error("❌ 기상청 API 오류 - 서비스 키 문제 또는 서비스 오류");
       throw new Error(`기상청 API 오류: ${text}`);
@@ -79,7 +75,7 @@ export const fetchKmaForecast = async (region, date = null) => {
   } catch (err) {
     console.error("❌ fetchKmaForecast error:", err);
     
-    // 네트워크 오류나 기타 오류 시에도 실제 오류 던지기 (모의 데이터 사용 안함)
+    // 네트워크 오류나 기타 오류 시에도 실제 오류 던지기 
     console.error("❌ 네트워크 오류 또는 기타 오류 - 실제 오류 전파");
     throw new Error(`기상청 API 네트워크 오류: ${err.message}`);
   }

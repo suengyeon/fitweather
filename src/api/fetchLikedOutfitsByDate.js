@@ -2,7 +2,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 
 /**
- * 특정 날짜에 사용자가 좋아요한 코디들을 조회합니다.
+ * 특정 날짜에 사용자가 좋아요한 코디들 조회
  * @param {string} uid - 사용자 ID
  * @param {string} date - 날짜 (YYYY-MM-DD 형식)
  * @returns {Promise<Array>} 해당 날짜의 좋아요한 코디 배열

@@ -23,8 +23,6 @@ erDiagram
         number weight "몸무게 (kg)"
         array style "선호 스타일 배열"
         string region "주 활동 지역"
-        string bio "자기소개"
-        string profilePictureUrl "프로필 사진 URL"
         number followerCount "팔로워 수"
         number followingCount "팔로잉 수"
         timestamp lastActiveAt "마지막 활동 시간"
