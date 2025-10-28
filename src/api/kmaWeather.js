@@ -8,7 +8,7 @@ const SERVICE_KEY = process.env.REACT_APP_KMA_SERVICE_KEY || "your_actual_kma_ap
 /**
  * 주어진 지역(region)으로 격자(nx, ny) 찾아 기상청 단기예보 API 호출
  * @param {string} region - "Seoul", "Busan" 등
- * @param {string} date - 날짜 (YYYY-MM-DD 형식, 선택사항)
+ * @param {string} date - 날짜(YYYY-MM-DD 형식, 선택사항)
  * @returns {Promise<object[]|null>} API에서 받은 예보 item 배열
  */
 export const fetchKmaForecast = async (region, date = null) => {
@@ -54,7 +54,7 @@ export const fetchKmaForecast = async (region, date = null) => {
       throw new Error(`기상청 API 오류: ${text}`);
     }
     
-    // JSON 파싱 시도 (500 오류 등으로 인한 비JSON 응답 처리)
+    // JSON 파싱 시도(500 오류 등으로 인한 비JSON 응답 처리)
     let json;
     try {
       json = JSON.parse(text);
@@ -69,7 +69,7 @@ export const fetchKmaForecast = async (region, date = null) => {
       throw new Error(`기상청 API 오류: ${json.response.header.resultMsg}`);
     }
 
-    // 5) 결과 리턴 (items.item 배열)
+    // 5) 결과 리턴(items.item 배열)
     return json.response.body.items.item;
 
   } catch (err) {

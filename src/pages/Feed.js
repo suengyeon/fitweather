@@ -429,9 +429,6 @@ function Feed() {
                     {getWeatherEmoji(weather.icon)}
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-gray-600">
-                  {weather.temp}°C
-                </div>
               </div>
             ) : weatherLoading ? (
               <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>

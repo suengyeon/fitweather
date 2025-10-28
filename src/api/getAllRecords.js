@@ -3,7 +3,7 @@ import { getAllPublicRecords } from "../utils/firebaseQueries";
 
 /**
  * 모든 공개 레코드(게시물 등)를 백엔드로부터 가져와 인기순 정렬하여 반환
- * @returns {Promise<Array<Object>>} 
+ * @returns {Promise<Array<Object>>} 정렬된 레코드 객체의 배열 반환(에러 발생 시 빈 배열 반환)
  */
 export const getAllRecords = async () => {
   try {

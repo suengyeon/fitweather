@@ -12,8 +12,8 @@ import { db } from "../firebase";
  */
 export async function toggleLike(recordId, currentUserUid) {
   // 1. 필요한 Firestore 문서 참조 생성
-  const recordRef = doc(db, "records", recordId); // 레코드 문서 참조 (좋아요 목록 포함)
-  const userRef = doc(db, "users", currentUserUid); // 사용자 문서 참조 (좋아요 누른 레코드 목록 포함)
+  const recordRef = doc(db, "records", recordId); // 레코드 문서 참조(좋아요 목록 포함)
+  const userRef = doc(db, "users", currentUserUid); // 사용자 문서 참조(좋아요 누른 레코드 목록 포함)
 
   // 2. 현재 레코드 문서 상태 조회 및 유효성 검사
   const recordSnap = await getDoc(recordRef);

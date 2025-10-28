@@ -5,7 +5,7 @@ const SERVICE_KEY = "StCI4VD0mNM52wrGGdkJqHlAh12auErOmKgzJtma0l%2FLsc%2B5QvM10mv
 
 /**
  * 기상청 관측 데이터 API에서 과거 날씨 데이터를 가져옵니다.
- * @param {string} date - 날짜 (YYYY-MM-DD 형식)
+ * @param {string} date - 날짜(YYYY-MM-DD 형식)
  * @param {string} region - 지역 코드
  * @returns {Promise<Object|null>} - 과거 날씨 데이터
  */

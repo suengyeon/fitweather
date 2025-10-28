@@ -5,7 +5,7 @@ import { createFollowNotification } from "../services/notificationService";
 /**
  * 게시글에 새 댓글 달렸을 시 게시글 작성자에게 알림 생성하여 저장
  * @param {string} commenterId 댓글 작성자 ID
- * @param {string} postOwnerId 게시글 작성자 ID (알림 수신자)
+ * @param {string} postOwnerId 게시글 작성자 ID(알림 수신자)
  * @param {string} postId 댓글이 달린 게시글 ID
  * @param {string} commentContent 댓글 내용
  */
@@ -44,7 +44,7 @@ export const createCommentNotification = async (commenterId, postOwnerId, postId
 /**
  * 댓글에 답글 달렸을 시 댓글 작성자에게 알림 생성하여 저장
  * @param {string} replierId 답글 작성자 ID
- * @param {string} commentOwnerId 댓글 작성자 ID (알림 수신자)
+ * @param {string} commentOwnerId 댓글 작성자 ID(알림 수신자)
  * @param {string} postId 답글이 달린 게시글 ID
  * @param {string} replyContent 답글 내용
  */
@@ -196,10 +196,10 @@ export const checkSubscription = async (followerId, followingId) => {
 };
 
 /**
- * 구독 상태 토글 (구독 중이면 취소, 아니면 구독)
+ * 구독 상태 토글(구독 중이면 취소, 아니면 구독)
  * @param {string} followerId 액션을 수행하는 사용자 ID
  * @param {string} followingId 대상 사용자 ID
- * @returns {Promise<boolean>} 최종 구독 상태 (구독됨: true, 취소됨: false)
+ * @returns {Promise<boolean>} 최종 구독 상태(구독됨: true, 취소됨: false)
  * @throws {Error} 토글 실패 시
  */
 export const toggleSubscription = async (followerId, followingId) => {

@@ -7,18 +7,18 @@ import { notifyFollowersAboutNewPost } from "../services/notificationService";
  * 저장 완료 후, 레코드가 공개(isPublic: true)일 경우 팔로워에 알림 전송
  *
  * @param {Object} record - 저장할 착장 기록 데이터 객체
- * @param {string} record.uid           - 사용자 UID (작성자)
- * @param {string} record.region        - 기록된 지역명 (예: "Seoul")
- * @param {string} record.date          - 기록 날짜 (ISO 문자열 등)
- * @param {number} record.temp          - 기록 당시의 기온 (추가된 필드)
- * @param {number} record.rain          - 기록 당시의 강수량 (추가된 필드)
- * @param {string} record.feeling       - 체감 이모지 (예: "👍")
- * @param {string[]} record.weatherEmojis - 날씨 이모지 배열 (최대 2개)
+ * @param {string} record.uid           - 사용자 UID(작성자)
+ * @param {string} record.region        - 기록된 지역명(예: "Seoul")
+ * @param {string} record.date          - 기록 날짜(ISO 문자열 등)
+ * @param {number} record.temp          - 기록 당시의 기온(추가된 필드)
+ * @param {number} record.rain          - 기록 당시의 강수량(추가된 필드)
+ * @param {string} record.feeling       - 체감 이모지(예: "👍")
+ * @param {string[]} record.weatherEmojis - 날씨 이모지 배열(최대 2개)
  * @param {string[]} record.imageUrls   - 업로드된 이미지 URL 배열
  * @param {string} record.feedback      - 사용자의 피드백 텍스트
- * @param {Object} record.outfit        - 옷 항목 객체 (outer, top, bottom, shoes, acc 등의 배열 포함)
- * @param {string[]} record.styles      - 착장의 스타일 태그 배열 (추가된 필드)
- * @param {string[]} record.season      - 착장의 계절 정보 배열 (추가된 필드)
+ * @param {Object} record.outfit        - 옷 항목 객체(outer, top, bottom, shoes, acc 등의 배열 포함)
+ * @param {string[]} record.styles      - 착장의 스타일 태그 배열(추가된 필드)
+ * @param {string[]} record.season      - 착장의 계절 정보 배열(추가된 필드)
  * @param {boolean} record.isPublic     - 지역피드 공개 여부
  * @returns {Promise<string>} 새로 생성된 Firestore 문서의 ID
  */

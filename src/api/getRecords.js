@@ -3,7 +3,7 @@ import { db } from "../firebase";
 import { sortRecords } from "../utils/sortingUtils";
 
 export async function getRecords(region, order, date = null) {
-  // 날짜가 제공되지 않으면 오늘 날짜 사용 (로컬 시간 기준)
+  // 날짜가 제공되지 않으면 오늘 날짜 사용(로컬 시간 기준)
   const targetDate = date || (() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -19,7 +19,7 @@ export async function getRecords(region, order, date = null) {
     where("isPublic", "==", true)
   );
 
-  // 최신순 정렬 (createdAt)
+  // 최신순 정렬(createdAt)
   if (order === "latest") {
     q = query(q, orderBy("createdAt", "desc"));
   }

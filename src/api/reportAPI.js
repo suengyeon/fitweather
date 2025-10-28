@@ -2,11 +2,11 @@ import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc } fro
 import { db } from '../firebase'; 
 
 /**
- * 사용자 신고 제출 후 Firestore에 저장 (중복 신고 방지 로직 포함)
+ * 사용자 신고 제출 후 Firestore에 저장(중복 신고 방지 로직 포함)
  * @param {string} reporterId 신고자 ID
- * @param {string} targetUserId 신고 대상 (게시물/댓글 작성자) ID
- * @param {string} targetId 신고 대상 (게시물/댓글) 문서 ID
- * @param {('post'|'comment')} targetType 신고 대상 타입 ('post' 또는 'comment')
+ * @param {string} targetUserId 신고 대상(게시물/댓글 작성자) ID
+ * @param {string} targetId 신고 대상(게시물/댓글) 문서 ID
+ * @param {('post'|'comment')} targetType 신고 대상 타입('post' 또는 'comment')
  * @param {string} reason 신고 사유
  * @returns {Promise<string>} 새로 생성된 신고 문서의 ID
  * @throws {Error} 이미 신고한 경우 또는 제출 실패 시
@@ -179,7 +179,7 @@ export async function banUser(userId) {
 /**
  * 특정 사용자의 상태를 'active'로 변경하여 차단 해제
  * @param {string} userId 차단 해제할 사용자 ID
- * @returns {Promise<boolean>} 성공 여부 (true)
+ * @returns {Promise<boolean>} 성공 여부(true)
  * @throws {Error} 사용자 차단 해제 실패 시
  */
 export async function unbanUser(userId) {
@@ -197,15 +197,15 @@ export async function unbanUser(userId) {
 }
 
 /**
- * 특정 게시물에 포함된 특정 댓글 삭제(댓글이 게시물 문서 내 배열 형태로 저장되어 있다고 가정하고 구현됨)
+ * 특정 게시물에 포함된 특정 댓글 삭제(댓글이 게시물 문서 내 배열 형태로 저장되어 있다고 가정하고 구현)
  * @param {string} commentId 삭제할 댓글의 고유 ID
  * @param {string} recordId 댓글이 포함된 게시물(또는 댓글 그룹)의 문서 ID
- * @returns {Promise<boolean>} 성공 여부 (true)
+ * @returns {Promise<boolean>} 성공 여부(true)
  * @throws {Error} 댓글 삭제 실패 시
  */
 export async function deleteComment(commentId, recordId) {
   try {
-    // 댓글이 배열로 저장된 문서 (ID는 recordId) 참조
+    // 댓글이 배열로 저장된 문서(ID는 recordId) 참조
     const commentsRef = doc(db, 'comments', recordId);
     const commentsSnap = await getDoc(commentsRef);
 
@@ -228,7 +228,7 @@ export async function deleteComment(commentId, recordId) {
 }
 
 /**
- * 모든 사용자 목록 조회 후, 각 사용자의 신고 횟수를 계산하여 포함한 목록을 반환
+ * 모든 사용자 목록 조회 후, 각 사용자의 신고 횟수를 계산하여 포함한 목록 반환
  * @returns {Promise<Array<Object>>} 신고 횟수가 포함된 사용자 목록 배열
  * @throws {Error} 사용자 목록 조회 실패 시
  */
