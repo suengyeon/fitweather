@@ -3,7 +3,7 @@ import { db } from "../firebase";
 
 /**
  * Firestore 'users' 컬렉션에서 로그인한 사용자의 region 정보 가져옴
- * @param {string} uid - Firebase Auth의 currentUser.uid (현재 사용자 ID)
+ * @param {string} uid - Firebase Auth의 currentUser.uid(현재 사용자 ID)
  * @returns {Promise<string|null>} 사용자의 region 문자열 또는 해당 정보가 없거나 오류 발생 시 null
  */
 export const fetchUserRegion = async (uid) => {

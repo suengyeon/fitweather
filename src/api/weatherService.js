@@ -1,7 +1,7 @@
 import { fetchKmaForecast } from './kmaWeather';
 import { getSeason, getWeatherExpression, getExpressionColor } from '../utils/forecastUtils';
 
-export class WeatherService { //WeatherService 생성자: API 우선순위 및 상태 초기화
+export class WeatherService { //WeatherService 생성자 : API 우선순위 및 상태 초기화
   constructor() {
     this.primaryAPI = 'kma'; // 기본 API(기상청)
     // 기상청 실패 시 순차적으로 시도할 대체(Fallback) API 목록
@@ -12,7 +12,7 @@ export class WeatherService { //WeatherService 생성자: API 우선순위 및 �
       'visualcrossing'
     ];
     this.lastUsedAPI = null; // 마지막으로 성공한 API 이름 기록
-    this.currentFallbackIndex = 0; // 현재 대체 API 목록 인덱스(사용되지 않음)
+    this.currentFallbackIndex = 0; // 현재 대체 API 목록 인덱스
   }
 
   // ---------------------------------
@@ -51,7 +51,7 @@ export class WeatherService { //WeatherService 생성자: API 우선순위 및 �
       });
       return kmaData;
     } catch (error) {
-      // 기상청 API 호출 실패 또는 타임아웃 시 대체 API 시도
+      // 기상청 API 호출 실패or타임아웃 시 대체 API 시도
       console.warn(`⚠️ [WeatherService] 기상청 API 실패: ${error.message}`);
       console.warn(`⚠️ [WeatherService] 기상청 API 오류 상세:`, error);
       return await this.tryFallbackAPIs(region);
@@ -59,7 +59,7 @@ export class WeatherService { //WeatherService 생성자: API 우선순위 및 �
   }
 
   /**
-   * 대체 API들을 순차 시도하여 성공한 데이터 반환(모든 대체 API 실패 시 모의(Mock) 데이터 반환)
+   * 대체 API들을 순차 시도해 성공한 데이터 반환(모든 대체 API 실패 시 모의(Mock) 데이터 반환)
    * @param {string} region - 지역명
    * @returns {Promise<Object>} 날씨 데이터
    */
@@ -138,8 +138,8 @@ export class WeatherService { //WeatherService 생성자: API 우선순위 및 �
       tavg: temp, // 평균 온도(모의 데이터에서는 동일 설정)
       rain: 0,
       humidity: 65,
-      sky: "1", // 맑음 (기본값)
-      pty: "0", // 강수 없음 (기본값)
+      sky: "1", // 맑음(기본값)
+      pty: "0", // 강수 없음(기본값)
       icon: "sunny",
       season: season,
       weatherExpression: weatherExpression,
@@ -462,7 +462,7 @@ export class WeatherService { //WeatherService 생성자: API 우선순위 및 �
     return {
       temp: temperature,
       tavg: temperature, // 현재 기온을 평균 기온으로 사용
-      rain: awData.Precip1hr?.Metric?.Value || 0, // 1시간 강수량 (없으면 0)
+      rain: awData.Precip1hr?.Metric?.Value || 0, // 1시간 강수량(없으면 0)
       humidity: awData.RelativeHumidity,
       sky: this.convertAccuWeatherToSky(weatherCode), // SKY 값 변환
       pty: this.convertAccuWeatherToPty(weatherCode), // PTY 값 변환

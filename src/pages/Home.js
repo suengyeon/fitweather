@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, ArrowPathIcon } from "@heroicons/react/24/solid";
@@ -110,15 +108,6 @@ function Home() {
       setTimeout(() => setIsRefreshing(false), 1000);
     }
   };
-
-
-
-
-
-
-
-
-
 
   const loading = profileLoading || weatherLoading;
 

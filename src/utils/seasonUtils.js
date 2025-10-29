@@ -11,22 +11,22 @@ export function getSeasonInfo(date = new Date()) {
   
   // 12절기 기반 계절 구분
   const seasonMap = {
-    // 봄 (3-5월)
+    // 봄(3-5월)
     3: { season: 'spring', period: 'early', label: '초봄', emoji: '🌸' },
     4: { season: 'spring', period: 'mid', label: '늦봄', emoji: '🌺' },
     5: { season: 'spring', period: 'late', label: '늦봄', emoji: '🌺' },
     
-    // 여름 (6-8월)
+    // 여름(6-8월)
     6: { season: 'summer', period: 'early', label: '초여름', emoji: '☀️' },
     7: { season: 'summer', period: 'mid', label: '한여름', emoji: '🔥' },
     8: { season: 'summer', period: 'late', label: '늦여름', emoji: '🌞' },
     
-    // 가을 (9-11월)
+    // 가을(9-11월)
     9: { season: 'autumn', period: 'early', label: '초가을', emoji: '🍂' },
     10: { season: 'autumn', period: 'early', label: '초가을', emoji: '🍂' },
     11: { season: 'autumn', period: 'late', label: '늦가을', emoji: '🍁' },
     
-    // 겨울 (12-2월)
+    // 겨울(12-2월)
     12: { season: 'winter', period: 'early', label: '초겨울', emoji: '❄️' },
     1: { season: 'winter', period: 'mid', label: '한겨울', emoji: '🥶' },
     2: { season: 'winter', period: 'late', label: '늦겨울', emoji: '🌨️' }
@@ -36,7 +36,7 @@ export function getSeasonInfo(date = new Date()) {
 }
 
 /**
- * 시간대 구분 (아침/점심/저녁)
+ * 시간대 구분(아침/점심/저녁)
  * @param {Date} date - 날짜 객체
  * @returns {Object} 시간대 정보
  */
@@ -54,21 +54,21 @@ export function getTimePeriod(date = new Date()) {
 
 /**
  * 온도 기반 체감 온도 구분
- * @param {number} temp - 온도 (섭씨)
- * @param {number} humidity - 습도 (%)
- * @param {number} windSpeed - 풍속 (m/s)
+ * @param {number} temp - 온도(섭씨)
+ * @param {number} humidity - 습도(%)
+ * @param {number} windSpeed - 풍속(m/s)
  * @returns {Object} 체감 온도 정보
  */
 export function getFeelingTemperature(temp, humidity = 50, windSpeed = 0) {
-  // 간단한 체감온도 계산 (실제로는 더 복잡한 공식 사용 가능)
+  // 간단한 체감온도 계산
   let feelsLike = temp;
   
-  // 습도 영향 (습도가 높으면 더 덥게 느껴짐)
+  // 습도 영향(습도가 높으면 더 덥게 느껴짐)
   if (temp > 20) {
     feelsLike += (humidity - 50) * 0.1;
   }
   
-  // 풍속 영향 (바람이 강하면 더 춥게 느껴짐)
+  // 풍속 영향(바람이 강하면 더 춥게 느껴짐)
   feelsLike -= windSpeed * 0.5;
   
   // 체감 온도 구간별 분류
@@ -86,8 +86,6 @@ export function getFeelingTemperature(temp, humidity = 50, windSpeed = 0) {
     return { level: 'hot', label: '더움', emoji: '🔥', color: '#FF6B6B' };
   }
 }
-
-// 스타일 관련 함수들은 styleUtils.js로 이동
 
 /**
  * 옷 카테고리 정규화

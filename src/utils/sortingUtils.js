@@ -4,9 +4,9 @@
 
 /**
  * 인기순 정렬 함수
- * 1차: 좋아요 개수 내림차순
- * 2차: 싫어요 개수 오름차순 (적은 순서대로)
- * 3차: 기록 시간 오름차순 (빠른 순서대로)
+ * 1차 : 좋아요 개수 내림차순
+ * 2차 : 싫어요 개수 오름차순(적은 순서대로)
+ * 3차 : 기록 시간 오름차순(빠른 순서대로)
  * @param {Array} records - 정렬할 기록 배열
  * @param {Object} options - 정렬 옵션
  * @param {boolean} options.useThumbsCount - thumbsUpCount/thumbsDownCount 사용 여부
@@ -24,17 +24,17 @@ export function sortByPopularity(records, options = {}) {
     const aDislikes = useThumbsCount ? (a.thumbsDownCount || 0) : (a.dislikes?.length || 0);
     const bDislikes = useThumbsCount ? (b.thumbsDownCount || 0) : (b.dislikes?.length || 0);
     
-    // 1차: 좋아요 개수 내림차순
+    // 1차 : 좋아요 개수 내림차순
     if (aLikes !== bLikes) {
       return bLikes - aLikes;
     }
     
-    // 2차: 싫어요 개수 오름차순 (적은 순서대로)
+    // 2차 : 싫어요 개수 오름차순(적은 순서대로)
     if (aDislikes !== bDislikes) {
       return aDislikes - bDislikes;
     }
     
-    // 3차: 기록 시간 오름차순 (빠른 순서대로)
+    // 3차 : 기록 시간 오름차순(빠른 순서대로)
     const aTime = new Date(a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt);
     const bTime = new Date(b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt);
     return aTime - bTime;
@@ -57,7 +57,7 @@ export function sortByLatest(records) {
 /**
  * 통합 정렬 함수
  * @param {Array} records - 정렬할 기록 배열
- * @param {string} order - 정렬 순서 ("popular" | "latest")
+ * @param {string} order - 정렬 순서("popular" | "latest")
  * @param {Object} options - 정렬 옵션
  * @returns {Array} 정렬된 배열
  */

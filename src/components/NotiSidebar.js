@@ -3,7 +3,7 @@ import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon, PhotoIcon, UserPl
 import { useNavigate } from "react-router-dom";
 
 // --- 유틸리티 함수 ---
-// 간단한 유틸 : 클래스 합치기 (Conditional Classnames)
+// 간단한 유틸 : 클래스 합치기(Conditional Classnames)
 const cx = (...arr) => arr.filter(Boolean).join(" ");
 
 // 사용자 이름 가져오기(nickname 사용)

@@ -1,35 +1,39 @@
 /**
  * Firebase 쿼리 공통 유틸리티
  */
-
 import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../firebase"; 
 
 /**
- * 오늘 날짜의 공개 기록 조회
- * @param {string} region - 지역 (선택사항)
- * @param {number} maxCount - 최대 개수
- * @returns {Promise<Array>} 기록 배열
+ * 오늘 날짜 공개 기록 조회(outfits 컬렉션 기준)
+ * @param {string} [region=null] - 지역(선택사항, 해당 지역만 필터링)
+ * @param {number} [maxCount=100] - 최대 개수
+ * @returns {Promise<Array<Object>>} 기록 배열(ID 포함)
  */
 export async function getTodayPublicRecords(region = null, maxCount = 100) {
   try {
     const today = new Date();
+    // 현재 날짜를 'YYYY-MM-DD' 형식의 문자열로 변환
     const todayStr = today.toISOString().split('T')[0];
     
     let q;
+    
+    // 1. 지역 조건 O
     if (region) {
       q = query(
         collection(db, "outfits"),
-        where("region", "==", region),
-        where("date", "==", todayStr),
-        where("isPublic", "==", true),
+        where("region", "==", region), // 지역 필터
+        where("date", "==", todayStr),  // 오늘 날짜 필터
+        where("isPublic", "==", true), // 공개 기록 필터
         limit(maxCount)
       );
-    } else {
+    } 
+    // 2. 지역 조건 X(전체 지역)
+    else {
       q = query(
         collection(db, "outfits"),
-        where("date", "==", todayStr),
-        where("isPublic", "==", true),
+        where("date", "==", todayStr),  // 오늘 날짜 필터
+        where("isPublic", "==", true), // 공개 기록 필터
         limit(maxCount)
       );
     }
@@ -37,6 +41,7 @@ export async function getTodayPublicRecords(region = null, maxCount = 100) {
     const querySnapshot = await getDocs(q);
     const records = [];
     
+    // 문서 ID&데이터 합쳐 배열에 추가
     querySnapshot.forEach((doc) => {
       records.push({
         id: doc.id,
@@ -52,15 +57,15 @@ export async function getTodayPublicRecords(region = null, maxCount = 100) {
 }
 
 /**
- * 모든 공개 기록 조회 (outfits + records 컬렉션)
- * @param {number} maxCount - 최대 개수
- * @returns {Promise<Array>} 기록 배열
+ * 모든 공개 기록 조회(outfits + records 컬렉션)
+ * @param {number} [maxCount=1000] - 최대 개수(컬렉션당 maxCount 적용)
+ * @returns {Promise<Array<Object>>} 기록 배열
  */
 export async function getAllPublicRecords(maxCount = 1000) {
   try {
     console.log("🔍 모든 공개 기록 조회 시작...");
     
-    // outfits 컬렉션에서 조회
+    // 1. outfits 컬렉션에서 조회
     const outfitsQuery = query(
       collection(db, "outfits"),
       where("isPublic", "==", true),
@@ -79,7 +84,7 @@ export async function getAllPublicRecords(maxCount = 1000) {
     
     console.log("📊 outfits 컬렉션:", outfitsRecords.length, "개");
     
-    // records 컬렉션에서도 조회
+    // 2. records 컬렉션에서 조회
     const recordsQuery = query(
       collection(db, "records"),
       where("isPublic", "==", true),
@@ -98,7 +103,7 @@ export async function getAllPublicRecords(maxCount = 1000) {
     
     console.log("📊 records 컬렉션:", recordsRecords.length, "개");
     
-    // 두 컬렉션 결과 합치기
+    // 3. 두 컬렉션 결과 합치기
     const allRecords = [...outfitsRecords, ...recordsRecords];
     console.log("📊 전체 합계:", allRecords.length, "개");
     
@@ -110,13 +115,13 @@ export async function getAllPublicRecords(maxCount = 1000) {
 }
 
 /**
- * 특정 기록 조회
+ * 특정 기록을 ID로 조회(outfits 컬렉션에서만 시도)
  * @param {string} recordId - 기록 ID
- * @returns {Promise<Object|null>} 기록 데이터
+ * @returns {Promise<Object|null>} 기록 데이터(ID 포함), 없으면 null
  */
 export async function getRecordById(recordId) {
   try {
-    const ref = doc(db, "outfits", recordId);
+    const ref = doc(db, "outfits", recordId); // 'outfits' 컬렉션 문서 참조
     const snapshot = await getDoc(ref);
     
     if (snapshot.exists()) {
@@ -134,17 +139,17 @@ export async function getRecordById(recordId) {
 }
 
 /**
- * 지역별 공개 기록 조회
+ * 지역별 공개 기록 조회(outfits 컬렉션 기준)
  * @param {string} region - 지역
- * @param {number} maxCount - 최대 개수
- * @returns {Promise<Array>} 기록 배열
+ * @param {number} [maxCount=100] - 최대 개수
+ * @returns {Promise<Array<Object>>} 기록 배열
  */
 export async function getPublicRecordsByRegion(region, maxCount = 100) {
   try {
     const q = query(
       collection(db, "outfits"),
-      where("region", "==", region),
-      where("isPublic", "==", true),
+      where("region", "==", region),   // 지역 필터
+      where("isPublic", "==", true),  // 공개 기록 필터
       limit(maxCount)
     );
     
@@ -166,17 +171,17 @@ export async function getPublicRecordsByRegion(region, maxCount = 100) {
 }
 
 /**
- * 사용자별 기록 조회
- * @param {string} userId - 사용자 ID
- * @param {number} maxCount - 최대 개수
- * @returns {Promise<Array>} 기록 배열
+ * 사용자별 기록 조회(outfits 컬렉션 기준)
+ * @param {string} userId - 사용자 ID (uid)
+ * @param {number} [maxCount=100] - 최대 개수
+ * @returns {Promise<Array<Object>>} 기록 배열
  */
 export async function getRecordsByUser(userId, maxCount = 100) {
   try {
     const q = query(
       collection(db, "outfits"),
-      where("uid", "==", userId),
-      orderBy("createdAt", "desc"),
+      where("uid", "==", userId),             // 사용자 ID 필터
+      orderBy("createdAt", "desc"),          // 생성일 기준 내림차순 정렬
       limit(maxCount)
     );
     

@@ -125,45 +125,20 @@ export const WEATHER_ICONS = {
 };
 
 /**
- * 온도에 따른 배경 그라디언트
- */
-export const TEMPERATURE_GRADIENTS = {
-  very_cold: 'from-blue-600 to-blue-800',    // -10°C 이하
-  cold: 'from-blue-400 to-blue-600',         // -10°C ~ 0°C
-  cool: 'from-blue-200 to-blue-400',         // 0°C ~ 10°C
-  comfortable: 'from-green-300 to-green-500', // 10°C ~ 20°C
-  warm: 'from-yellow-300 to-orange-400',     // 20°C ~ 25°C
-  hot: 'from-orange-400 to-red-500'          // 25°C 이상
-};
-
-/**
- * 시간대별 색상 조정
- */
-export const TIME_COLORS = {
-  morning: { brightness: 1.2, saturation: 1.1 }, // 아침: 밝고 선명
-  afternoon: { brightness: 1.0, saturation: 1.0 }, // 점심: 기본
-  evening: { brightness: 0.8, saturation: 0.9 }   // 저녁: 어둡고 차분
-};
-
-/**
  * 날씨 상태를 아이콘으로 변환
  * @param {string} weatherCode - 날씨 코드
  * @param {number} temperature - 온도
  * @returns {Object} 날씨 아이콘 정보
  */
 export function getWeatherIcon(weatherCode, temperature = 20) {
-  // 날씨 코드를 표준화
+  // 날씨 코드 표준화
   const normalizedCode = normalizeWeatherCode(weatherCode);
   
   // 기본 아이콘 정보 가져오기
   const iconInfo = WEATHER_ICONS[normalizedCode] || WEATHER_ICONS.sunny;
   
-  // 온도에 따른 배경 그라디언트 추가
-  const tempGradient = getTemperatureGradient(temperature);
-  
   return {
     ...iconInfo,
-    tempGradient,
     weatherCode: normalizedCode
   };
 }
@@ -188,32 +163,6 @@ function normalizeWeatherCode(code) {
   if (codeStr.includes('wind')) return 'windy';
   
   return 'sunny'; // 기본값
-}
-
-/**
- * 온도에 따른 그라디언트 반환
- */
-function getTemperatureGradient(temperature) {
-  if (temperature <= -10) return TEMPERATURE_GRADIENTS.very_cold;
-  if (temperature <= 0) return TEMPERATURE_GRADIENTS.cold;
-  if (temperature <= 10) return TEMPERATURE_GRADIENTS.cool;
-  if (temperature <= 20) return TEMPERATURE_GRADIENTS.comfortable;
-  if (temperature <= 25) return TEMPERATURE_GRADIENTS.warm;
-  return TEMPERATURE_GRADIENTS.hot;
-}
-
-/**
- * 시간대에 따른 색상 조정
- */
-export function adjustColorsForTime(iconInfo, timePeriod) {
-  const timeAdjustment = TIME_COLORS[timePeriod] || TIME_COLORS.afternoon;
-  
-  return {
-    ...iconInfo,
-    timeAdjusted: true,
-    brightness: timeAdjustment.brightness,
-    saturation: timeAdjustment.saturation
-  };
 }
 
 /**
@@ -245,35 +194,3 @@ export const WEATHER_COLOR_PALETTES = {
     background: '#F0FFFF'
   }
 };
-
-/**
- * 날씨별 스타일 팁
- */
-export const WEATHER_STYLE_TIPS = {
-  sunny: [
-    '☀️ 선글라스를 챙기세요!',
-    '🧴 자외선 차단제를 바르세요.',
-    '👒 모자나 캡을 착용하세요.'
-  ],
-  cloudy: [
-    '☁️ 레이어링을 활용하세요.',
-    '🎒 얇은 겉옷을 준비하세요.',
-    '👕 편안한 소재를 선택하세요.'
-  ],
-  rainy: [
-    '☔ 우산을 챙기세요!',
-    '👟 방수 신발을 신으세요.',
-    '🧥 방수 재킷을 입으세요.'
-  ],
-  snowy: [
-    '❄️ 보온에 신경 쓰세요.',
-    '🧤 장갑과 목도리를 착용하세요.',
-    '👢 미끄럼 방지 신발을 신으세요.'
-  ],
-  windy: [
-    '💨 바람에 날리지 않는 옷을 입으세요.',
-    '🧥 바람막이를 챙기세요.',
-    '👕 무거운 소재의 옷을 선택하세요.'
-  ]
-};
-

@@ -16,15 +16,15 @@ export const NOTIFICATION_TYPES = {
 /**
  * 알림 스키마 정의
  * @typedef {Object} Notification
- * @property {string} id - 알림 고유 ID (Firestore 문서 ID)
- * @property {string} recipient - 알림을 받는 사용자 ID (필수)
- * @property {Object} sender - 알림을 발생시킨 사용자 정보 (필수)
+ * @property {string} id - 알림 고유 ID(Firestore 문서 ID)
+ * @property {string} recipient - 알림을 받는 사용자 ID(필수)
+ * @property {Object} sender - 알림을 발생시킨 사용자 정보(필수)
  * @property {string} sender.id - 발신자 사용자 ID
  * @property {string} sender.nickname - 발신자 닉네임
  * @property {string} [sender.avatarUrl] - 발신자 프로필 사진 URL
- * @property {string} type - 알림 종류 (NOTIFICATION_TYPES 중 하나, 필수)
- * @property {boolean} isRead - 읽음 여부 (기본값: false)
- * @property {string} link - 알림 클릭 시 이동할 경로 (필수)
+ * @property {string} type - 알림 종류(NOTIFICATION_TYPES 중 하나, 필수)
+ * @property {boolean} isRead - 읽음 여부(기본값: false)
+ * @property {string} link - 알림 클릭 시 이동할 경로(필수)
  * @property {string} [message] - 알림에 표시될 추가 내용
  * @property {Date} createdAt - 알림 생성 시간
  * @property {Date} [updatedAt] - 알림 수정 시간
@@ -53,8 +53,8 @@ export const NOTIFICATION_TYPES = {
  * @property {boolean} isRead - 읽음 여부
  * @property {string} link - 이동 경로
  * @property {string} [message] - 추가 메시지
- * @property {string} createdAt - 생성 시간 (ISO 문자열)
- * @property {string} [updatedAt] - 수정 시간 (ISO 문자열)
+ * @property {string} createdAt - 생성 시간(ISO 문자열)
+ * @property {string} [updatedAt] - 수정 시간(ISO 문자열)
  */
 
 /**
@@ -63,7 +63,7 @@ export const NOTIFICATION_TYPES = {
  * @property {NotificationResponse[]} notifications - 알림 목록
  * @property {number} totalCount - 전체 알림 개수
  * @property {number} unreadCount - 읽지 않은 알림 개수
- * @property {string} [nextPageToken] - 다음 페이지 토큰 (페이징용)
+ * @property {string} [nextPageToken] - 다음 페이지 토큰(페이징용)
  */
 
 /**
@@ -90,7 +90,7 @@ export function validateNotificationData(data) {
 
   // 타입별 추가 검사
   if (data.type === NOTIFICATION_TYPES.FOLLOW) {
-    // 구독 알림은 추가 메시지 불필요
+    // 구독 알림 : 추가 메시지 불필요
   } else if (data.type === NOTIFICATION_TYPES.COMMENT_ON_MY_POST) {
     if (!data.message) {
       errors.push('message is required for comment notifications');
@@ -100,7 +100,7 @@ export function validateNotificationData(data) {
       errors.push('message is required for reply notifications');
     }
   } else if (data.type === NOTIFICATION_TYPES.NEW_POST_FROM_FOLLOWING) {
-    // 새 기록 알림은 추가 메시지 불필요
+    // 새 기록 알림 : 추가 메시지 불필요
   }
 
   return {

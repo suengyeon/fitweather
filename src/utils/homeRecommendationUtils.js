@@ -8,9 +8,9 @@ import { getSeasonInfo } from './seasonUtils';
 import { getStyleLabel } from './styleUtils';
 
 /**
- * 계절별 추천 데이터 가져오기 (지역 무관)
- * @param {string} userStyle - 사용자 스타일 (선택사항)
- * @param {string} exactSeason - 홈화면에 표시된 정확한 계절 (한글)
+ * 계절별 추천 데이터 가져오기(지역 무관)
+ * @param {string} userStyle - 사용자 스타일(선택사항)
+ * @param {string} exactSeason - 홈화면에 표시된 정확한 계절
  * @returns {Promise<Array>} 추천 데이터 배열
  */
 export async function getHomeRecommendations(userStyle = null, exactSeason = null) {
@@ -22,15 +22,15 @@ export async function getHomeRecommendations(userStyle = null, exactSeason = nul
     const seasonInfo = getSeasonInfo(new Date());
     console.log("📅 현재 계절 정보:", seasonInfo);
     
-    // 모든 공개 기록 조회 (지역 상관없이)
+    // 모든 공개 기록 조회(지역 상관없이)
     const allRecords = await getAllPublicRecords(200);
     console.log("📊 전체 기록:", allRecords.length, "개");
     
-    // 계절별 필터링 (현재 계절에 해당하는 모든 기록)
+    // 계절별 필터링(현재 계절에 해당하는 모든 기록)
     const seasonFilteredRecords = filterBySeason(allRecords, seasonInfo.season, exactSeason);
     console.log("🍂 계절 필터링 후:", seasonFilteredRecords.length, "개");
     
-    // 스타일 필터링 (선택된 경우)
+    // 스타일 필터링(선택된 경우)
     let filteredRecords = seasonFilteredRecords;
     if (userStyle && userStyle.trim() !== "") {
       filteredRecords = filterByStyle(seasonFilteredRecords, userStyle);
@@ -39,7 +39,7 @@ export async function getHomeRecommendations(userStyle = null, exactSeason = nul
       console.log("👕 스타일 필터링 건너뜀 (전체)");
     }
     
-    // 정렬 (좋아요 내림차순 → 싫어요 오름차순 → 최신순)
+    // 정렬(좋아요 내림차순 → 싫어요 오름차순 → 최신순)
     const sortedRecords = sortRecords(filteredRecords, "popular");
     
     // 상위 3개 반환
@@ -63,10 +63,10 @@ export async function getHomeRecommendations(userStyle = null, exactSeason = nul
 }
 
 /**
- * 계절별 필터링 (정확한 계절 매칭)
+ * 계절별 필터링(정확한 계절 매칭)
  * @param {Array} records - 기록 배열
- * @param {string} currentSeason - 현재 계절 (영문)
- * @param {string} exactSeason - 홈화면에 표시된 정확한 계절 (한글)
+ * @param {string} currentSeason - 현재 계절(영문)
+ * @param {string} exactSeason - 홈화면에 표시된 정확한 계절(한글)
  * @returns {Array} 필터링된 기록 배열
  */
 function filterBySeason(records, currentSeason, exactSeason = null) {
@@ -79,28 +79,28 @@ function filterBySeason(records, currentSeason, exactSeason = null) {
   console.log("🎯 홈화면 계절:", exactSeason);
   
   return records.filter(record => {
-    // 기록에 계절 정보가 있으면 정확히 매칭
+    // 기록에 계절 정보 있으면 정확히 매칭
     if (record.season) {
       const matches = record.season === exactSeason;
       console.log(`📊 기록 계절: "${record.season}" vs 홈화면: "${exactSeason}" → ${matches ? '매칭' : '불일치'}`);
       return matches;
     }
     
-    // weather.season이 있으면 확인
+    // weather.season 있으면 확인
     if (record.weather?.season) {
       const matches = record.weather.season === exactSeason;
       console.log(`📊 기록 weather.season: "${record.weather.season}" vs 홈화면: "${exactSeason}" → ${matches ? '매칭' : '불일치'}`);
       return matches;
     }
     
-    // 계절 정보가 없으면 날짜 기반으로 추정
+    // 계절 정보 없으면 날짜 기반으로 추정
     if (record.createdAt) {
       const recordDate = record.createdAt.toDate ? record.createdAt.toDate() : new Date(record.createdAt);
       const recordSeasonInfo = getSeasonInfo(recordDate);
       return recordSeasonInfo.season === currentSeason;
     }
     
-    // 계절 정보가 전혀 없으면 제외
+    // 계절 정보 전혀 없으면 제외
     return false;
   });
 }
@@ -118,19 +118,19 @@ function filterByStyle(records, targetStyle) {
   console.log("🎨 스타일 필터링:", { targetStyle, targetStyleLabel });
   
   return records.filter(record => {
-    // 1. 영문 코드로 직접 비교 (기존 기록들)
+    // 1. 영문 코드로 직접 비교(기존 기록들)
     if (record.style === targetStyle) {
       console.log(`✅ 영문 스타일 매칭: "${record.style}" === "${targetStyle}"`);
       return true;
     }
     
-    // 2. 한글로 변환해서 비교 (새로 저장된 기록들)
+    // 2. 한글로 변환해서 비교(새로 저장된 기록들)
     if (record.style === targetStyleLabel) {
       console.log(`✅ 한글 스타일 매칭: "${record.style}" === "${targetStyleLabel}"`);
       return true;
     }
     
-    // 3. 스타일이 중첩 구조에 있는 경우 (outfit.style)
+    // 3. 스타일이 중첩 구조에 있는 경우(outfit.style)
     if (record.outfit && record.outfit.style === targetStyleLabel) {
       console.log(`✅ outfit 스타일 매칭: "${record.outfit.style}" === "${targetStyleLabel}"`);
       return true;
@@ -142,9 +142,9 @@ function filterByStyle(records, targetStyle) {
 }
 
 /**
- * 새로고침을 위한 랜덤 추천 (지역 무관)
- * @param {string} userStyle - 사용자 스타일 (선택사항)
- * @param {string} exactSeason - 홈화면에 표시된 정확한 계절 (한글)
+ * 새로고침을 위한 랜덤 추천(지역 무관)
+ * @param {string} userStyle - 사용자 스타일(선택사항)
+ * @param {string} exactSeason - 홈화면에 표시된 정확한 계절(한글)
  * @returns {Promise<Array>} 랜덤 추천 데이터 배열
  */
 export async function getRandomHomeRecommendations(userStyle = null, exactSeason = null) {
@@ -160,7 +160,7 @@ export async function getRandomHomeRecommendations(userStyle = null, exactSeason
     const seasonFilteredRecords = filterBySeason(allRecords, seasonInfo.season, exactSeason);
     console.log("🍂 계절 필터링 후:", seasonFilteredRecords.length, "개");
     
-    // 스타일 필터링 (선택된 경우)
+    // 스타일 필터링(선택된 경우)
     let filteredRecords = seasonFilteredRecords;
     if (userStyle && userStyle.trim() !== "") {
       filteredRecords = filterByStyle(seasonFilteredRecords, userStyle);

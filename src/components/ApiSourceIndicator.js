@@ -1,14 +1,12 @@
-
 /**
- * API 소스 표시 컴포넌트
- * 사용된 날씨 API의 출처(기상청 또는 OpenWeatherMap 등)를 아이콘과 라벨로 표시
+ * API 소스 표시 컴포넌트 - 사용된 날씨 API의 출처(기상청orpenWeatherMap 등)를 아이콘&라벨로 표시
  * @param {Object} props - 컴포넌트 속성
  * @param {string} props.apiSource - API 소스('kma' | 'openweathermap' 등)
  * @param {boolean} [props.showLabel=false] - API 라벨(예:'기상청') 표시 여부
  * @returns {JSX.Element|null} API 소스 표시 요소 또는 apiSource가 유효하지 않으면 null
  */
 export default function ApiSourceIndicator({ apiSource, showLabel = false }) {
-  // apiSource 없으면 아무것도 렌더링하지 않음
+  // apiSource 없으면 아무것도 렌더링 X
   if (!apiSource) return null;
 
   /**
@@ -35,12 +33,12 @@ export default function ApiSourceIndicator({ apiSource, showLabel = false }) {
           description: 'OpenWeatherMap API'
         };
       default:
-        return null; // 정의되지 않은 소스는 처리하지 않음
+        return null; // 정의되지 않은 소스는 처리 X
     }
   };
 
   const apiInfo = getApiInfo(apiSource);
-  // 유효한 API 정보가 없으면 null 반환
+  // 유효한 API 정보 없으면 null 반환
   if (!apiInfo) return null;
 
   // 컴포넌트 렌더링
@@ -49,7 +47,7 @@ export default function ApiSourceIndicator({ apiSource, showLabel = false }) {
       {/* 1. 이모지 아이콘 */}
       <span className="mr-1">{apiInfo.emoji}</span>
       
-      {/* 2. 라벨(showLabel이 true일 때만 표시) */}
+      {/* 2. 라벨(showLabel==true일 때만 표시) */}
       {showLabel && (
         <span className="mr-1">{apiInfo.label}</span>
       )}
