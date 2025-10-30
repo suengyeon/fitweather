@@ -25,7 +25,6 @@ import Admin from "./pages/Admin";
 import BannedUserMessage from "./components/BannedUserMessage";
 import SetAdmin from "./pages/SetAdmin";
 import AdminLogin from "./pages/AdminLogin";
-import UpdateBasicStyle from "./pages/UpdateBasicStyle";
 
 
 
@@ -126,7 +125,6 @@ function AppContent() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/set-admin" element={<SetAdmin />} />
-          <Route path="/update-basic-style" element={<UpdateBasicStyle />} />
         </Routes>
   );
 }

@@ -93,7 +93,7 @@ export function getFeelingTemperature(temp, humidity = 50, windSpeed = 0) {
 export const CLOTHING_CATEGORIES = {
   outer: {
     label: '아우터',
-    items: ['코트', '자켓', '가디건', '후드티', '블레이저', '패딩', '야상', '트렌치코트', '니트', '맨투맨']
+    items: ['재킷/점퍼', '블레이저', '코트', '가디건', '후드집업', '바람막이', '패딩']
   },
   top: {
     label: '상의',

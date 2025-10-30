@@ -395,7 +395,6 @@ function FeedCard({
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             {record.uid === currentUserUid ? (
               <>
-                <span style={{ fontSize: 12, fontWeight: 600 }}>내 기록</span>
                 <span style={{ fontSize: 16 }}>{feelingEmoji}</span>
               </>
             ) : (

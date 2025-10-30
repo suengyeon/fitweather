@@ -8,11 +8,11 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
+import { regionMap } from "../constants/regionData";
 
 function ProfileEdit() {
   const { user } = useAuth();
   const navigate = useNavigate();
-
   const [nickname, setNickname] = useState("");
   const [region, setRegion] = useState("");
   const [email, setEmail] = useState("");
@@ -24,7 +24,6 @@ function ProfileEdit() {
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
   } = useNotiSidebar();
-
 
   // 1. 기존 정보 불러오기
   useEffect(() => {
@@ -136,27 +135,11 @@ function ProfileEdit() {
               onChange={e => setRegion(e.target.value)}
               className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
             >
-              <option value="Baengnyeongdo">백령도</option>
-              <option value="Incheon">인천</option>
-              <option value="Seoul">서울</option>
-              <option value="Chuncheon">춘천</option>
-              <option value="Gangneung">강릉</option>
-              <option value="Ulleungdo">울릉도/독도</option>
-              <option value="Hongseong">홍성</option>
-              <option value="Suwon">수원</option>
-              <option value="Cheongju">청주</option>
-              <option value="Andong">안동</option>
-              <option value="Jeonju">전주</option>
-              <option value="Daejeon">대전</option>
-              <option value="Daegu">대구</option>
-              <option value="Pohang">포항</option>
-              <option value="Heuksando">흑산도</option>
-              <option value="Mokpo">목포</option>
-              <option value="Jeju">제주</option>
-              <option value="Ulsan">울산</option>
-              <option value="Yeosu">여수</option>
-              <option value="Changwon">창원</option>
-              <option value="Busan">부산</option>
+              {Object.entries(regionMap).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
           <div className="mb-10 flex items-center">

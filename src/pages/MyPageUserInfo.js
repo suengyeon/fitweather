@@ -8,6 +8,7 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
+import { regionMap } from "../constants/regionData";
 
 function MyPageUserInfo() {
   const { user } = useAuth();
@@ -21,35 +22,11 @@ function MyPageUserInfo() {
     markOneRead, handleAlarmItemClick,
   } = useNotiSidebar();
 
-
   const navigate = useNavigate();
 
   // 지역 이름을 한글로 변환하는 함수
   const getKoreanRegionName = (englishRegion) => {
-    const regionMap = {
-      Baengnyeongdo: "백령도",
-      Incheon: "인천",
-      Seoul: "서울",
-      Chuncheon: "춘천",
-      Gangneung: "강릉",
-      Ulleungdo: "울릉도/독도",
-      Hongseong: "홍성",
-      Suwon: "수원",
-      Cheongju: "청주",
-      Andong: "안동",
-      Jeonju: "전주",
-      Daejeon: "대전",
-      Daegu: "대구",
-      Pohang: "포항",
-      Heuksando: "흑산도",
-      Mokpo: "목포",
-      Jeju: "제주",
-      Ulsan: "울산",
-      Yeosu: "여수",
-      Changwon: "창원",
-      Busan: "부산",
-      Gwangju: "광주"
-    };
+    // regionMap은 regionData.js에서 가져옴
     return regionMap[englishRegion] || englishRegion;
   };
 
@@ -63,8 +40,6 @@ function MyPageUserInfo() {
         setNickname(data.nickname);
         setRegion(data.region);
         setEmail(data.email);
-
-
       }
     };
     fetchProfile();
@@ -112,7 +87,6 @@ function MyPageUserInfo() {
             )}
           </button>
         </div>
-
       </div>
 
       <div className="mt-10 flex justify-center">

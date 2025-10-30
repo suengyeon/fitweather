@@ -213,10 +213,10 @@ function Record() {
             temp: "20",
             rain: "0",
             humidity: "60",
-            icon: "sunny",
+            icon: "rain",
             season: "초가을",
             sky: "1",
-            pty: "0"
+            pty: "1"
           });
         }
       } catch (error) {
