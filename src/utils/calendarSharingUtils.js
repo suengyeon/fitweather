@@ -12,27 +12,28 @@ import {
   limit,
   getDoc,
   setDoc,
-  increment
+  increment 
 } from 'firebase/firestore';
 
 /**
  * 캘린더 공유 설정 관련 함수들
  */
 
-// 캘린더 공유 설정 저장/업데이트
+// 캘린더 공유 설정 저장/업데이트(setDoc 사용 : 덮어쓰기 또는 생성)
 export async function saveCalendarSharingSettings(userId, settings) {
   try {
     const settingsData = {
       userId,
       isPublic: settings.isPublic || false,
-      shareLevel: settings.shareLevel || 'private', // 'private', 'followers', 'public'
+      shareLevel: settings.shareLevel || 'private', // 'private', 'followers', 'public' 중 하나
       allowComments: settings.allowComments || false,
       allowLikes: settings.allowLikes || true,
       showPersonalInfo: settings.showPersonalInfo || false,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date() // 업데이트 시각 기록
     };
 
+    // 사용자 ID를 문서 ID로 사용해 특정 문서에 저장(사용자별 1개 문서)
     const docRef = doc(db, 'calendarSharingSettings', userId);
     await setDoc(docRef, settingsData);
     
@@ -52,7 +53,7 @@ export async function getCalendarSharingSettings(userId) {
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() };
     } else {
-      // 기본 설정 반환
+      // 문서 없으면 기본 설정 반환
       return {
         userId,
         isPublic: false,
@@ -69,17 +70,17 @@ export async function getCalendarSharingSettings(userId) {
 }
 
 /**
- * 공개 캘린더 조회 관련 함수들
+ * 공개 캘린더 목록 조회 관련 함수들
  */
 
-// 공개 캘린더 목록 조회
+// 전체 공개 상태의 캘린더 목록 조회
 export async function getPublicCalendars(limitCount = 20) {
   try {
     const q = query(
       collection(db, 'calendarSharingSettings'),
-      where('isPublic', '==', true),
-      where('shareLevel', '==', 'public'),
-      orderBy('updatedAt', 'desc'),
+      where('isPublic', '==', true),         // 공개 설정된 캘린더
+      where('shareLevel', '==', 'public'),  // 전체 공개 레벨
+      orderBy('updatedAt', 'desc'),         // 최근 업데이트 순 정렬
       limit(limitCount)
     );
 
@@ -89,7 +90,7 @@ export async function getPublicCalendars(limitCount = 20) {
     for (const doc of querySnapshot.docs) {
       const settingsData = doc.data();
       
-      // 사용자 정보 조회
+      // 사용자 정보(닉네임 등) 조회해 병합
       const userDoc = await getDoc(doc(db, 'users', settingsData.userId));
       if (userDoc.exists()) {
         const userData = userDoc.data();
@@ -111,7 +112,7 @@ export async function getPublicCalendars(limitCount = 20) {
 // 팔로잉한 사용자들의 캘린더 조회
 export async function getFollowingCalendars(userId, limitCount = 20) {
   try {
-    // 팔로잉 목록 조회
+    // 1. 현재 사용자가 팔로잉하는 사용자 ID 목록 조회
     const followingQuery = query(
       collection(db, 'follows'),
       where('followerId', '==', userId)
@@ -124,14 +125,15 @@ export async function getFollowingCalendars(userId, limitCount = 20) {
       return [];
     }
 
-    // 팔로잉한 사용자들의 캘린더 설정 조회
+    // 2. 팔로잉한 사용자들의 캘린더 설정 조회 및 필터링
     const calendars = [];
     for (const followingId of followingIds) {
       const settingsDoc = await getDoc(doc(db, 'calendarSharingSettings', followingId));
       if (settingsDoc.exists()) {
         const settingsData = settingsDoc.data();
+        // 공개 상태이고, 'followers' 또는 'public' 레벨로 공유되었는지 확인
         if (settingsData.isPublic && (settingsData.shareLevel === 'followers' || settingsData.shareLevel === 'public')) {
-          // 사용자 정보 조회
+          // 3. 사용자 정보 조회 및 결과에 추가
           const userDoc = await getDoc(doc(db, 'users', followingId));
           if (userDoc.exists()) {
             const userData = userDoc.data();
@@ -145,6 +147,7 @@ export async function getFollowingCalendars(userId, limitCount = 20) {
       }
     }
 
+    // 업데이트 시각 기준 내림차순 정렬 후 반환
     return calendars.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   } catch (error) {
     console.error('팔로잉 캘린더 조회 오류:', error);
@@ -156,19 +159,21 @@ export async function getFollowingCalendars(userId, limitCount = 20) {
  * 캘린더 데이터 조회 관련 함수들
  */
 
-// 특정 사용자의 공개 기록 조회 (캘린더용)
+// 특정 사용자의 공개 기록 조회(캘린더 뷰어용 : 월별)
 export async function getUserPublicRecords(userId, year, month, limitCount = 50) {
   try {
+    // 월의 시작일&종료일 계산
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    const endDate = new Date(year, month, 0); // 다음 달 0일 = 현재 월의 마지막 날
     
     const q = query(
       collection(db, 'records'),
-      where('userId', '==', userId),
-      where('isPublic', '==', true),
+      where('userId', '==', userId), // 특정 사용자 ID 필터
+      where('isPublic', '==', true), // 공개 기록 필터
+      // 날짜 범위 필터(문자열 비교)
       where('date', '>=', startDate.toISOString().split('T')[0]),
       where('date', '<=', endDate.toISOString().split('T')[0]),
-      orderBy('date', 'desc'),
+      orderBy('date', 'desc'), // 날짜 내림차순 정렬
       limit(limitCount)
     );
 
@@ -186,12 +191,12 @@ export async function getUserPublicRecords(userId, year, month, limitCount = 50)
   }
 }
 
-// 특정 날짜의 공개 기록 조회
+// 특정 날짜의 공개 기록 조회(날짜 피드용)
 export async function getPublicRecordsByDate(date, limitCount = 20) {
   try {
     const q = query(
       collection(db, 'records'),
-      where('date', '==', date),
+      where('date', '==', date), // 특정 날짜 필터
       where('isPublic', '==', true),
       orderBy('createdAt', 'desc'),
       limit(limitCount)
@@ -203,14 +208,14 @@ export async function getPublicRecordsByDate(date, limitCount = 20) {
     for (const doc of querySnapshot.docs) {
       const recordData = doc.data();
       
-      // 사용자 정보 조회
+      // 사용자 정보 조회 및 병합
       const userDoc = await getDoc(doc(db, 'users', recordData.userId));
       if (userDoc.exists()) {
         const userData = userDoc.data();
         records.push({
           id: doc.id,
           ...recordData,
-          author: userData
+          author: userData // 작성자 정보 추가
         });
       }
     }
@@ -223,10 +228,10 @@ export async function getPublicRecordsByDate(date, limitCount = 20) {
 }
 
 /**
- * 캘린더 상호작용 관련 함수들
+ * 캘린더 상호작용(좋아요) 관련 함수들
  */
 
-// 캘린더 좋아요
+// 캘린더 좋아요 누르기
 export async function likeCalendar(userId, targetUserId) {
   try {
     const likeData = {
@@ -235,9 +240,10 @@ export async function likeCalendar(userId, targetUserId) {
       createdAt: new Date()
     };
 
+    // 'calendarLikes' 컬렉션에 좋아요 문서 추가
     const docRef = await addDoc(collection(db, 'calendarLikes'), likeData);
     
-    // 캘린더 좋아요 수 증가
+    // 캘린더 설정 문서 좋아요 수(likeCount) 1 증가
     await updateDoc(doc(db, 'calendarSharingSettings', targetUserId), {
       likeCount: increment(1)
     });
@@ -252,7 +258,7 @@ export async function likeCalendar(userId, targetUserId) {
 // 캘린더 좋아요 취소
 export async function unlikeCalendar(userId, targetUserId) {
   try {
-    // 좋아요 관계 찾기
+    // 1. 좋아요 관계 문서 조회
     const q = query(
       collection(db, 'calendarLikes'),
       where('userId', '==', userId),
@@ -262,10 +268,11 @@ export async function unlikeCalendar(userId, targetUserId) {
     const querySnapshot = await getDocs(q);
     
     if (!querySnapshot.empty) {
+      // 2. 좋아요 문서 삭제
       const likeDoc = querySnapshot.docs[0];
       await deleteDoc(doc(db, 'calendarLikes', likeDoc.id));
 
-      // 캘린더 좋아요 수 감소
+      // 3. 캘린더 설정 문서 좋아요 수 1 감소
       await updateDoc(doc(db, 'calendarSharingSettings', targetUserId), {
         likeCount: increment(-1)
       });
@@ -288,6 +295,7 @@ export async function checkCalendarLikeStatus(userId, targetUserId) {
     );
 
     const querySnapshot = await getDocs(q);
+    // 문서가 존재하면 true (좋아요 상태)
     return !querySnapshot.empty;
   } catch (error) {
     console.error('캘린더 좋아요 상태 확인 오류:', error);
@@ -308,12 +316,13 @@ export async function addCalendarComment(userId, targetUserId, content) {
       content,
       createdAt: new Date(),
       updatedAt: new Date(),
-      isDeleted: false
+      isDeleted: false // 댓글 삭제 상태 플래그
     };
 
+    // 'calendarComments' 컬렉션에 댓글 문서 추가
     const docRef = await addDoc(collection(db, 'calendarComments'), commentData);
     
-    // 캘린더 댓글 수 증가
+    // 캘린더 설정 문서의 댓글 수(commentCount) 1 증가
     await updateDoc(doc(db, 'calendarSharingSettings', targetUserId), {
       commentCount: increment(1)
     });
@@ -330,9 +339,9 @@ export async function getCalendarComments(targetUserId, limitCount = 20) {
   try {
     const q = query(
       collection(db, 'calendarComments'),
-      where('targetUserId', '==', targetUserId),
-      where('isDeleted', '==', false),
-      orderBy('createdAt', 'desc'),
+      where('targetUserId', '==', targetUserId), // 해당 캘린더에 대한 댓글
+      where('isDeleted', '==', false),           // 삭제되지 않은 댓글만
+      orderBy('createdAt', 'desc'),              // 최신순 정렬
       limit(limitCount)
     );
 
@@ -342,14 +351,14 @@ export async function getCalendarComments(targetUserId, limitCount = 20) {
     for (const doc of querySnapshot.docs) {
       const commentData = doc.data();
       
-      // 댓글 작성자 정보 조회
+      // 댓글 작성자 정보 조회 및 병합
       const userDoc = await getDoc(doc(db, 'users', commentData.userId));
       if (userDoc.exists()) {
         const userData = userDoc.data();
         comments.push({
           id: doc.id,
           ...commentData,
-          author: userData
+          author: userData // 작성자 정보 추가
         });
       }
     }
@@ -365,11 +374,11 @@ export async function getCalendarComments(targetUserId, limitCount = 20) {
  * 캘린더 통계 관련 함수들
  */
 
-// 캘린더 조회 통계 업데이트
+// 캘린더 조회 통계 업데이트(조회수 1 증가)
 export async function updateCalendarViewStats(targetUserId) {
   try {
     await updateDoc(doc(db, 'calendarSharingSettings', targetUserId), {
-      viewCount: increment(1),
+      viewCount: increment(1), // 조회수 1 증가
       lastViewedAt: new Date()
     });
     return true;
@@ -379,15 +388,15 @@ export async function updateCalendarViewStats(targetUserId) {
   }
 }
 
-// 인기 캘린더 조회 (좋아요/조회수 기준)
+// 인기 캘린더 조회(좋아요 수, 조회수 기준 내림차순 정렬)
 export async function getPopularCalendars(limitCount = 20) {
   try {
     const q = query(
       collection(db, 'calendarSharingSettings'),
       where('isPublic', '==', true),
       where('shareLevel', '==', 'public'),
-      orderBy('likeCount', 'desc'),
-      orderBy('viewCount', 'desc'),
+      orderBy('likeCount', 'desc'), // 1순위 정렬 : 좋아요 수
+      orderBy('viewCount', 'desc'), // 2순위 정렬 : 조회수
       limit(limitCount)
     );
 
@@ -397,7 +406,7 @@ export async function getPopularCalendars(limitCount = 20) {
     for (const doc of querySnapshot.docs) {
       const settingsData = doc.data();
       
-      // 사용자 정보 조회
+      // 사용자 정보 조회 및 병합
       const userDoc = await getDoc(doc(db, 'users', settingsData.userId));
       if (userDoc.exists()) {
         const userData = userDoc.data();

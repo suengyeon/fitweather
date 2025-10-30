@@ -1,23 +1,23 @@
 // 카테고리별 선택 가능한 아이템 목록 (영문 코드)
 export const outfitOptions = {
     outer: [
-        "jacket", 
-        "jumper", 
+        "jacket",  
         "coat", 
         "cardigan", 
         "hoodzipup", 
         "blazer", 
         "windbreak", 
-        "jersey", 
         "padding", 
         "custom"
     ],
     top: [
         "tshirt", 
         "shirt", 
-        "blouse", 
-        "tank", 
-        "sweater", 
+        "blouse",
+        "sweater",
+        "sweatshirt",
+        "hoodie",
+        "sleeveless",
         "custom"
     ],
     bottom: [
@@ -26,23 +26,28 @@ export const outfitOptions = {
         "slacks",
         "shorts", 
         "skirt", 
+        "dresses",
         "leggings", 
+        "training",
         "custom"
     ],
     shoes: [
         "sneakers", 
-        "boots", 
-        "sandals", 
-        "heels", 
-        "loafers", 
+        "runnings",
+        "clogs",
+        "boots",
+        "rainboots",
+        "sandals",
+        "heels",
+        "loafers",
         "custom"
     ],
     acc: [
-        "bag", 
-        "hat", 
-        "scarf", 
-        "watch", 
-        "jewelry", 
+        "umbrella",
+        "sunglasses",
+        "muffler",
+        "gloves",
+        "cap", 
         "custom"
     ],
 };

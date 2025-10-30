@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, ArrowPathIcon } from "@heroicons/react/24/solid";
@@ -11,22 +9,14 @@ import useWeather from "../hooks/useWeather";
 import { useAuth } from "../contexts/AuthContext";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
-import  useNotiSidebar from "../hooks/useNotiSidebar";
+import useNotiSidebar from "../hooks/useNotiSidebar";
 import { getHomeRecommendations, getRandomHomeRecommendations } from "../utils/homeRecommendationUtils";
+import { regionMap } from "../constants/regionData";
+import { styleOptions } from "../constants/styleOptions";
+import { getWeatherEmoji } from "../utils/weatherUtils";
 
-// 날씨 아이콘 코드에 따른 이모지 반환 함수
-function getWeatherEmoji(iconCode) {
-  switch (iconCode) {
-    case "sunny": return "☀️";
-    case "cloudy": return "☁️";
-    case "overcast": return "🌥️";
-    case "rain": return "🌧️";
-    case "snow": return "❄️";
-    case "snow_rain": return "🌨️";
-    case "shower": return "🌦️";
-    default: return "☁️";
-  }
-}
+// 지역 드롭다운 옵션 목록 생성
+const regionOptions = Object.entries(regionMap).map(([key, label]) => ({ value: key, label }));
 
 function Home() {
   const { profile, loading: profileLoading } = useUserProfile();
@@ -51,7 +41,7 @@ function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState(""); // 기본값: 전체
 
-  // 날씨 정보 가져오기 (weather 변수 선언을 먼저)
+  // 날씨 정보 가져오기
   const { weather, loading: weatherLoading } = useWeather(selectedRegion);
 
   useEffect(() => {
@@ -67,11 +57,11 @@ function Home() {
       setRecommendationLoading(true);
       try {
         console.log("🔍 추천 데이터 가져오기 시작:", { selectedRegion, selectedStyle });
-        
+
         // 홈화면 추천 로직 사용 (계절별 + 스타일 필터링, 지역 무관)
         const data = await getHomeRecommendations(selectedStyle, weather?.season);
         console.log("추천 결과:", data.length, "개");
-        
+
         console.log("최종 추천 데이터:", data);
         setRecommendations(data);
         setCurrentRecommendationIndex(prev => {
@@ -91,15 +81,15 @@ function Home() {
   // 새로고침 버튼 클릭 핸들러
   const handleRefreshRecommendation = async () => {
     if (!selectedRegion) return;
-    
+
     setIsRefreshing(true);
     try {
       console.log("🔄 새로고침 추천 요청:", { selectedRegion, selectedStyle });
-      
+
       // 랜덤 추천 로직 사용 (지역 무관)
       const newData = await getRandomHomeRecommendations(selectedStyle, weather?.season);
       console.log("새로고침 추천 결과:", newData.length, "개");
-      
+
       if (newData.length > 0) {
         setRecommendations(newData);
         setCurrentRecommendationIndex(0); // 첫 번째 추천으로 설정
@@ -111,15 +101,6 @@ function Home() {
     }
   };
 
-
-
-
-
-
-
-
-
-
   const loading = profileLoading || weatherLoading;
 
   // 현재 표시할 추천 데이터 계산
@@ -127,6 +108,35 @@ function Home() {
     if (recommendations.length === 0) return null;
     return recommendations[currentRecommendationIndex];
   }, [recommendations, currentRecommendationIndex]);
+
+
+  // ********************************************************
+  // 지역 선택 드롭다운 렌더링 함수
+  const renderRegionSelect = () => (
+    <select
+      value={selectedRegion || profile?.region || "Seoul"}
+      onChange={(e) => setSelectedRegion(e.target.value)}
+      className="w-32 bg-white px-4 py-2 rounded mb-4 text-center"
+    >
+      {regionOptions.map(opt => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+  );
+
+  // 스타일 선택 드롭다운 렌더링 함수 (재사용)
+  const renderStyleSelect = () => (
+    <select
+      value={selectedStyle}
+      onChange={(e) => setSelectedStyle(e.target.value)}
+      className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none border border-gray-300 rounded px-2 py-1"
+    >
+      <option value="">전체</option>
+      {styleOptions.map(opt => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+  );
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -170,7 +180,7 @@ function Home() {
                 onClick={() => setAlarmOpen(true)}
                 aria-label="알림 열기"
               >
-                <BellIcon className="w-5 h-5"/>
+                <BellIcon className="w-5 h-5" />
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
                 )}
@@ -185,30 +195,8 @@ function Home() {
 
           {/* 콘텐츠 */}
           <div className="flex flex-col items-center mt-8 px-4 flex-1">
-            {/* 지역 선택 드롭다운 */}
-            <select
-              value={selectedRegion || profile?.region || "Seoul"}
-              onChange={(e) => setSelectedRegion(e.target.value)}
-              className="w-32 bg-white px-4 py-2 rounded mb-4 text-center"
-            >
-              <option value="Incheon">인천</option>
-              <option value="Seoul">서울</option>
-              <option value="Chuncheon">춘천</option>
-              <option value="Gangneung">강릉</option>
-              <option value="Ulleungdo">울릉도/독도</option>
-              <option value="Suwon">수원</option>
-              <option value="Cheongju">청주</option>
-              <option value="Jeonju">전주</option>
-              <option value="Daejeon">대전</option>
-              <option value="Daegu">대구</option>
-              <option value="Pohang">포항</option>
-              <option value="Mokpo">목포</option>
-              <option value="Jeju">제주</option>
-              <option value="Ulsan">울산</option>
-              <option value="Yeosu">여수</option>
-              <option value="Busan">부산</option>
-              <option value="Gwangju">광주</option>
-            </select>
+            {/* 지역 선택 드롭다운 (분리된 함수 사용) */}
+            {renderRegionSelect()}
 
             {/* 오늘의 날씨 섹션 */}
             {weather && (
@@ -260,19 +248,8 @@ function Home() {
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
                   {/* 카드 헤더 */}
                   <div className="flex items-center justify-between mb-4">
-                    <select 
-                      value={selectedStyle}
-                      onChange={(e) => setSelectedStyle(e.target.value)}
-                      className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none border border-gray-300 rounded px-2 py-1"
-                    >
-                      <option value="">전체</option>
-                      <option value="casual">캐주얼</option>
-                      <option value="formal">포멀</option>
-                      <option value="basic">베이직/놈코어</option>
-                      <option value="sporty">스포티/액티브</option>
-                      <option value="street">시크/스트릿</option>
-                      <option value="feminine">러블리/페미닌</option>
-                    </select>
+                    {/* 스타일 선택 드롭다운 (분리된 함수 사용) */}
+                    {renderStyleSelect()}
                     <button
                       onClick={handleRefreshRecommendation}
                       className={`p-1 text-gray-400 hover:text-gray-600 transition-colors ${isRefreshing ? "animate-spin" : ""}`}
@@ -300,7 +277,7 @@ function Home() {
                             </div>
                           ))
                         ) : (
-                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
+                          <div className="inline-block text-xs text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
                             가디건
                           </div>
                         )}
@@ -394,23 +371,11 @@ function Home() {
             ) : (
               <div className="w-full max-w-md mt-6">
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
-                  {/* 스타일 선택 드롭다운 */}
+                  {/* 스타일 선택 드롭다운 (분리된 함수 사용) */}
                   <div className="flex items-center justify-center mb-4">
-                    <select 
-                      value={selectedStyle}
-                      onChange={(e) => setSelectedStyle(e.target.value)}
-                      className="w-32 text-sm font-medium text-gray-700 text-center focus:outline-none border border-gray-300 rounded px-2 py-1"
-                    >
-                      <option value="">전체</option>
-                      <option value="casual">캐주얼</option>
-                      <option value="formal">포멀</option>
-                      <option value="basic">베이직/놈코어</option>
-                      <option value="sporty">스포티/액티브</option>
-                      <option value="street">시크/스트릿</option>
-                      <option value="feminine">러블리/페미닌</option>
-                    </select>
+                    {renderStyleSelect()}
                   </div>
-                  
+
                   <div className="text-center text-gray-500">
                     <p>오늘의 추천 착장이 없습니다.</p>
                     <p className="text-sm mt-2">스타일을 선택하여 다른 추천을 찾아보세요.</p>

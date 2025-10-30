@@ -39,7 +39,7 @@ function Feed() {
   const [outfits, setOutfits] = useState([]);
   const [order, setOrder] = useState("popular"); // 인기순 or 최신순
   const [region, setRegion] = useState(""); // 초기값 빈 문자열
-  const [style, setStyle] = useState("casual"); // 스타일 필터 (기본값: 캐주얼)
+  const [style, setStyle] = useState(""); // 스타일 필터
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const {
     alarmOpen, setAlarmOpen,
@@ -181,12 +181,15 @@ function Feed() {
     getRecords(region, order, selectedDate).then(records => {
       // 스타일 필터링 적용
       const filteredRecords = records.filter(record => {
+        // style이 빈 문자열이면 (전체 선택) 모든 기록을 반환
+        if (!style) return true;
+
         // 스타일이 설정되지 않은 기록은 모든 스타일에 포함
         if (!record.style) return true;
         
         // 저장된 스타일(한글)과 필터 스타일(영문) 비교
-        const recordStyleLabel = record.style; // '캐주얼'
-        const filterStyleLabel = getStyleLabel(style); // 'casual' → '캐주얼'
+        const recordStyleLabel = record.style; // ex.'캐주얼'
+        const filterStyleLabel = getStyleLabel(style); // ex.'casual' → '캐주얼'
         
         console.log("🔍 스타일 필터링:", { 
           recordStyle: recordStyleLabel, 
@@ -429,9 +432,6 @@ function Feed() {
                     {getWeatherEmoji(weather.icon)}
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-gray-600">
-                  {weather.temp}°C
-                </div>
               </div>
             ) : weatherLoading ? (
               <p className="text-sm text-gray-500">날씨 정보를 불러오는 중...</p>
@@ -485,7 +485,7 @@ function Feed() {
                 onChange={e => setStyle(e.target.value)}
                 className="w-32 px-3 py-2 rounded  text-sm text-center"
               >
-                <option value="" className="text-gray-500">선택</option>
+                <option value="" className="text-gray-500">전체</option>
                 {/* 분리된 styleOptions를 사용하여 옵션 생성 */}
                 {styleOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>

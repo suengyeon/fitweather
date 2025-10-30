@@ -2,13 +2,8 @@ import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { sortRecords } from "../utils/sortingUtils";
 
-/**
- * region: ex) "서울"
- * order: "popular" | "latest"
- * date: "YYYY-MM-DD" 형식의 날짜 (선택사항, 기본값은 오늘)
- */
 export async function getRecords(region, order, date = null) {
-  // 날짜가 제공되지 않으면 오늘 날짜 사용 (로컬 시간 기준)
+  // 날짜가 제공되지 않으면 오늘 날짜 사용(로컬 시간 기준)
   const targetDate = date || (() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -24,7 +19,7 @@ export async function getRecords(region, order, date = null) {
     where("isPublic", "==", true)
   );
 
-  // 최신순 정렬 (createdAt)
+  // 최신순 정렬(createdAt)
   if (order === "latest") {
     q = query(q, orderBy("createdAt", "desc"));
   }

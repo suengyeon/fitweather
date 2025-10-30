@@ -1,8 +1,3 @@
-/**
- * 알림 API 엔드포인트
- * Firestore 직접 연동 함수들
- */
-
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 

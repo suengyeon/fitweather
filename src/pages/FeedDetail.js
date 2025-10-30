@@ -11,18 +11,8 @@ import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
 import ReportModal from "../components/ReportModal";
 import { submitReport } from "../api/reportAPI";
 import { getReactionSummary, getUserReaction, toggleThumbsUp, toggleThumbsDown } from "../api/reactions";
-
-function styleToLabel(style) {
-    const map = {
-        casual: "캐주얼",
-        minimal: "미니멀",
-        formal: "포멀",
-        sporty: "스포티/액티브",
-        street: "시크/스트릿",
-        feminine: "러블리/페미닌",
-    };
-    return map[style] || style || "-";
-}
+import { getStyleLabel } from "../utils/styleUtils";
+import { navBtnStyle, indicatorStyle, dotStyle } from "../components/ImageCarouselStyles";
 
 function FeedDetail() {
     const { id } = useParams();
@@ -89,28 +79,28 @@ function FeedDetail() {
         const loadReactionData = async () => {
             if (!user || !id) return;
             console.log('FeedDetail - 반응 데이터 로드 시작:', { userId: user.uid, recordId: id });
-            
+
             try {
                 const [summary, userReaction] = await Promise.all([
                     getReactionSummary(id),
                     getUserReaction(id, user.uid)
                 ]);
-                
+
                 console.log('FeedDetail - API 응답:', { summary, userReaction });
-                
+
                 // NaN 방지 및 기본값 설정
                 const upCount = summary.thumbsUpCount || 0;
                 const downCount = summary.thumbsDownCount || 0;
                 const isUp = userReaction.isThumbsUp || false;
                 const isDown = userReaction.isThumbsDown || false;
-                
+
                 console.log('FeedDetail - 설정할 값:', { upCount, downCount, isUp, isDown });
-                
+
                 setThumbsUpCount(upCount);
                 setThumbsDownCount(downCount);
                 setIsThumbsUp(isUp);
                 setIsThumbsDown(isDown);
-                
+
                 // localStorage에 상태 저장 (새로고침 후 유지)
                 const reactionData = {
                     thumbsUpCount: upCount,
@@ -170,14 +160,14 @@ function FeedDetail() {
     useEffect(() => {
         const fetchData = async () => {
             console.log("🔍 FeedDetail - 데이터 조회 시작:", id);
-            
+
             try {
                 // 1단계: outfits 컬렉션에서 데이터 조회
                 const outfitsRef = doc(db, "outfits", id);
                 const outfitsSnapshot = await getDoc(outfitsRef);
-                
+
                 console.log("📊 outfits 컬렉션 조회 결과:", outfitsSnapshot.exists());
-                
+
                 if (outfitsSnapshot.exists()) {
                     const record = outfitsSnapshot.data();
                     console.log("✅ outfits에서 데이터 조회 성공:", record);
@@ -206,9 +196,9 @@ function FeedDetail() {
                 console.log("🔄 records 컬렉션에서 조회 시도...");
                 const recordsRef = doc(db, "records", id);
                 const recordsSnapshot = await getDoc(recordsRef);
-                
+
                 console.log("📊 records 컬렉션 조회 결과:", recordsSnapshot.exists());
-                
+
                 if (recordsSnapshot.exists()) {
                     const record = recordsSnapshot.data();
                     console.log("✅ records에서 데이터 조회 성공:", record);
@@ -236,7 +226,7 @@ function FeedDetail() {
                 // 3단계: 두 컬렉션 모두에서 찾을 수 없음
                 console.error("❌ 두 컬렉션 모두에서 데이터를 찾을 수 없습니다:", id);
                 setLoading(false);
-                
+
             } catch (error) {
                 console.error("❌ 데이터 조회 중 오류:", error);
                 setLoading(false);
@@ -284,7 +274,7 @@ function FeedDetail() {
     if (!data) return <div className="p-6 text-red-500">게시물을 찾을 수 없습니다.</div>;
 
     const { weather, outfit, memo, imageUrls, feeling } = data;
-    
+
     // Base64 이미지 처리 함수
     const getImageSrc = (imageUrl) => {
         if (!imageUrl) return null;
@@ -314,10 +304,10 @@ function FeedDetail() {
         e.stopPropagation();
         if (!user) return;
 
-        console.log('FeedDetail - 좋아요 클릭:', { 
+        console.log('FeedDetail - 좋아요 클릭:', {
             currentState: { isThumbsUp, thumbsUpCount, isThumbsDown, thumbsDownCount },
-            userId: user.uid, 
-            recordId: id 
+            userId: user.uid,
+            recordId: id
         });
 
         const prev = isThumbsUp;
@@ -333,7 +323,7 @@ function FeedDetail() {
             console.log('FeedDetail - API 호출 시작: toggleThumbsUp');
             await toggleThumbsUp(id, user.uid);
             console.log('FeedDetail - API 호출 성공');
-            
+
             // localStorage 업데이트
             const newUpCount = isThumbsUp ? thumbsUpCount - 1 : thumbsUpCount + 1;
             const newDownCount = isThumbsDown ? thumbsDownCount - 1 : thumbsDownCount;
@@ -346,7 +336,7 @@ function FeedDetail() {
             };
             localStorage.setItem(`reaction_${id}_${user.uid}`, JSON.stringify(reactionData));
             console.log('FeedDetail - localStorage 업데이트:', reactionData);
-            
+
             // 다른 페이지에 상태 변경 알림
             window.dispatchEvent(new CustomEvent('reactionUpdated', {
                 detail: { recordId: id, type: 'thumbsUp', isActive: !isThumbsUp }
@@ -379,7 +369,7 @@ function FeedDetail() {
 
         try {
             await toggleThumbsDown(id, user.uid);
-            
+
             // localStorage 업데이트
             const newUpCount = isThumbsUp ? thumbsUpCount - 1 : thumbsUpCount;
             const newDownCount = isThumbsDown ? thumbsDownCount - 1 : thumbsDownCount + 1;
@@ -391,7 +381,7 @@ function FeedDetail() {
                 timestamp: Date.now()
             };
             localStorage.setItem(`reaction_${id}_${user.uid}`, JSON.stringify(reactionData));
-            
+
             // 다른 페이지에 상태 변경 알림
             window.dispatchEvent(new CustomEvent('reactionUpdated', {
                 detail: { recordId: id, type: 'thumbsDown', isActive: !isThumbsDown }
@@ -664,7 +654,7 @@ function FeedDetail() {
                                 <div className="flex items-center w-60">
                                     <span className="w-28 text-base font-semibold text-left">스타일</span>
                                     <div className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center bg-white">
-                                        <span className="text-gray-800">{styleToLabel(data?.style)}</span>
+                                        <span className="text-gray-800">{getStyleLabel(data.style)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -747,7 +737,7 @@ function FeedDetail() {
 
                             {/* 신고 버튼 */}
                             {user && user.uid !== data.uid && (
-                                <button 
+                                <button
                                     onClick={() => openReportModal(id, data.uid)}
                                     className="flex items-center gap-1 px-2 py-1 rounded transition hover:scale-110 text-red-500 hover:text-red-600 font-semibold"
                                     title="신고하기"
@@ -769,16 +759,18 @@ function FeedDetail() {
                                         <div className="absolute bottom-2 left-0 right-0 flex justify-between px-2">
                                             <button
                                                 onClick={() => setImagePreviewIdx((imagePreviewIdx - 1 + imageUrls.length) % imageUrls.length)}
-                                                className="bg-white bg-opacity-70 px-2 py-1 rounded-full"
+                                                style={navBtnStyle("left")}
                                             >
                                                 ◀
                                             </button>
-                                            <span className="bg-white bg-opacity-70 px-2 py-1 rounded text-sm">
-                                                {imagePreviewIdx + 1} / {imageUrls.length}
-                                            </span>
+                                            <div style={indicatorStyle}>
+                                                {imageUrls.map((_, i) => (
+                                                    <div key={i} style={dotStyle(i === imagePreviewIdx)} />
+                                                ))}
+                                            </div>
                                             <button
                                                 onClick={() => setImagePreviewIdx((imagePreviewIdx + 1) % imageUrls.length)}
-                                                className="bg-white bg-opacity-70 px-2 py-1 rounded-full"
+                                                style={navBtnStyle("right")}
                                             >
                                                 ▶
                                             </button>
@@ -827,5 +819,4 @@ function FeedDetail() {
         </div>
     );
 }
-
 export default FeedDetail;

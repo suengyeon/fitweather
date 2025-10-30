@@ -8,7 +8,6 @@ import { HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { toast } from "react-toastify";
 import { collection, query, where, getDocs, addDoc, deleteDoc, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
-// Firebase Storage 제거 - Base64 인코딩 사용
 import { useAuth } from "../contexts/AuthContext";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
@@ -214,10 +213,10 @@ function Record() {
             temp: "20",
             rain: "0",
             humidity: "60",
-            icon: "sunny",
+            icon: "rain",
             season: "초가을",
             sky: "1",
-            pty: "0"
+            pty: "1"
           });
         }
       } catch (error) {
@@ -408,7 +407,6 @@ function Record() {
       toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
       return;
     }
-    // Storage 체크 제거 - Base64 인코딩 사용
 
     setSubmitLoading(true);
 

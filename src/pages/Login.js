@@ -146,7 +146,7 @@ function Login() {
 
       {/* 중앙 로그인 섹션 */}
       <div className="flex flex-col items-center justify-start mt-10">
-        <h1 className="text-5xl font-bold text-indigo-500 mb-10">
+        <h1 className="text-5xl font-lilita text-indigo-500 mb-10">
           Fitweather
         </h1>
 

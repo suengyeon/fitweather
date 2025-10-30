@@ -1,64 +1,89 @@
-// 캘린더 공유 설정 컴포넌트
-
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { saveCalendarSharingSettings, getCalendarSharingSettings } from '../utils/calendarSharingUtils';
+import { useAuth } from '../contexts/AuthContext'; 
+import { saveCalendarSharingSettings, getCalendarSharingSettings } from '../utils/calendarSharingUtils'; 
 
+/**
+ * CalendarSharingSettings 컴포넌트 - 사용자의 캘린더 공유 및 공개 설정 관리하는 모달 UI
+ * @param {Object} props - 컴포넌트 속성
+ * @param {() => void} props.onClose - 모달 닫는 함수
+ */
 function CalendarSharingSettings({ onClose }) {
-  const { user } = useAuth();
+  const { user } = useAuth(); // 현재 로그인한 사용자 정보(user.uid 포함)
+  
+  // --- 상태 관리 ---
   const [settings, setSettings] = useState({
-    isPublic: false,
-    shareLevel: 'private',
-    allowComments: false,
-    allowLikes: true,
-    showPersonalInfo: false
+    isPublic: false,      // 캘린더 공개 여부(토글)
+    shareLevel: 'private', // 공개 범위('private', 'public', 'followers')
+    allowComments: false,  // 댓글 허용 여부
+    allowLikes: true,      // 좋아요 허용 여부
+    showPersonalInfo: false // 닉네임, 지역 등 개인 정보 표시 여부
   });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true); // 설정 로딩 상태
+  const [saving, setSaving] = useState(false);  // 설정 저장 중 상태
 
+  // --- 데이터 로딩(Mount 시 및 user 변경 시) ---
   useEffect(() => {
+    // 사용자 정보 로드되면 기존 설정 불러오기
     loadSettings();
-  }, [user]);
+  }, [user]); // user 객체 변경될 때마다 재실행
 
+  /**
+   * Firestore에서 현재 사용자의 저장된 캘린더 공유 설정을 비동기적으로 불러옴
+   */
   const loadSettings = async () => {
-    if (!user) return;
+    if (!user) return; // 사용자 정보 없으면 종료
     
     setLoading(true);
     try {
+      // 유틸리티 함수 이용해 설정 데이터 조회
       const currentSettings = await getCalendarSharingSettings(user.uid);
-      setSettings(currentSettings);
+      setSettings(currentSettings); // 조회된 설정으로 상태 업데이트
     } catch (error) {
       console.error('설정 로드 오류:', error);
     } finally {
-      setLoading(false);
+      setLoading(false); // 로딩 완료
     }
   };
 
+  /**
+   * 변경된 설정을 Firestore에 비동기적으로 저장
+   */
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) return; // 사용자 정보 없으면 종료
     
     setSaving(true);
+    // 
     try {
+      // 유틸리티 함수 이용해 변경된 설정 저장
       await saveCalendarSharingSettings(user.uid, settings);
-      alert('캘린더 공유 설정이 저장되었습니다.');
-      onClose?.();
+      // 저장 성공 알림 및 모달 닫기
+      // NOTE: alert() 대신 커스텀 모달 UI를 사용하는 것이 권장되나, 현재 코드에서는 alert 사용
+      alert('캘린더 공유 설정이 저장되었습니다.'); 
+      onClose?.(); 
     } catch (error) {
       console.error('설정 저장 오류:', error);
       alert('설정 저장에 실패했습니다.');
     } finally {
-      setSaving(false);
+      setSaving(false); // 저장 상태 해제
     }
   };
 
+  /**
+   * 개별 설정 항목의 값이 변경될 때 상태 업데이트하는 범용 핸들러
+   * @param {string} key - 변경할 설정 항목 키(예: 'isPublic')
+   * @param {any} value - 변경할 새로운 값
+   */
   const handleSettingChange = (key, value) => {
     setSettings(prev => ({
       ...prev,
-      [key]: value
+      [key]: value // 특정 키 값만 변경
     }));
   };
 
+  // --- 렌더링 : 로딩 중 상태 ---
   if (loading) {
     return (
+      // 모달 배경 및 로딩 스피너
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6">
           <div className="text-center">
@@ -70,9 +95,12 @@ function CalendarSharingSettings({ onClose }) {
     );
   }
 
+  // --- 렌더링 : 설정 모달 UI ---
   return (
+    // 모달 컨테이너 (고정 위치, 배경 반투명 오버레이)
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-md max-h-96 overflow-hidden">
+        
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">캘린더 공유 설정</h2>
@@ -84,14 +112,16 @@ function CalendarSharingSettings({ onClose }) {
           </button>
         </div>
 
-        {/* 설정 내용 */}
+        {/* 설정 내용(스크롤 가능 영역) */}
         <div className="p-4 space-y-4 overflow-y-auto max-h-80">
-          {/* 공개 여부 */}
+          
+          {/* 1. 캘린더 공개 여부(토글 스위치) */}
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-medium text-gray-800">캘린더 공개</h3>
               <p className="text-sm text-gray-500">다른 사용자가 내 캘린더를 볼 수 있게 합니다</p>
             </div>
+            {/* 토글 스위치 UI */}
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -103,11 +133,12 @@ function CalendarSharingSettings({ onClose }) {
             </label>
           </div>
 
-          {/* 공개 레벨 */}
+          {/* 2. 공개 범위(isPublic==true일 때만 표시) */}
           {settings.isPublic && (
             <div>
               <h3 className="font-medium text-gray-800 mb-2">공개 범위</h3>
               <div className="space-y-2">
+                {/* 라디오 버튼 : 전체 공개 */}
                 <label className="flex items-center">
                   <input
                     type="radio"
@@ -119,6 +150,7 @@ function CalendarSharingSettings({ onClose }) {
                   />
                   <span className="text-sm">전체 공개</span>
                 </label>
+                {/* 라디오 버튼 : 팔로워만 */}
                 <label className="flex items-center">
                   <input
                     type="radio"
@@ -134,13 +166,14 @@ function CalendarSharingSettings({ onClose }) {
             </div>
           )}
 
-          {/* 좋아요 허용 */}
+          {/* 3. 좋아요 허용(isPublic==true일 때만 표시) */}
           {settings.isPublic && (
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium text-gray-800">좋아요 허용</h3>
                 <p className="text-sm text-gray-500">다른 사용자가 내 캘린더에 좋아요를 누를 수 있습니다</p>
               </div>
+              {/* 좋아요 허용 토글 */}
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -153,13 +186,14 @@ function CalendarSharingSettings({ onClose }) {
             </div>
           )}
 
-          {/* 댓글 허용 */}
+          {/* 4. 댓글 허용(isPublic==true일 때만 표시) */}
           {settings.isPublic && (
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium text-gray-800">댓글 허용</h3>
                 <p className="text-sm text-gray-500">다른 사용자가 내 캘린더에 댓글을 달 수 있습니다</p>
               </div>
+              {/* 댓글 허용 토글 */}
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -172,13 +206,14 @@ function CalendarSharingSettings({ onClose }) {
             </div>
           )}
 
-          {/* 개인정보 표시 */}
+          {/* 5. 개인정보 표시(isPublic==true일 때만 표시) */}
           {settings.isPublic && (
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium text-gray-800">개인정보 표시</h3>
                 <p className="text-sm text-gray-500">닉네임, 지역 등 개인정보를 표시합니다</p>
               </div>
+              {/* 개인정보 표시 토글 */}
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -192,14 +227,16 @@ function CalendarSharingSettings({ onClose }) {
           )}
         </div>
 
-        {/* 하단 버튼 */}
+        {/* 하단 버튼 영역 */}
         <div className="flex justify-end gap-2 p-4 border-t">
+          {/* 취소 버튼 */}
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-600 hover:text-gray-800"
           >
             취소
           </button>
+          {/* 저장 버튼(saving 중일 때 비활성화 및 로딩 텍스트 표시) */}
           <button
             onClick={handleSave}
             disabled={saving}
@@ -214,13 +251,3 @@ function CalendarSharingSettings({ onClose }) {
 }
 
 export default CalendarSharingSettings;
-
-
-
-
-
-
-
-
-
-

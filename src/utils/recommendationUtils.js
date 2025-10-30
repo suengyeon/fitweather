@@ -236,7 +236,7 @@ export const SEASONAL_RECOMMENDATIONS = {
  * @param {number} conditions.temp - 온도
  * @param {number} conditions.humidity - 습도
  * @param {number} conditions.windSpeed - 풍속
- * @param {string} conditions.weather - 날씨 상태 (sunny, cloudy, rainy, snowy)
+ * @param {string} conditions.weather - 날씨 상태(sunny, cloudy, rainy, snowy)
  * @param {Date} conditions.date - 날짜
  * @param {Array} conditions.styleTags - 스타일 태그
  * @returns {Object} 추천 결과
@@ -280,8 +280,7 @@ export function getOutfitRecommendation(conditions) {
     feelingTemperature: feelingTemp,
     weather: weatherInfo,
     recommendedItems,
-    confidence: calculateConfidence(conditions, seasonInfo, feelingTemp),
-    tips: getStyleTips(seasonInfo, feelingTemp, weatherInfo)
+    confidence: calculateConfidence(conditions, seasonInfo, feelingTemp)
   };
 }
 
@@ -363,43 +362,6 @@ function calculateConfidence(conditions, seasonInfo, feelingTemp) {
   }
   
   return Math.min(confidence, 1.0);
-}
-
-/**
- * 스타일 팁 생성
- */
-function getStyleTips(seasonInfo, feelingTemp, weatherInfo) {
-  const tips = [];
-  
-  // 절기별 팁
-  switch (seasonInfo.season) {
-    case 'spring':
-      tips.push('🌸 봄에는 레이어링을 활용해보세요!');
-      break;
-    case 'summer':
-      tips.push('☀️ 여름에는 통풍이 좋은 소재를 선택하세요!');
-      break;
-    case 'autumn':
-      tips.push('🍂 가을에는 따뜻한 색감의 옷을 입어보세요!');
-      break;
-    case 'winter':
-      tips.push('❄️ 겨울에는 보온에 신경 쓰세요!');
-      break;
-  }
-  
-  // 체감온도별 팁
-  if (feelingTemp.level === 'hot') {
-    tips.push('🔥 더운 날씨에는 얇고 시원한 옷을 입으세요!');
-  } else if (feelingTemp.level === 'cold') {
-    tips.push('🥶 추운 날씨에는 여러 겹의 옷을 입어보세요!');
-  }
-  
-  // 날씨별 팁
-  if (weatherInfo.mood === 'protective') {
-    tips.push('☔️ 비나 눈이 올 때는 방수 소재를 고려해보세요!');
-  }
-  
-  return tips;
 }
 
 /**

@@ -1,5 +1,3 @@
-// src/utils/timeUtils.js
-
 /**
  * 현재 시간을 대한민국(서울) 표준시로 변환한 Date 객체 반환
  */
@@ -10,8 +8,7 @@ const getSeoulDate = () => {
   };
   
   /**
-   * 기상청 API에 사용할 base_date 계산 (YYYYMMDD)
-   * - 02:00 이전이면 전날 날짜 사용
+   * 기상청 API에 사용할 base_date 계산(YYYYMMDD) - 02:00 이전이면 전날 날짜 사용
    */
   export const getTodayYYYYMMDD = () => {
     const seoulDate = getSeoulDate();
@@ -30,8 +27,8 @@ const getSeoulDate = () => {
   };
   
   /**
-   * 기상청 API에 사용할 base_time 계산 (HHMM)
-   * - 가장 최근 배포 시각: 02:00, 05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00
+   * 기상청 API에 사용할 base_time 계산(HHMM)
+   - 가장 최근 배포 시각: 02:00, 05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00
    */
   export const getBaseTime = () => {
     const seoulDate = getSeoulDate();

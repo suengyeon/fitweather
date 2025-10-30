@@ -1,5 +1,3 @@
-// src/api/pastWeather.js
-
 import { db } from "../firebase";
 import { collection, doc, getDoc, setDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { fetchKmaForecast } from "./kmaWeather";
@@ -8,8 +6,8 @@ import { getSeason } from "../utils/forecastUtils";
 
 /**
  * 과거 날씨 데이터를 Firestore에 저장하는 함수
- * @param {string} date - 날짜 (YYYY-MM-DD 형식)
- * @param {string} region - 지역 (예: "Seoul", "Busan")
+ * @param {string} date - 날짜(YYYY-MM-DD 형식)
+ * @param {string} region - 지역(예: "Seoul", "Busan")
  * @param {Object} weatherData - 날씨 데이터
  * @returns {Promise<void>}
  */
@@ -42,8 +40,8 @@ export const savePastWeatherData = async (date, region, weatherData) => {
 
 /**
  * 과거 날씨 데이터를 Firestore에서 삭제하는 함수
- * @param {string} date - 날짜 (YYYY-MM-DD 형식)
- * @param {string} region - 지역 (예: "Seoul", "Busan")
+ * @param {string} date - 날짜(YYYY-MM-DD 형식)
+ * @param {string} region - 지역(예: "Seoul", "Busan")
  */
 export const deletePastWeatherData = async (date, region) => {
   try {
@@ -58,8 +56,8 @@ export const deletePastWeatherData = async (date, region) => {
 
 /**
  * 특정 날짜와 지역의 과거 날씨 데이터를 불러오는 함수
- * @param {string} date - 날짜 (YYYY-MM-DD 형식)
- * @param {string} region - 지역 (예: "Seoul", "Busan")
+ * @param {string} date - 날짜(YYYY-MM-DD 형식)
+ * @param {string} region - 지역(예: "Seoul", "Busan")
  * @returns {Promise<Object|null>} - 과거 날씨 데이터 또는 null
  */
 export const getPastWeatherData = async (date, region) => {
@@ -84,8 +82,8 @@ export const getPastWeatherData = async (date, region) => {
 
 /**
  * 기상청 API에서 과거 날씨 데이터를 가져와서 저장하는 함수
- * @param {string} date - 날짜 (YYYY-MM-DD 형식)
- * @param {string} region - 지역 (예: "Seoul", "Busan")
+ * @param {string} date - 날짜(YYYY-MM-DD 형식)
+ * @param {string} region - 지역(예: "Seoul", "Busan")
  * @returns {Promise<Object|null>} - 저장된 날씨 데이터 또는 null
  */
 export const fetchAndSavePastWeather = async (date, region) => {
@@ -131,13 +129,13 @@ export const fetchAndSavePastWeather = async (date, region) => {
     if (!forecastItems || forecastItems.length === 0) {
       console.log("기상청 API에서 데이터를 가져올 수 없음, 기본값 사용");
       
-      // 특정 날짜에 대한 실제 데이터 설정 (예시)
+      // 특정 날짜에 대한 실제 데이터 설정(예시)
       let defaultWeatherData;
       if (date === "2025-09-12") {
-        // 9월 12일 - 비가 많이 온 날 (서울 기준)
+        // 9월 12일 - 비가 많이 온 날(서울 기준)
         defaultWeatherData = {
           avgTemp: "19",
-          avgRain: "45", // 45mm 강수량 (실제 비가 많이 온 양)
+          avgRain: "45", // 45mm 강수량(실제 비가 많이 온 양)
           avgHumidity: "88",
           sky: "4", // 흐림
           pty: "1", // 비
@@ -225,7 +223,7 @@ export const fetchAndSavePastWeather = async (date, region) => {
     const ptyData = dayData.filter(item => item.category === 'PTY');
     
     const avgTemp = tempData.length > 0 ? (tempData.reduce((a, b) => a + b, 0) / tempData.length).toFixed(1) : "0";
-    // 강수량은 평균이 아닌 일 강수량 그대로 사용 (NaN 값 제외하고 가장 큰 값)
+    // 강수량 : 평균 아닌 일 강수량 그대로 사용(NaN 값 제외하고 가장 큰 값)
     const validRainData = rainData.filter(val => !isNaN(val) && val >= 0);
     const avgRain = validRainData.length > 0 ? Math.max(...validRainData).toFixed(1) : "0";
     console.log("🌧️ 유효한 강수량 데이터:", validRainData, "최종 강수량:", avgRain);
@@ -249,7 +247,7 @@ export const fetchAndSavePastWeather = async (date, region) => {
     // 아이콘 코드 생성
     const iconCode = getWeatherIconFromCodes(sky, pty);
     
-    // 계절 계산 (절기 + 온도 기반, 홈화면과 동일한 로직)
+    // 계절 계산(절기 + 온도 기반, 홈화면과 동일한 로직)
     const season = getSeason(avgTemp, new Date(date));
     
     const weatherData = {
@@ -273,13 +271,13 @@ export const fetchAndSavePastWeather = async (date, region) => {
 };
 
 /**
- * SKY와 PTY 코드를 기반으로 날씨 아이콘 코드를 반환하는 함수
- * @param {string} sky - SKY 코드 (1: 맑음, 3: 구름많음, 4: 흐림)
- * @param {string} pty - PTY 코드 (0: 없음, 1: 비, 2: 비/눈, 3: 눈, 4: 소나기)
+ * SKY&PTY 코드 기반으로 날씨 아이콘 코드 반환하는 함수
+ * @param {string} sky - SKY 코드(1: 맑음, 3: 구름많음, 4: 흐림)
+ * @param {string} pty - PTY 코드(0: 없음, 1: 비, 2: 비/눈, 3: 눈, 4: 소나기)
  * @returns {string} - 날씨 아이콘 코드
  */
 function getWeatherIconFromCodes(sky, pty) {
-  // PTY 조건문을 순서대로 실행
+  // PTY 조건문 순서대로 실행
   if (pty === "1") {
     return "rain";      // 비 - 🌧️
   }
@@ -296,7 +294,7 @@ function getWeatherIconFromCodes(sky, pty) {
     return "shower";    // 소나기 - 🌦️
   }
   
-  // PTY가 0이고 SKY 조건문 실행
+  // PTY==0, SKY 조건문 실행
   if (pty === "0" && sky === "1") {
     return "sunny";     // 맑음 - ☀️
   }
@@ -309,8 +307,8 @@ function getWeatherIconFromCodes(sky, pty) {
     return "overcast";  // 흐림 - 🌥️
   }
   
-  // 예외 처리: 위의 어떤 조건에도 해당하지 않으면
+  // 예외 처리 : 위의 어떤 조건에도 해당하지 않으면
   console.error(`날씨 아이콘 조건 오류 - PTY: ${pty}, SKY: ${sky}`);
-  return "cloudy";      // 기본값: 구름 - ☁️
+  return "cloudy";      // 기본값 : 구름 - ☁️
 }
 

@@ -4,6 +4,7 @@ import { doc, setDoc, query, collection, where, getDocs } from "firebase/firesto
 import { useState } from "react";
 import { HomeIcon, Bars3Icon } from "@heroicons/react/24/solid";
 import { useAuth } from "../contexts/AuthContext";
+import { regionMap } from "../constants/regionData";
 
 function ProfileSetup() {
   const location = useLocation();
@@ -34,31 +35,6 @@ function ProfileSetup() {
     return region.charAt(0).toUpperCase() + region.slice(1).toLowerCase();
   }
 
-  const regionMap = {
-    Baengnyeongdo: "백령도",
-    Incheon: "인천",
-    Seoul: "서울",
-    Chuncheon: "춘천",
-    Gangneung: "강릉",
-    Ulleungdo: "울릉도/독도",
-    Hongseong: "홍성",
-    Suwon: "수원",
-    Cheongju: "청주",
-    Andong: "안동",
-    Jeonju: "전주",
-    Daejeon: "대전",
-    Daegu: "대구",
-    Pohang: "포항",
-    Heuksando: "흑산도",
-    Mokpo: "목포",
-    Jeju: "제주",
-    Ulsan: "울산",
-    Yeosu: "여수",
-    Changwon: "창원",
-    Busan: "부산",
-    Gwangju: "광주"
-  };
-
   const handleSave = async () => {
     if (!nickname || !region) {
       setError("닉네임과 지역을 모두 입력해주세요!");
@@ -79,7 +55,7 @@ function ProfileSetup() {
 
     try {
       console.log('프로필 저장 시작...', { uid, nickname, region });
-      
+
       // 닉네임 중복 검사
       console.log('닉네임 중복 검사 시작...');
       const nicknameQuery = query(
@@ -131,10 +107,10 @@ function ProfileSetup() {
       console.log('사용자 데이터 저장 시작...', userData);
       await setDoc(doc(db, "users", uid), userData);
       console.log('사용자 데이터 저장 완료');
-      
+
       // 로그인 상태 설정
       setSocialUser({ uid, ...userData });
-      
+
       navigate("/");
     } catch (err) {
       console.error('프로필 저장 오류:', err);
@@ -219,29 +195,11 @@ function ProfileSetup() {
               onChange={e => setRegion(e.target.value)}
               className="w-full border border-gray-300 px-4 py-2 rounded bg-white"
             >
-              <option value="">지역을 선택하세요</option>
-              <option value="Seoul">서울</option>
-              <option value="Busan">부산</option>
-              <option value="Daegu">대구</option>
-              <option value="Incheon">인천</option>
-              <option value="Gwangju">광주</option>
-              <option value="Daejeon">대전</option>
-              <option value="Ulsan">울산</option>
-              <option value="Suwon">수원</option>
-              <option value="Chuncheon">춘천</option>
-              <option value="Gangneung">강릉</option>
-              <option value="Cheongju">청주</option>
-              <option value="Andong">안동</option>
-              <option value="Jeonju">전주</option>
-              <option value="Pohang">포항</option>
-              <option value="Mokpo">목포</option>
-              <option value="Yeosu">여수</option>
-              <option value="Changwon">창원</option>
-              <option value="Jeju">제주</option>
-              <option value="Baengnyeongdo">백령도</option>
-              <option value="Ulleungdo">울릉도/독도</option>
-              <option value="Hongseong">홍성</option>
-              <option value="Heuksando">흑산도</option>
+              {Object.entries(regionMap).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
 
