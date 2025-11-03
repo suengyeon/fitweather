@@ -11,11 +11,11 @@ export const SEASONAL_RECOMMENDATIONS = {
     early: { // 초봄 (3월)
       temperature: {
         cold: {
-          outer: ['코트', '자켓', '가디건'],
-          top: ['긴팔티', '니트', '셔츠'],
-          bottom: ['청바지', '슬랙스', '긴바지'],
-          shoes: ['부츠', '운동화', '로퍼'],
-          acc: ['스카프', '장갑', '모자']
+          outer: ['코트', '자켓/점퍼', '가디건'],
+          top: ['티셔츠', '스웨터', '셔츠'],
+          bottom: ['데님팬츠', '슬랙스', '치노팬츠'],
+          shoes: ['부츠', '운동화', '로퍼/플랫슈즈'],
+          acc: ['머플러', '장갑', '모자']
         },
         cool: {
           outer: ['자켓', '가디건', '후드티'],
@@ -132,8 +132,8 @@ export const SEASONAL_RECOMMENDATIONS = {
     early: { // 초가을 (9월)
       temperature: {
         comfortable: {
-          outer: ['가디건', '얇은 자켓'],
-          top: ['긴팔티', '반팔티', '셔츠'],
+          outer: ['가디건', '자켓/점퍼'],
+          top: ['티셔츠', '셔츠'],
           bottom: ['청바지', '슬랙스'],
           shoes: ['운동화', '로퍼'],
           acc: ['스카프']
@@ -162,11 +162,11 @@ export const SEASONAL_RECOMMENDATIONS = {
           acc: ['스카프', '장갑', '모자']
         },
         cold: {
-          outer: ['코트', '자켓', '패딩'],
-          top: ['긴팔티', '니트', '맨투맨'],
-          bottom: ['청바지', '슬랙스', '긴바지'],
+          outer: ['코트', '자켓/점퍼', '패딩'],
+          top: ['티셔츠', '스웨트', '맨투맨'],
+          bottom: ['데님팬츠', '슬랙스', '치노팬츠'],
           shoes: ['부츠', '운동화'],
-          acc: ['스카프', '장갑', '모자']
+          acc: ['머플러', '장갑', '모자']
         }
       },
       weather: {
@@ -182,11 +182,11 @@ export const SEASONAL_RECOMMENDATIONS = {
     early: { // 초겨울 (12월)
       temperature: {
         cold: {
-          outer: ['코트', '패딩', '야상'],
-          top: ['긴팔티', '니트', '맨투맨'],
-          bottom: ['청바지', '슬랙스', '긴바지'],
-          shoes: ['부츠', '워커'],
-          acc: ['스카프', '장갑', '모자']
+          outer: ['코트', '패딩'],
+          top: ['티셔츠', '스웨터', '맨투맨'],
+          bottom: ['데님팬츠', '슬랙스', '치노팬츠'],
+          shoes: ['부츠'],
+          acc: ['머플러', '장갑', '모자']
         },
         very_cold: {
           outer: ['패딩', '야상', '롱패딩'],
@@ -295,29 +295,29 @@ function filterByStyleTags(items, styleTags) {
       case 'formal':
         // 포멀한 옷으로 필터링
         filtered.outer = filtered.outer.filter(item => 
-          ['자켓', '블레이저', '코트'].includes(item)
+          ['자켓/점퍼', '블레이저', '코트'].includes(item)
         );
         filtered.top = filtered.top.filter(item => 
           ['셔츠', '블라우스'].includes(item)
         );
         filtered.bottom = filtered.bottom.filter(item => 
-          ['슬랙스', '정장바지'].includes(item)
+          ['슬랙스'].includes(item)
         );
         filtered.shoes = filtered.shoes.filter(item => 
-          ['구두', '로퍼', '힐'].includes(item)
+          ['로퍼/플랫슈즈', '힐'].includes(item)
         );
         break;
         
       case 'sport':
         // 운동복으로 필터링
         filtered.outer = filtered.outer.filter(item => 
-          ['후드티', '야상'].includes(item)
+          ['후드티', '바람막이'].includes(item)
         );
         filtered.top = filtered.top.filter(item => 
-          ['티셔츠', '탱크톱'].includes(item)
+          ['티셔츠', '민소매'].includes(item)
         );
         filtered.bottom = filtered.bottom.filter(item => 
-          ['트레이닝복', '레깅스'].includes(item)
+          ['트레이닝 팬츠', '레깅스'].includes(item)
         );
         filtered.shoes = filtered.shoes.filter(item => 
           ['운동화', '스니커즈'].includes(item)
@@ -327,41 +327,22 @@ function filterByStyleTags(items, styleTags) {
       case 'date':
         // 데이트룩으로 필터링
         filtered.outer = filtered.outer.filter(item => 
-          ['자켓', '가디건'].includes(item)
+          ['자켓/점퍼', '가디건'].includes(item)
         );
         filtered.top = filtered.top.filter(item => 
-          ['셔츠', '블라우스', '니트'].includes(item)
+          ['셔츠', '블라우스', '스웨터'].includes(item)
         );
         filtered.bottom = filtered.bottom.filter(item => 
-          ['청바지', '슬랙스', '치마'].includes(item)
+          ['데님팬츠', '슬랙스', '스커트'].includes(item)
         );
         filtered.shoes = filtered.shoes.filter(item => 
-          ['구두', '로퍼', '힐'].includes(item)
+          ['스니커즈', '로퍼/플랫슈즈', '힐'].includes(item)
         );
         break;
     }
   });
   
   return filtered;
-}
-
-/**
- * 추천 신뢰도 계산
- */
-function calculateConfidence(conditions, seasonInfo, feelingTemp) {
-  let confidence = 0.7; // 기본 신뢰도
-  
-  // 절기 정보가 정확할수록 신뢰도 증가
-  if (seasonInfo.season !== 'unknown') {
-    confidence += 0.2;
-  }
-  
-  // 체감온도가 명확할수록 신뢰도 증가
-  if (feelingTemp.level !== 'comfortable') {
-    confidence += 0.1;
-  }
-  
-  return Math.min(confidence, 1.0);
 }
 
 /**

@@ -31,7 +31,7 @@ const getNotificationTitle = (notification) => {
 const getNotificationMessage = (notification) => {
   switch (notification.type) {
     case 'follow':
-      return `${getUserName(notification.sender)}이 나를 구독하기 시작했어요.`;
+      return `${getUserName(notification.sender)}님이 나를 구독하기 시작했어요.`;
     case 'comment_on_my_post':
       return `${getUserName(notification.sender)}: '${notification.message || '댓글 내용'}'`;
     case 'reply_to_my_comment':

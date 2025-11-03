@@ -109,8 +109,6 @@ function Home() {
     return recommendations[currentRecommendationIndex];
   }, [recommendations, currentRecommendationIndex]);
 
-
-  // ********************************************************
   // 지역 선택 드롭다운 렌더링 함수
   const renderRegionSelect = () => (
     <select
@@ -444,7 +442,6 @@ function Home() {
           </div>
         </div>
       )}
-
       {/* 좌측 하단 임시 피드 버튼 */}
       <button
         style={{
@@ -484,6 +481,7 @@ function Home() {
       >
         📅 달력
       </button>
+
     </div>
   );
 }

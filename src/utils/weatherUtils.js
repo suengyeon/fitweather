@@ -15,18 +15,24 @@ export function getWeatherEmoji(iconCode) {
     }
 }
 
-/**
- * 체감 온도(feeling) 값에 따른 이모지&텍스트 반환
- * @param {string} feeling - 체감 온도 값(steam, hot, nice, cold, ice)
- * @returns {string} 체감 이모지 + 텍스트
- */
+// 1. 매핑 데이터 자체를 상수로 export
+export const feelingMap = {
+    steam: "🥟 (찐만두)",
+    hot: "🥵 (더움)",
+    nice: "👍🏻 (적당)",
+    cold: "💨 (추움)",
+    ice: "🥶 (동태)",
+};
+
+// 2. 단일 값 변환 함수
 export function feelingToEmoji(feeling) {
-    const map = {
-        steam: "🥟 (찐만두)",
-        hot: "🥵 (더움)",
-        nice: "👍🏻 (적당)",
-        cold: "💨 (추움)",
-        ice: "🥶 (동태)",
-    };
-    return map[feeling] || feeling;
+    return feelingMap[feeling] || feeling;
 }
+
+// 3. 드롭다운 옵션 배열을 동적으로 생성하여 export
+export const getFeelingOptions = () => {
+    return Object.entries(feelingMap).map(([value, label]) => ({
+        value,
+        label
+    }));
+};

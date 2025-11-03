@@ -361,7 +361,7 @@ function RecommendView() {
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
                 <label htmlFor="onlySubscribedUsers" className="ml-2 text-sm text-gray-700">
-                  구독한 사람만
+                  내가 구독한 사람만
                 </label>
               </div>
             </div>

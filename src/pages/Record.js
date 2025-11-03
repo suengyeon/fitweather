@@ -1,32 +1,28 @@
 // src/pages/Record.js
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { db } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import useWeather from "../hooks/useWeather";
+import { useAuth } from "../contexts/AuthContext";
+import { useComments } from "../hooks/useComments";
+import { useRecordForm } from "../hooks/useRecordForm";
 import { HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { BellIcon } from "@heroicons/react/24/outline";
-import { toast } from "react-toastify";
-import { collection, query, where, getDocs, addDoc, deleteDoc, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
-import { useAuth } from "../contexts/AuthContext";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
 import { getPastWeatherData, fetchAndSavePastWeather, deletePastWeatherData, savePastWeatherData } from "../api/pastWeather";
 import { fetchKmaPastWeather } from "../api/kmaPastWeather";
-import { createCommentNotification, createReplyNotification } from "../api/subscribe";
 import CommentSection from "../components/CommentSection";
 import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
-import { addReplyRecursively, deleteNodeKeepChildren, findCommentAuthor } from "../utils/commentUtils";
 import { regionMap } from "../constants/regionData";
 import { styleOptions } from "../constants/styleOptions";
 import { outfitOptionTexts } from "../constants/outfitOptionTexts";
-import { outfitOptions } from "../constants/outfitOptions";
 import { weatherService } from "../api/weatherService";
-import { getStyleLabel, getStyleCode } from "../utils/styleUtils";
+import { getStyleCode } from "../utils/styleUtils";
 import { navBtnStyle, indicatorStyle, dotStyle } from "../components/ImageCarouselStyles";
 
-// 이미지 압축 함수 (더 강력한 압축)
+// 이미지 압축 함수 (더 강력한 압축) - Record.js 내에 유지
 const compressImage = (file, maxWidth = 600, quality = 0.6) => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
@@ -34,19 +30,13 @@ const compressImage = (file, maxWidth = 600, quality = 0.6) => {
     const img = new Image();
     
     img.onload = () => {
-      // 원본 비율 유지하면서 크기 조정 (더 작게)
       const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
       canvas.width = img.width * ratio;
       canvas.height = img.height * ratio;
-      
-      // 이미지 그리기
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-      // 압축된 Base64 반환 (품질 낮춤)
       const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
       
-      // 만약 여전히 크다면 더 강하게 압축
-      if (compressedBase64.length > 400 * 1024) { // 400KB 초과시
+      if (compressedBase64.length > 400 * 1024) { 
         const strongerCompressed = canvas.toDataURL('image/jpeg', 0.4);
         resolve(strongerCompressed);
       } else {
@@ -70,30 +60,23 @@ function Record() {
 
   const { profile, loading: profileLoading } = useUserProfile();
   const { user } = useAuth();
-  const [regionName, setRegionName] = useState("");
-
-  // 댓글 관련 상태 (기록이 있을 때만 사용)
+  
   const [isCommentViewVisible, setIsCommentViewVisible] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
-  const [replyToCommentId, setReplyToCommentId] = useState(null);
-  const [replyContent, setReplyContent] = useState("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // 오늘 날짜인지 확인 (컴포넌트 내부 버전만 사용)
+  
   const isToday = (ds) => {
     const today = new Date();
     const targetDate = new Date(ds);
     return today.toDateString() === targetDate.toDateString();
   };
 
-  // 지역 정보 설정
+  // --- 1. 지역 및 날씨 상태 ---
   const [selectedRegion, setSelectedRegion] = useState(() => {
     if (existingRecord?.region) return existingRecord.region;
     return location.state?.selectedRegion || "Seoul";
   });
+  const handleRegionChange = (newRegion) => setSelectedRegion(newRegion);
+  const regionName = regionMap[selectedRegion] || selectedRegion; 
 
-  // profile 로드 이후 selectedRegion 업데이트
   useEffect(() => {
     if (profile?.region && !existingRecord?.region) {
       const isTodayDate = isToday(dateStr);
@@ -105,58 +88,13 @@ function Record() {
     }
   }, [profile?.region, existingRecord?.region, dateStr, location.state?.selectedRegion]);
 
-  // 기존 기록이 있을 때 스타일 설정
-  useEffect(() => {
-    if (existingRecord?.style) {
-      const styleCode = getStyleCode(existingRecord.style);
-      console.log("📝 기존 기록에서 스타일 불러오기:", { 
-        original: existingRecord.style, 
-        converted: styleCode 
-      });
-      console.log("🔍 styleOptions 확인:", styleOptions.map(opt => ({ value: opt.value, label: opt.label })));
-      console.log("🎯 설정할 style 값:", styleCode);
-      setStyle(styleCode);
-    }
-  }, [existingRecord?.style]);
-
-  const regionOptions = Object.entries(regionMap).map(([key, value]) => ({ value: key, label: value }));
-  const [imageFiles, setImageFiles] = useState([]);
-  const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] });
-  const [selectedItems, setSelectedItems] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" });
-  const [customInputMode, setCustomInputMode] = useState({ outer: false, top: false, bottom: false, shoes: false, acc: false });
-  const [customInputs, setCustomInputs] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" });
-  const [feeling, setFeeling] = useState("");
-  const [style, setStyle] = useState("");
-  
-  // style 상태 변경 감지
-  useEffect(() => {
-    console.log("🎨 style 상태 변경:", style);
-  }, [style]);
-  const [memo, setMemo] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [weatherEmojis, setWeatherEmojis] = useState([]);
-  const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { alarmOpen, setAlarmOpen,
-    notifications, unreadCount,
-    markAllRead, handleDeleteSelected,
-    markOneRead, handleAlarmItemClick,
-  } = useNotiSidebar();
-
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [recordId, setRecordId] = useState(null);
-
-  // 날씨 API 연동 (오늘 날짜일 때만)
   const { weather: apiWeather, loading: apiWeatherLoading } = useWeather(
     isToday(dateStr) ? selectedRegion : null
   );
 
-  // 과거 날씨 데이터 상태
   const [pastWeather, setPastWeather] = useState(null);
   const [pastWeatherLoading, setPastWeatherLoading] = useState(false);
 
-  // 과거 날짜일 때 저장된 날씨 데이터 불러오기
   useEffect(() => {
     const loadPastWeather = async () => {
       if (isToday(dateStr) || !selectedRegion) {
@@ -166,29 +104,20 @@ function Record() {
 
       setPastWeatherLoading(true);
       try {
-        // 저장된 데이터 확인
         const savedData = await getPastWeatherData(dateStr, selectedRegion);
         if (savedData) {
-          // 2025-09-12는 강수량 검증을 위한 강제 재생성 로직 (유지)
           if (dateStr === "2025-09-12") {
             await deletePastWeatherData(dateStr, selectedRegion);
           } else {
-            const weatherData = {
-              temp: savedData.avgTemp,
-              rain: savedData.avgRain,
-              humidity: savedData.avgHumidity,
-              icon: savedData.iconCode,
-              season: savedData.season,
-              sky: savedData.sky,
-              pty: savedData.pty
-            };
-            setPastWeather(weatherData);
+            setPastWeather({
+              temp: savedData.avgTemp, rain: savedData.avgRain, humidity: savedData.avgHumidity,
+              icon: savedData.iconCode, season: savedData.season, sky: savedData.sky, pty: savedData.pty
+            });
             setPastWeatherLoading(false);
             return;
           }
         }
 
-        // 저장된 데이터가 없으면 API 호출
         let pastData = await fetchKmaPastWeather(dateStr, selectedRegion);
         if (pastData) {
           await savePastWeatherData(dateStr, selectedRegion, pastData);
@@ -198,38 +127,16 @@ function Record() {
         }
 
         if (pastData) {
-          const weatherData = {
-            temp: pastData.avgTemp,
-            rain: pastData.avgRain,
-            humidity: pastData.avgHumidity,
-            icon: pastData.iconCode,
-            season: pastData.season,
-            sky: pastData.sky,
-            pty: pastData.pty
-          };
-          setPastWeather(weatherData);
-        } else {
           setPastWeather({
-            temp: "20",
-            rain: "0",
-            humidity: "60",
-            icon: "rain",
-            season: "초가을",
-            sky: "1",
-            pty: "1"
+            temp: pastData.avgTemp, rain: pastData.avgRain, humidity: pastData.avgHumidity,
+            icon: pastData.iconCode, season: pastData.season, sky: pastData.sky, pty: pastData.pty
           });
+        } else {
+          setPastWeather({ temp: "20", rain: "0", humidity: "60", icon: "rain", season: "초가을", sky: "1", pty: "1" });
         }
       } catch (error) {
         console.error("과거 날씨 데이터 로드 실패:", error);
-        setPastWeather({
-          temp: "20",
-          rain: "0",
-          humidity: "60",
-          icon: "sunny",
-          season: "초가을",
-          sky: "1",
-          pty: "0"
-        });
+        setPastWeather({ temp: "20", rain: "0", humidity: "60", icon: "sunny", season: "초가을", sky: "1", pty: "0" });
       } finally {
         setPastWeatherLoading(false);
       }
@@ -238,475 +145,57 @@ function Record() {
     loadPastWeather();
   }, [dateStr, selectedRegion]);
 
-  // 날씨 정보 선택
   const weather = existingRecord?.weather ||
     (isToday(dateStr) ? apiWeather : pastWeather) || {
-    temp: 20,
-    rain: 0,
-    humidity: 60,
-    icon: "sunny",
-    season: "초가을"
+    temp: 20, rain: 0, humidity: 60, icon: "sunny", season: "초가을"
   };
 
-  // 로딩 상태
-  const loading = profileLoading ||
-    (isToday(dateStr) ? apiWeatherLoading : pastWeatherLoading);
+  const loading = profileLoading || (isToday(dateStr) ? apiWeatherLoading : pastWeatherLoading);
 
-  // 지역 변경
-  const handleRegionChange = (newRegion) => setSelectedRegion(newRegion);
-
-  // regionMap 사용 (import된 상수)
+  // --- 2. 폼 로직 Hook 적용 ---
+  const {
+    outfit, selectedItems, customInputMode, customInputs, feeling, style, memo, isPublic, 
+    imageFiles, imagePreviewIdx, submitLoading, isEditMode,
+    setImagePreviewIdx, setFeeling, setStyle, setMemo, setIsPublic,
+    handleImageChange, handleImageDelete, handleSelectChange, handleCustomInputChange, 
+    handleBackToDropdown, handleAddSelectedItem, handleRemoveItem,
+    handleSubmit, handleDelete
+  } = useRecordForm(
+    existingRecord, 
+    dateStr, 
+    weather, 
+    selectedRegion, 
+    regionName, 
+    profile, 
+    compressImage, // compressImage 함수 전달
+    weatherService // ✅ weatherService 클래스 전달
+  );
+  
   useEffect(() => {
-    if (selectedRegion) {
-      setRegionName(regionMap[selectedRegion] || selectedRegion);
+    if (existingRecord?.style) {
+      const styleCode = getStyleCode(existingRecord.style);
+      setStyle(styleCode);
     }
-  }, [selectedRegion]);
+  }, [existingRecord?.style, setStyle]);
+  
+  // --- 3. 댓글 로직 Hook 적용 ---
+  const {
+    comments, newComment, setNewComment, replyToCommentId, replyContent, setReplyContent,
+    isRefreshing, handleCommentSubmit, handleCommentDelete, handleReply, handleReplySubmit,
+    handleCancelReply, handleRefreshComments
+  } = useComments(existingRecord?.id || '', user, existingRecord, profile);
 
+  // --- 4. 기타 UI 및 상태 ---
+  const regionOptions = Object.entries(regionMap).map(([key, value]) => ({ value: key, label: value }));
+  const { alarmOpen, setAlarmOpen,
+    notifications, unreadCount,
+    markAllRead, handleDeleteSelected,
+    markOneRead, handleAlarmItemClick,
+  } = useNotiSidebar();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    if (existingRecord) {
-      setIsEditMode(true);
-      setRecordId(existingRecord.id);
-      if (existingRecord.region) setSelectedRegion(existingRecord.region);
-
-      setOutfit(existingRecord.outfit || {});
-      setFeeling(existingRecord.feeling || "");
-      // setStyle은 useEffect에서 처리 (한글 → 영문 변환)
-      setMemo(existingRecord.memo || "");
-      setIsPublic(existingRecord.isPublic || false);
-      setWeatherEmojis(existingRecord.weatherEmojis || []);
-      setImageFiles(existingRecord.imageUrls.map((url) => ({ name: url, isUrl: true })));
-      setImagePreviewIdx(0);
-    }
-  }, [existingRecord]);
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files).filter(f => f && f.name);
-    if (!files.length) return;
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
-    const maxSizeMB = 3;
-    for (const file of files) {
-      if (!allowedTypes.includes(file.type)) {
-        alert("jpg, png, gif 형식의 이미지 파일만 업로드 가능합니다.");
-        return;
-      }
-      if (file.size > maxSizeMB * 1024 * 1024) {
-        alert(`이미지 용량은 ${maxSizeMB}MB 이하로 업로드해주세요.`);
-        return;
-      }
-    }
-
-    setImageFiles((prev) => {
-      const newList = [...prev, ...files];
-      if (prev.length === 0 && newList.length > 0) {
-        setImagePreviewIdx(0);
-      }
-      return newList;
-    });
-  };
-
-  const handleImageDelete = () => {
-    if (imageFiles.length === 0) return;
-
-    const confirmDelete = window.confirm("현재 사진을 삭제하시겠어요?");
-    if (!confirmDelete) return;
-
-    setImageFiles((prev) => {
-      const newList = prev.filter((_, index) => index !== imagePreviewIdx);
-      if (newList.length === 0) {
-        setImagePreviewIdx(0);
-      } else if (imagePreviewIdx >= newList.length) {
-        setImagePreviewIdx(newList.length - 1);
-      }
-      return newList;
-    });
-  };
-
-  const handleAddItem = (category, value) => {
-    if (!value.trim()) return;
-    setOutfit((prev) => ({ ...prev, [category]: [...prev[category], value] }));
-  };
-
-  const handleRemoveItem = (category, idx) => {
-    setOutfit((prev) => ({
-      ...prev,
-      [category]: prev[category].filter((_, i) => i !== idx)
-    }));
-  };
-
-  // 드롭다운 선택
-  const handleSelectChange = (category, value) => {
-    if (value === "custom") {
-      setCustomInputMode((prev) => ({ ...prev, [category]: true }));
-      setSelectedItems((prev) => ({ ...prev, [category]: "" }));
-    } else {
-      setCustomInputMode((prev) => ({ ...prev, [category]: false }));
-      setSelectedItems((prev) => ({ ...prev, [category]: value }));
-    }
-  };
-
-  const handleCustomInputChange = (category, value) => {
-    setCustomInputs((prev) => ({ ...prev, [category]: value }));
-  };
-
-  const handleBackToDropdown = (category) => {
-    setCustomInputMode((prev) => ({ ...prev, [category]: false }));
-    setCustomInputs((prev) => ({ ...prev, [category]: "" }));
-  };
-
-  // + 버튼
-  const handleAddSelectedItem = (category) => {
-    let valueToAdd = "";
-
-    if (customInputMode[category]) {
-      valueToAdd = customInputs[category];
-      if (!valueToAdd.trim()) return;
-      setCustomInputMode((prev) => ({ ...prev, [category]: false }));
-      setCustomInputs((prev) => ({ ...prev, [category]: "" }));
-    } else {
-      const selectedValue = selectedItems[category];
-      if (!selectedValue) return;
-      // outfitOptionTexts 사용
-      valueToAdd = outfitOptionTexts[category][selectedValue] || selectedValue;
-      setSelectedItems((prev) => ({ ...prev, [category]: "" }));
-    }
-
-    setOutfit((prev) => ({ ...prev, [category]: [...prev[category], valueToAdd] }));
-  };
-
-  const handleDelete = async () => {
-    if (!recordId) return;
-    const confirmDelete = window.confirm("정말 삭제하시겠어요?");
-    if (!confirmDelete) return;
-
-    try {
-      await deleteDoc(doc(db, "records", recordId));
-      toast.success("기록이 삭제되었어요!", { autoClose: 1200 });
-      setTimeout(() => navigate("/calendar"), 1300);
-    } catch (err) {
-      console.error("삭제 오류:", err);
-      toast.error("삭제에 실패했습니다.");
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!user) {
-      toast.error("로그인이 필요합니다.");
-      return;
-    }
-    if (!imageFiles.length || imageFiles.some(f => !f || (!f.name && !f.isUrl))) {
-      toast.error("사진을 업로드해주세요.");
-      return;
-    }
-    if (!feeling) {
-      toast.error("체감을 선택해주세요.");
-      return;
-    }
-    if (typeof weather?.temp === "undefined" || typeof weather?.rain === "undefined") {
-      toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
-      return;
-    }
-
-    setSubmitLoading(true);
-
-    try {
-      // (신규일 때만) 중복 체크
-      if (!isEditMode) {
-        const q = query(
-          collection(db, "records"),
-          where("uid", "==", user.uid),
-          where("date", "==", dateStr)
-        );
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          toast.error("이미 기록하셨습니다.");
-          setSubmitLoading(false);
-          return;
-        }
-      }
-
-      // 이미지 처리 (Base64 인코딩으로 Firestore에 직접 저장)
-      console.log("📸 이미지 처리 시작:", { 
-        imageFilesCount: imageFiles.length, 
-        imageFiles: imageFiles.map(f => ({ name: f.name, isUrl: f.isUrl }))
-      });
-      
-      const imageUrls = await Promise.all(
-        imageFiles.map(async (file, index) => {
-          console.log(`📸 이미지 ${index + 1} 처리 중:`, { name: file.name, isUrl: file.isUrl });
-          if (file.isUrl) {
-            console.log(`📸 기존 URL 사용: ${file.name}`);
-            return file.name; // 기존 URL
-          }
-          if (!file || !file.name) throw new Error("잘못된 파일입니다.");
-          
-          try {
-            // 이미지 압축 후 Base64로 인코딩
-            const compressedBase64 = await compressImage(file);
-            
-            // 압축 후 크기 체크 (Firestore 문서 크기 제한 고려)
-            const maxSize = 500 * 1024; // 500KB
-            if (compressedBase64.length > maxSize) {
-              throw new Error(`압축 후에도 파일이 너무 큽니다. 더 작은 이미지를 선택해주세요. (압축 후: ${(compressedBase64.length / 1024).toFixed(2)}KB)`);
-            }
-            
-            console.log(`📸 압축된 Base64 인코딩 완료: ${file.name} (${compressedBase64.length} chars)`);
-            return compressedBase64;
-          } catch (error) {
-            console.error(`📸 이미지 압축 실패:`, error);
-            throw new Error(`이미지 처리 실패: ${error.message}`);
-          }
-        })
-      );
-      
-      console.log("📸 최종 imageUrls:", imageUrls);
-
-      const convertedStyle = getStyleLabel(style);
-      console.log("🎨 스타일 변환:", { original: style, converted: convertedStyle });
-      
-      const recordData = {
-        uid: user.uid,
-        region: selectedRegion, // profile?.region 대신 selectedRegion 사용
-        regionName,
-        date: dateStr,
-        temp: weather.temp ?? null,
-        rain: weather.rain ?? null,
-        humidity: weather.humidity ?? null,
-        weather: {
-          temp: weather.temp ?? null,
-          rain: weather.rain ?? null,
-          humidity: weather.humidity ?? null,
-          icon: weather.icon ?? null,
-          season: weatherService.getSeason(weather.temp, dateObj),
-        },
-        outfit,
-        feeling,
-        style: convertedStyle, // 스타일을 한글로 변환하여 저장
-        memo,
-        isPublic,
-        imageUrls,
-        weatherEmojis,
-        updatedAt: new Date(),
-        nickname: profile?.nickname || user.uid,
-        recordedDate: new Date().toISOString().split('T')[0],
-        recordedTime: new Date().toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-        recordedAt: new Date(),
-      };
-      
-      console.log("💾 저장할 recordData:", recordData);
-      console.log("🎯 저장할 style 필드:", recordData.style);
-      console.log("📸 저장할 imageUrls:", recordData.imageUrls);
-
-      if (isEditMode && recordId) {
-        const updateData = { ...recordData };
-        delete updateData.createdAt;
-        await updateDoc(doc(db, "records", recordId), updateData);
-        console.log("✅ 기록 업데이트 성공:", { recordId, style: updateData.style });
-        toast.success("기록이 수정되었어요!", { position: "top-center", autoClose: 1200 });
-      } else {
-        recordData.createdAt = new Date();
-        recordData.likes = [];
-        const docRef = await addDoc(collection(db, "records"), recordData);
-        console.log("✅ 기록 저장 성공:", { id: docRef.id, style: recordData.style });
-        toast.success("기록이 저장되었어요!", { position: "top-center", autoClose: 1200 });
-      }
-
-      if (isEditMode) {
-        setTimeout(() => navigate("/calendar", { state: { selectedDate: dateStr } }), 1300);
-      } else {
-        setTimeout(() => navigate("/calendar"), 1300);
-      }
-    } catch (err) {
-      console.error("저장 오류 발생:", err);
-      toast.error(`저장에 실패했습니다: ${err.message}`);
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
-
-  // 댓글 관련
-  const handleCommentViewToggle = () => setIsCommentViewVisible(!isCommentViewVisible);
-
-  const handleRefreshComments = async () => {
-    if (!existingRecord?.id) return;
-
-    setIsRefreshing(true);
-    try {
-      const commentsRef = doc(db, "comments", existingRecord.id);
-      const commentsSnap = await getDoc(commentsRef);
-      if (commentsSnap.exists()) {
-        const commentsData = commentsSnap.data();
-        setComments(commentsData.comments || []);
-      } else {
-        setComments([]);
-      }
-    } catch (error) {
-      console.error("Record - 댓글 새로고침 실패:", error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    const fetchComments = async () => {
-      if (!existingRecord?.id) return;
-      try {
-        const commentsRef = doc(db, "comments", existingRecord.id);
-        const commentsSnap = await getDoc(commentsRef);
-        if (commentsSnap.exists()) {
-          const commentsData = commentsSnap.data();
-          setComments(commentsData.comments || []);
-        } else {
-          setComments([]);
-        }
-      } catch (error) {
-        console.error("Record - 댓글 데이터 가져오기 실패:", error);
-        setComments([]);
-      }
-    };
-    fetchComments();
-  }, [existingRecord?.id]);
-
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (newComment.trim() && existingRecord?.id) {
-      const newCommentObj = {
-        id: (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`),
-        author: profile?.nickname || user?.displayName || "익명",
-        authorUid: user?.uid,
-        timestamp: new Date().toLocaleString('ko-KR', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        }).replace(/\./g, '-').replace(/,/g, '').replace(/\s/g, ' '),
-        content: newComment.trim(),
-        replies: []
-      };
-
-      try {
-        const updatedComments = [...comments, newCommentObj];
-        setComments(updatedComments);
-        setNewComment("");
-
-        const commentsRef = doc(db, "comments", existingRecord.id);
-        await setDoc(commentsRef, {
-          comments: updatedComments,
-          lastUpdated: new Date()
-        }, { merge: true });
-
-        if (existingRecord.uid !== user?.uid) {
-          await createCommentNotification(
-            user?.uid,
-            existingRecord.uid,
-            existingRecord.id,
-            newComment.trim()
-          );
-        }
-
-        const commentsSnap = await getDoc(commentsRef);
-        if (commentsSnap.exists()) {
-          const freshCommentsData = commentsSnap.data();
-          setComments(freshCommentsData.comments || []);
-        }
-      } catch (error) {
-        console.error("Record - 댓글 저장 실패:", error);
-        setComments(comments);
-      }
-    }
-  };
-
-  const handleCommentDelete = async (commentId) => {
-    if (!window.confirm("댓글을 삭제하시겠습니까?")) return;
-    if (!existingRecord?.id) return;
-
-    try {
-      const { list: updatedList, changed } = deleteNodeKeepChildren(comments, commentId);
-      if (!changed) return;
-
-      setComments(updatedList);
-
-      const commentsRef = doc(db, "comments", existingRecord.id);
-      await setDoc(
-        commentsRef,
-        { comments: updatedList, lastUpdated: new Date() },
-        { merge: true }
-      );
-
-      const snap = await getDoc(commentsRef);
-      if (snap.exists()) setComments(snap.data()?.comments || []);
-    } catch (err) {
-      console.error("Record - 댓글 삭제 실패:", err);
-    }
-  };
-
-  const handleReply = (commentId) => {
-    if (replyToCommentId === commentId) {
-      setReplyToCommentId(null);
-      setReplyContent("");
-    } else {
-      setReplyToCommentId(commentId);
-      setReplyContent("");
-    }
-  };
-
-  const handleCancelReply = () => {
-    setReplyToCommentId(null);
-    setReplyContent("");
-  };
-
-  const handleReplySubmit = async (e) => {
-    e.preventDefault();
-    if (!replyContent.trim() || !replyToCommentId) return;
-    if (!existingRecord?.id) return;
-
-    const newReply = {
-      id: (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`),
-      author: profile?.nickname || user?.displayName || "익명",
-      authorUid: user?.uid,
-      timestamp: new Date().toLocaleString('ko-KR', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit'
-      }).replace(/\./g, '-').replace(/,/g, '').replace(/\s/g, ' '),
-      content: replyContent.trim(),
-      replies: []
-    };
-
-    const optimistic = addReplyRecursively(comments, replyToCommentId, newReply);
-    setComments(optimistic);
-    setReplyToCommentId(null);
-    setReplyContent("");
-
-    try {
-      const commentsRef = doc(db, "comments", existingRecord.id);
-      await setDoc(commentsRef, { comments: optimistic, lastUpdated: new Date() }, { merge: true });
-
-      const originalCommentAuthor = findCommentAuthor(comments, replyToCommentId);
-      if (originalCommentAuthor && originalCommentAuthor !== user?.uid) {
-        await createReplyNotification(
-          user?.uid,
-          originalCommentAuthor,
-          existingRecord.id,
-          replyContent.trim()
-        );
-      }
-
-      const snap = await getDoc(commentsRef);
-      if (snap.exists()) {
-        const fresh = snap.data()?.comments || [];
-        setComments(fresh);
-      }
-    } catch (err) {
-      console.error("답글 저장 실패:", err);
-    }
-  };
-
-  // Select 옵션 표시를 위해 느낌표와 텍스트를 결합하는 함수
   const getFeelingTextForOption = (feelingCode) => {
     const result = feelingToEmoji(feelingCode);
-    // '🥟 찐만두' 형태를 '🥟 (찐만두)' 형태로 변환 (Select Box용)
     if (result && result.includes(' ')) {
       const [emoji, text] = result.split(' ');
       return `${emoji} (${text})`;
@@ -1077,7 +566,7 @@ function Record() {
                       onChange={(e) => handleSelectChange("outer", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      {outfitOptions.outer.map(value => (
+                      {Object.keys(outfitOptionTexts.outer).map(value => (
                         <option key={value} value={value}>
                           {value === 'custom' ? '직접입력' : outfitOptionTexts.outer[value]}
                         </option>
@@ -1139,7 +628,7 @@ function Record() {
                       onChange={(e) => handleSelectChange("top", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      {outfitOptions.top.map(value => (
+                      {Object.keys(outfitOptionTexts.top).map(value => (
                         <option key={value} value={value}>
                           {value === 'custom' ? '직접입력' : outfitOptionTexts.top[value]}
                         </option>
@@ -1201,7 +690,7 @@ function Record() {
                       onChange={(e) => handleSelectChange("bottom", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      {outfitOptions.bottom.map(value => (
+                      {Object.keys(outfitOptionTexts.bottom).map(value => (
                         <option key={value} value={value}>
                           {value === 'custom' ? '직접입력' : outfitOptionTexts.bottom[value]}
                         </option>
@@ -1263,7 +752,7 @@ function Record() {
                       onChange={(e) => handleSelectChange("shoes", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      {outfitOptions.shoes.map(value => (
+                      {Object.keys(outfitOptionTexts.shoes).map(value => (
                         <option key={value} value={value}>
                           {value === 'custom' ? '직접입력' : outfitOptionTexts.shoes[value]}
                         </option>
@@ -1325,7 +814,7 @@ function Record() {
                       onChange={(e) => handleSelectChange("acc", e.target.value)}
                     >
                       <option value="">선택하세요</option>
-                      {outfitOptions.acc.map(value => (
+                      {Object.keys(outfitOptionTexts.acc).map(value => (
                         <option key={value} value={value}>
                           {value === 'custom' ? '직접입력' : outfitOptionTexts.acc[value]}
                         </option>

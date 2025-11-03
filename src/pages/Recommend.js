@@ -11,6 +11,10 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
+import { regionMap } from "../constants/regionData";
+import { styleOptions } from "../constants/styleOptions";
+import { seasonMap, normalizeSeason, matchesStyle } from "../utils/filterUtils";
+import { getFeelingOptions } from "../utils/weatherUtils";
 
 function Recommend() {
   const { user } = useAuth();
@@ -33,46 +37,6 @@ function Recommend() {
   const [onlySubscribedUsers, setOnlySubscribedUsers] = useState(false);
   const [subscribedUsers, setSubscribedUsers] = useState([]);
 
-  // ✅ 계절 코드↔한글 레이블 매핑 (레코드가 한글, 셀렉트는 코드여도 매칭 가능)
-  const seasonMap = {
-    earlyspring: "초봄",
-    spring: "봄",
-    latespring: "늦봄",
-    earlysummer: "초여름",
-    summer: "여름",
-    latesummer: "늦여름",
-    earlyautumn: "초가을",
-    autumn: "가을",
-    lateautumn: "늦가을",
-    earlywinter: "초겨울",
-    winter: "겨울",
-    latewinter: "늦겨울",
-  };
-  const normalizeSeason = (v) => (v ? (seasonMap[v] || v) : "");
-
-  // ✅ 스타일 매칭 (영문/한글/복합 레이블 모두 인식)
-  const styleAliases = {
-    casual: ["casual", "캐주얼"],
-    basic: ["basic", "베이직/놈코어"],
-    formal: ["formal", "포멀"],
-    sporty: ["sporty", "스포티", "액티브", "스포티/액티브"],
-    street: ["street", "시크", "스트릿", "시크/스트릿"],
-    feminine: ["feminine", "러블리", "페미닌", "러블리/페미닌"],
-  };
-  const matchesStyle = (recordStyleField, filterKey) => {
-    if (!filterKey) return true;
-    // record.styles (array) 또는 record.style (string) 모두 대응
-    const wanted = styleAliases[filterKey] || [filterKey];
-    const checkOne = (s) =>
-      !!wanted.find((w) => String(s).toLowerCase() === String(w).toLowerCase());
-    if (Array.isArray(recordStyleField)) {
-      return recordStyleField.some(checkOne);
-    }
-    if (recordStyleField == null) return false;
-    return checkOne(recordStyleField);
-  };
-
-  // ⭐ 필터 상태 (region, feeling + season, style)
   const [filters, setFilters] = useState(() => {
     const saved = sessionStorage.getItem("recommendFilters");
     if (saved) {
@@ -81,45 +45,21 @@ function Recommend() {
         return {
           region: p.region || "",
           feeling: p.feeling || "",
-          season: p.season || "", // ← 추가
-          style: p.style || "",   // ← 추가
+          season: p.season || "",
+          style: p.style || "",
         };
       } catch {
-        /* ignore */
       }
     }
     return { region: "", feeling: "", season: "", style: "" };
   });
 
-  // 지역 목록
-  const regionMap = {
-    Incheon: "인천",
-    Seoul: "서울",
-    Chuncheon: "춘천",
-    Gangneung: "강릉",
-    Ulleungdo: "울릉도/독도",
-    Suwon: "수원",
-    Cheongju: "청주",
-    Jeonju: "전주",
-    Daejeon: "대전",
-    Daegu: "대구",
-    Pohang: "포항",
-    Mokpo: "목포",
-    Jeju: "제주",
-    Ulsan: "울산",
-    Yeosu: "여수",
-    Busan: "부산",
-    Gwangju: "광주",
-  };
+  // 체감 옵션 
+  const feelingOptions = getFeelingOptions();
 
-  // 체감 옵션
-  const feelingOptions = [
-    { value: "steam", label: "🥟 (찐만두)", emoji: "🥟" },
-    { value: "hot", label: "🥵 (더움)", emoji: "🥵" },
-    { value: "nice", label: "👍🏻 (적당)", emoji: "👍🏻" },
-    { value: "cold", label: "💨 (추움)", emoji: "💨" },
-    { value: "ice", label: "🥶 (동태)", emoji: "🥶" },
-  ];
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
 
   // 모든 기록 가져오기 (전체 기록)
   useEffect(() => {
@@ -187,7 +127,7 @@ function Recommend() {
   useEffect(() => {
     const handleReactionUpdate = (event) => {
       const { recordId, type, isActive } = event.detail;
-      setOutfits(prevOutfits => 
+      setOutfits(prevOutfits =>
         prevOutfits.map(outfit => {
           if (outfit.id === recordId) {
             const updatedOutfit = { ...outfit };
@@ -314,16 +254,6 @@ function Recommend() {
       )
     );
   };
-
-  // 필터 핸들러
-  const handleRegionChange = (region) =>
-    setFilters((prev) => ({ ...prev, region }));
-  const handleFeelingChange = (feeling) =>
-    setFilters((prev) => ({ ...prev, feeling }));
-  const handleSeasonChange = (season) =>
-    setFilters((prev) => ({ ...prev, season }));
-  const handleStyleChange = (style) =>
-    setFilters((prev) => ({ ...prev, style }));
 
   const clearFilters = () => {
     setFilters({ region: "", feeling: "", season: "", style: "" });
@@ -487,7 +417,7 @@ function Recommend() {
             <label className="block text-base font-semibold mb-2">지역</label>
             <select
               value={filters.region}
-              onChange={(e) => handleRegionChange(e.target.value)}
+              onChange={(e) => handleFilterChange('region', e.target.value)}
               className="w-full px-3 py-2 border rounded-md text-center"
             >
               <option value="">전체 지역</option>
@@ -504,7 +434,7 @@ function Recommend() {
             <label className="block text-base font-semibold mb-3">체감</label>
             <select
               value={filters.feeling}
-              onChange={(e) => handleFeelingChange(e.target.value)}
+              onChange={(e) => handleFilterChange('feeling', e.target.value)}
               className="w-full px-3 py-2 border rounded-md text-center"
             >
               <option value="">전체</option>
@@ -516,45 +446,37 @@ function Recommend() {
             </select>
           </div>
 
-          {/* ✅ 계절 */}
+          {/* 계절 */}
           <div className="mb-5">
             <label className="block text-base font-semibold mb-3">계절</label>
             <select
               value={filters.season}
-              onChange={(e) => handleSeasonChange(e.target.value)}
+              onChange={(e) => handleFilterChange('season', e.target.value)}
               className="w-full px-3 py-2 border rounded-md text-center"
             >
               <option value="">전체</option>
-              <option value="earlyspring">초봄</option>
-              <option value="spring">봄</option>
-              <option value="latespring">늦봄</option>
-              <option value="earlysummer">초여름</option>
-              <option value="summer">여름</option>
-              <option value="latesummer">늦여름</option>
-              <option value="earlyautumn">초가을</option>
-              <option value="autumn">가을</option>
-              <option value="lateautumn">늦가을</option>
-              <option value="earlywinter">초겨울</option>
-              <option value="winter">겨울</option>
-              <option value="latewinter">늦겨울</option>
+              {Object.entries(seasonMap).map(([code, label]) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* ✅ 스타일 */}
+          {/* 스타일 */}
           <div className="mb-5">
             <label className="block text-base font-semibold mb-3">스타일</label>
             <select
               value={filters.style}
-              onChange={(e) => handleStyleChange(e.target.value)}
+              onChange={(e) => handleFilterChange('style', e.target.value)}
               className="w-full px-3 py-2 border rounded-md text-center"
             >
               <option value="">전체</option>
-              <option value="casual">캐주얼</option>
-              <option value="formal">포멀</option>
-              <option value="basic">베이직/놈코어</option>
-              <option value="sporty">스포티/액티브</option>
-              <option value="street">시크/스트릿</option>
-              <option value="feminine">러블리/페미닌</option>
+              {styleOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>

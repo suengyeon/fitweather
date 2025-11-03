@@ -77,7 +77,7 @@ function MyPageUserInfo() {
           </button>
           <button
             className="relative flex items-center justify-center 
-                                            bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+            bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
             onClick={() => setAlarmOpen(true)}
             aria-label="알림 열기"
           >

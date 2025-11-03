@@ -1,49 +1,23 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useCallback } from "react";
 import Calendar from "react-calendar";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import { BellIcon } from "@heroicons/react/24/outline";
-import { getDocs, collection, query, where, doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase";
-import useUserProfile from "../hooks/useUserProfile";
-import { useAuth } from "../contexts/AuthContext";
+import useNotiSidebar from "../hooks/useNotiSidebar"; 
+import { useCalendarLogic } from "../hooks/useCalendarLogic"; 
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
-import useNotiSidebar from "../hooks/useNotiSidebar";
 import "react-calendar/dist/Calendar.css";
 import "../pages/Calendar.css";
 import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
-
-
-function formatDateLocal(date) {
-  return date.toLocaleDateString("sv-SE");
-}
-
-const years = Array.from({ length: 5 }, (_, i) => 2023 + i);
-const months = [
-  { label: "1월", value: 0 },
-  { label: "2월", value: 1 },
-  { label: "3월", value: 2 },
-  { label: "4월", value: 3 },
-  { label: "5월", value: 4 },
-  { label: "6월", value: 5 },
-  { label: "7월", value: 6 },
-  { label: "8월", value: 7 },
-  { label: "9월", value: 8 },
-  { label: "10월", value: 9 },
-  { label: "11월", value: 10 },
-  { label: "12월", value: 11 },
-];
+import { formatDateLocal } from "../utils/calendarUtils"; 
 
 function CalendarPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { uid } = useParams(); // URL에서 사용자 ID 가져오기
-  const { user } = useAuth();
-  const { profile } = useUserProfile();
+
+  // 1. Sidebar 및 Notification 상태/로직
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [targetUser, setTargetUser] = useState(null);
-  const [isPublic, setIsPublic] = useState(false);
   const {
     alarmOpen, setAlarmOpen,
     notifications, unreadCount,
@@ -51,172 +25,22 @@ function CalendarPage() {
     markOneRead, handleAlarmItemClick,
   } = useNotiSidebar();
 
-  // Record 페이지에서 전달받은 선택된 날짜가 있으면 사용, 없으면 오늘 날짜
-  const selectedDateFromRecord = location.state?.selectedDate;
-  const initialDate = selectedDateFromRecord ? new Date(selectedDateFromRecord) : new Date();
-
-  const [value, setValue] = useState(initialDate);
-  const [calendarDate, setCalendarDate] = useState(initialDate);
-  const [outfitMap, setOutfitMap] = useState({});
-  const todayStr = formatDateLocal(new Date());
-  // 비공개 경고 중복 방지
-  const hasShownPrivateAlert = useRef(false);
-
-  // 현재 사용자 ID (자신의 캘린더인지 다른 사용자의 캘린더인지 구분)
-  const currentUserId = uid || user?.uid;
-  const isOwnCalendar = !uid || uid === user?.uid;
-
-  // 🔄 사용자 정보 및 공개 여부 불러오기
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!currentUserId) return;
-
-      // 다른 사용자의 캘린더인 경우
-      if (!isOwnCalendar) {
-        const userRef = doc(db, "users", currentUserId);
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          setTargetUser(userData);
-          setIsPublic(userData.isPublic || false);
-
-          // 공개되지 않은 캘린더인 경우 접근 거부
-          if (!userData.isPublic) {
-            if (!hasShownPrivateAlert.current) {
-              hasShownPrivateAlert.current = true;
-              alert("이 사용자의 캘린더는 비공개입니다.");
-              // 이전 페이지로 이동 (구독 페이지, FeedDetail 페이지 등)
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                navigate("/feed");
-              }
-            }
-            return;
-          }
-        } else {
-          if (!hasShownPrivateAlert.current) {
-            hasShownPrivateAlert.current = true;
-            alert("사용자를 찾을 수 없습니다.");
-            // 이전 페이지로 이동 (구독 페이지, FeedDetail 페이지 등)
-            if (window.history.length > 1) {
-              window.history.back();
-            } else {
-              navigate("/feed");
-            }
-          }
-          return;
-        }
-      } else {
-        // 자신의 캘린더인 경우
-        setTargetUser(profile);
-        setIsPublic(profile?.isPublic || false);
-        console.log("자신의 캘린더 - isPublic 상태:", profile?.isPublic);
-      }
-    };
-
-    fetchUserData();
-  }, [currentUserId, isOwnCalendar, profile, navigate]);
-
-  // 🔄 사용자 기록 불러오기
-  useEffect(() => {
-    if (!currentUserId) return;
-
-    const fetchData = async () => {
-      const q = query(collection(db, "records"), where("uid", "==", currentUserId));
-      const snap = await getDocs(q);
-
-      const map = {};
-      snap.forEach((doc) => {
-        const data = doc.data();
-        if (data.date) {
-          map[data.date] = { ...data, id: doc.id };
-        }
-      });
-
-      setOutfitMap(map);
-    };
-
-    fetchData();
-  }, [currentUserId]);
-
-  // 📆 달력 이동 시 드롭다운 동기화
-  const handleActiveStartDateChange = ({ activeStartDate }) => {
-    setCalendarDate(activeStartDate);
-  };
-
-  // 📌 날짜 클릭 시 기록 페이지 이동
-  const handleDateClick = (date) => {
-    const dateStr = formatDateLocal(date);
-    const existingRecord = outfitMap[dateStr];
-
-    // 미래 날짜 체크 (자신의 캘린더에서만)
-    if (isOwnCalendar) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const clickedDate = new Date(date);
-      clickedDate.setHours(0, 0, 0, 0);
-
-      if (clickedDate > today) {
-        alert("미래 날짜는 기록할 수 없습니다.");
-        return;
-      }
-    }
-
-    if (existingRecord) {
-      if (isOwnCalendar) {
-        // 자신의 기록: Record 페이지로 이동
-        navigate(`/record`, { state: { existingRecord } });
-      } else {
-        // 다른 사용자의 기록: FeedDetail 페이지로 이동
-        navigate(`/feed/${existingRecord.id}`, {
-          state: {
-            fromCalendar: true,
-            targetUserId: currentUserId
-          }
-        });
-      }
-    } else if (isOwnCalendar) {
-      // 자신의 캘린더에서만 새 기록 생성 가능
-      const isToday = dateStr === todayStr;
-      const state = { date: dateStr };
-
-      if (isToday) {
-        state.selectedRegion = profile?.region;
-      }
-
-      navigate("/record", { state });
-    }
-  };
-
-  // 공개 여부 토글 함수
-  const handlePublicToggle = async () => {
-    if (!isOwnCalendar || !user?.uid) return;
-
-    const newPublicState = !isPublic;
-
-    try {
-      console.log("공개 여부 변경 중:", newPublicState);
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
-        isPublic: newPublicState
-      });
-
-      // 상태 업데이트
-      setIsPublic(newPublicState);
-      console.log("공개 여부 변경 완료:", newPublicState);
-
-      // 성공 메시지
-      alert(newPublicState ? "캘린더가 공개되었습니다." : "캘린더가 비공개로 설정되었습니다.");
-    } catch (error) {
-      console.error("공개 여부 업데이트 실패:", error);
-      alert("공개 여부 변경에 실패했습니다.");
-    }
-  };
+  // 2. 🌟 캘린더 핵심 로직 적용
+  const {
+    value, 
+    calendarDate, 
+    outfitMap, 
+    todayStr,
+    isOwnCalendar, 
+    targetUser, 
+    isPublic,
+    handleDateClick, 
+    handleActiveStartDateChange, 
+    handlePublicToggle,
+  } = useCalendarLogic(uid);
 
   // 📌 날짜 타일에 이모지 + 날짜 표시
-  const tileContent = ({ date, view }) => {
+  const tileContent = useCallback(({ date, view }) => {
     if (view !== "month") return null;
 
     const dateStr = formatDateLocal(date);
@@ -236,7 +60,7 @@ function CalendarPage() {
         {feelingEmoji && <div className="calendar-feeling">{feelingEmoji}</div>}
       </div>
     );
-  };
+  }, [outfitMap]); // outfitMap이 변경될 때만 재생성되도록 useCallback 사용
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -262,6 +86,7 @@ function CalendarPage() {
 
         {/* 가운데: 제목 (항상 중앙 고정) */}
         <h2 className="absolute left-1/2 -translate-x-1/2 font-bold text-lg">
+          {/* targetUser 정보는 훅에서 가져옴 */}
           {isOwnCalendar ? "My Calendar" : `${targetUser?.nickname || "사용자"}님의 Calendar`}
         </h2>
 
@@ -272,8 +97,8 @@ function CalendarPage() {
               <input
                 type="checkbox"
                 id="publicCalendar"
-                checked={isPublic}
-                onChange={handlePublicToggle}
+                checked={isPublic} // 훅에서 가져온 상태
+                onChange={handlePublicToggle} // 훅에서 가져온 핸들러
                 className="w-4 h-4"
               />
               <label htmlFor="publicCalendar" className="text-sm text-gray-700">
@@ -301,23 +126,22 @@ function CalendarPage() {
         </div>
       </div>
 
-
       {/* 캘린더 */}
       <div className="flex justify-center py-6 px-4">
         <div className="w-full max-w-[900px] mx-auto px-4">
           <Calendar
             className="w-full max-w-none m-4 p-6 rounded-lg border-2 border-gray-200 font-sans"
-            value={value}
-            onClickDay={handleDateClick}
-            tileContent={tileContent}
+            value={value} // 훅에서 가져온 상태
+            onClickDay={handleDateClick} // 훅에서 가져온 핸들러
+            tileContent={tileContent} // useCallback으로 감싸진 렌더링 함수
             formatDay={() => ""}
-            activeStartDate={calendarDate}
-            onActiveStartDateChange={handleActiveStartDateChange}
+            activeStartDate={calendarDate} // 훅에서 가져온 상태
+            onActiveStartDateChange={handleActiveStartDateChange} // 훅에서 가져온 핸들러
             tileClassName={({ date, view }) => {
               if (view !== "month") return "";
               const dateStr = formatDateLocal(date);
               const isOtherMonth = date.getMonth() !== calendarDate.getMonth();
-              const hasRecord = !!outfitMap[dateStr];
+              const hasRecord = !!outfitMap[dateStr]; // 훅에서 가져온 데이터 사용
 
               const baseClasses = "p-2 h-[100px] align-top relative text-sm";
               let addedClasses = "";
@@ -334,7 +158,7 @@ function CalendarPage() {
               if (hasRecord) {
                 return "font-bold " + baseClasses + addedClasses;
               }
-              if (dateStr === todayStr) {
+              if (dateStr === todayStr) { // 훅에서 가져온 오늘 날짜 문자열
                 return "bg-blue-100 text-black rounded-md hover:bg-blue-300 " + baseClasses + addedClasses;
               }
 
