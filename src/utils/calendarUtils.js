@@ -1,22 +1,23 @@
 /**
- * 날짜를 'YYYY-MM-DD' 형식의 로컬 문자열로 포맷합니다.
- * react-calendar와 Firestore 기록의 날짜 키를 일치시키는 데 사용됩니다.
- * 예: 2024-05-15
+ * 날짜를 'YYYY-MM-DD' 형식의 로컬 문자열로 포맷
+ * react-calendar와 Firestore 기록의 날짜 키를 일치시키는 데 사용
  */
 export function formatDateLocal(date) {
-  return date.toLocaleDateString("sv-SE");
+  // "sv-SE" 로케일은 ISO 8601 형식(YYYY-MM-DD)을 따르므로 사용
+  return date.toLocaleDateString("sv-SE"); 
 }
 
 /**
- * 캘린더에서 드롭다운(Dropdown) 등으로 사용할 수 있는 연도 배열입니다.
- * 현재 연도(2025년 기준)를 중심으로 5개 연도를 생성합니다.
+ * 캘린더에서 드롭다운(Dropdown) 등으로 사용할 수 있는 연도 배열
+ * 현재 연도(2025년 기준)를 중심으로 5개 연도를 생성
  */
 const CURRENT_YEAR = new Date().getFullYear();
+// 현재 연도를 기준으로 -2년에서 +2년까지 총 5개 연도를 생성
 export const years = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i);
 
 /**
- * 캘린더에서 드롭다운으로 사용할 수 있는 월 배열입니다.
- * 0부터 11까지의 월 값과 한국어 레이블을 포함합니다.
+ * 캘린더에서 드롭다운으로 사용할 수 있는 월 배열
+ * value는 Date 객체에서 사용하는 0(1월)부터 11(12월)까지의 값 포함
  */
 export const months = [
   { label: "1월", value: 0 },

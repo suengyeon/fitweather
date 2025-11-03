@@ -6,81 +6,72 @@ import { GoogleAuthProvider, reauthenticateWithPopup } from "firebase/auth";
 import { useState } from "react";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 
+/**
+ * Withdraw 컴포넌트 - 사용자 계정 탈퇴를 처리하고 관련 데이터를 모두 삭제
+ */
 function Withdraw() {
-  const { user } = useAuth();
+  const { user } = useAuth(); // 현재 로그인 사용자 정보
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
 
+  // 회원 탈퇴 처리 핸들러
   const handleWithdraw = async () => {
     if (!window.confirm("정말로 회원 탈퇴하시겠습니까? 모든 정보가 삭제됩니다.")) return;
     
     try {
-      console.log("탈퇴 시작:", { uid: user.uid, provider: user.provider });
-      
-      // 🔴 1. Provider에 따른 재인증 처리
+      // 1. Provider에 따른 재인증 처리(Google만)
       if (user.provider === 'google') {
-        console.log("Google 사용자 재인증 시작");
         const provider = new GoogleAuthProvider();
         const currentUser = auth.currentUser;
         
         if (currentUser) {
+          // Firebase Auth 재인증 팝업
           await reauthenticateWithPopup(currentUser, provider);
-          console.log("Google 재인증 완료");
         } else {
           throw new Error("Firebase Auth 사용자를 찾을 수 없습니다.");
         }
       } else {
-        console.log("카카오 사용자 - 재인증 생략");
+        // 카카오 사용자는 재인증 생략(Firebase Auth 계정이 없으므로)
       }
 
-      // 🔵 2. 사용자의 모든 기록(records) 삭제
-      console.log("사용자 기록 삭제 시작");
+      // 2. 사용자의 모든 기록(records) 삭제(Firestore)
       const recordsQuery = query(collection(db, "records"), where("uid", "==", user.uid));
       const recordsSnapshot = await getDocs(recordsQuery);
       
       if (recordsSnapshot.size > 0) {
+        // 병렬로 모든 기록 문서 삭제
         const deletePromises = recordsSnapshot.docs.map(doc => deleteDoc(doc.ref));
         await Promise.all(deletePromises);
-        console.log(`사용자 기록 ${recordsSnapshot.size}개 삭제 완료`);
-      } else {
-        console.log("삭제할 사용자 기록이 없습니다.");
       }
 
-      // 🔵 3. Firestore 회원정보 삭제
-      console.log("Firestore 사용자 정보 삭제 시작");
+      // 3. Firestore 회원정보 삭제(users 컬렉션)
       await deleteDoc(doc(db, "users", user.uid));
-      console.log("Firestore 사용자 정보 삭제 완료");
       
-      // 🔵 4. 계정 삭제 (Google 사용자만, 선택적)
+      // 4. Firebase Auth 계정 삭제(Google 사용자만)
       if (user.provider === 'google') {
-        console.log("Firebase Auth 계정 삭제 시작");
         const currentUser = auth.currentUser;
         if (currentUser) {
           try {
             await currentUser.delete();
-            console.log("Firebase Auth 계정 삭제 완료");
           } catch (deleteError) {
-            console.warn("Firebase Auth 계정 삭제 실패, 앱 데이터만 삭제:", deleteError);
-            // Firebase Auth 계정 삭제가 실패해도 앱 데이터는 이미 삭제되었으므로 계속 진행
+            // Auth 계정 삭제가 실패해도 앱 데이터는 삭제되었으므로 경고만 기록
+            console.warn("Firebase Auth 계정 삭제 실패 (앱 데이터는 삭제됨):", deleteError);
           }
-        } else {
-          console.log("Firebase Auth 사용자가 이미 로그아웃되었습니다.");
         }
       }
       
       setInfoMsg("회원탈퇴 완료. 모든 정보가 삭제되었습니다.");
-      console.log("탈퇴 완료");
       
       setTimeout(() => {
-        logout();
+        logout(); // 전역 상태 로그아웃 처리
         navigate("/login"); // 로그인 페이지로 이동
       }, 1500);
       
     } catch (err) {
       console.error("탈퇴 중 에러:", err);
       
-      // 에러 메시지를 더 구체적으로 표시
+      // 에러 메시지 상세화
       let errorMessage = "탈퇴 중 에러가 발생했습니다.";
       
       if (err.code === 'auth/requires-recent-login') {
@@ -99,10 +90,12 @@ function Withdraw() {
     <div className="h-screen bg-gray-100 flex flex-col">
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+        {/* 메뉴 버튼 */}
         <button className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300">
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">회원탈퇴</h2>
+        {/* 홈 버튼 */}
         <button
           onClick={() => navigate("/")}
           className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
@@ -111,6 +104,7 @@ function Withdraw() {
         </button>
       </div>
 
+      {/* 앱 타이틀 */}
       <div className="mt-10 flex justify-center">
           <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
       </div>
@@ -122,6 +116,7 @@ function Withdraw() {
           <div className="text-center text-black text-base leading-relaxed">
             <p className="font-semibold">회원탈퇴 시 모든 정보가 삭제되며, 복구할 수 없습니다.</p>
             <p className="mt-2">정말 탈퇴하시겠습니까?</p>
+            {/* 카카오 사용자 안내 */}
             {user?.provider === 'kakao' && (
               <p className="mt-2 text-sm text-gray-600">
                 카카오 계정으로 가입하신 경우, 앱에서만 탈퇴되며 카카오 계정은 유지됩니다.
@@ -130,14 +125,16 @@ function Withdraw() {
           </div>
         </div>
 
-        {/* ✅ 버튼 그룹: 카드 외부 */}
+        {/* 버튼 그룹 */}
         <div className="flex justify-center gap-4 mb-4">
+          {/* 탈퇴 동의 버튼 */}
           <button
             onClick={handleWithdraw}
             className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md"
           >
             동의
           </button>
+          {/* 이전 페이지로 돌아가기 버튼 */}
           <button
             onClick={() => navigate(-1)}
             className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-md"
@@ -146,7 +143,7 @@ function Withdraw() {
           </button>
         </div>
 
-        {/* 메시지 출력 */}
+        {/* 오류 및 정보 메시지 출력 */}
         {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
         {infoMsg && <p className="text-black mt-2 text-sm">{infoMsg}</p>}
       </div>

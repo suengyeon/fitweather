@@ -2,63 +2,61 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { HomeIcon, ArrowLeftIcon, BellIcon } from '@heroicons/react/24/outline';
-import { getReports, getAllUsers, banUser, unbanUser, deleteComment, isAdmin } from '../api/reportAPI';
-import { deleteAnyRecord } from '../api/deleteOutfitRecord';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getReports, getAllUsers, banUser, unbanUser, deleteComment } from '../api/reportAPI'; 
+import { deleteAnyRecord } from '../api/deleteOutfitRecord'; 
+import { doc, getDoc } from 'firebase/firestore'; 
+import { db } from '../firebase'; 
 
+/**
+ * 관리자 페이지 컴포넌트 - 신고 기록 및 회원 정보 관리
+ */
 function Admin() {
-    const { user, loading } = useAuth();
+    const { user, loading } = useAuth(); 
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('reports');
-    const [reports, setReports] = useState([]);
-    const [users, setUsers] = useState([]);
-    const [dataLoading, setDataLoading] = useState(true);
-    const [isAdminUser, setIsAdminUser] = useState(false);
+    const [activeTab, setActiveTab] = useState('reports'); 
+    const [reports, setReports] = useState([]); 
+    const [users, setUsers] = useState([]); 
+    const [dataLoading, setDataLoading] = useState(true); 
+    const [isAdminUser, setIsAdminUser] = useState(false); 
 
-    // 관리자 로그인 상태 확인
+    // 관리자 로그인 상태 확인 및 세션 관리
     useEffect(() => {
         const checkAdminLogin = () => {
-            console.log('Admin 페이지 - 관리자 로그인 상태 확인');
-            
             const adminLoggedIn = sessionStorage.getItem('adminLoggedIn');
             const adminLoginTime = sessionStorage.getItem('adminLoginTime');
             
+            // 세션에 로그인 기록이 없거나 만료된 경우 admin-login 페이지로 리디렉션
             if (!adminLoggedIn || adminLoggedIn !== 'true') {
-                console.log('Admin 페이지 - 관리자 로그인되지 않음, 관리자 로그인 페이지로 이동');
                 navigate('/admin-login');
                 return;
             }
 
-            // 로그인 시간 확인 (24시간 후 만료)
             if (adminLoginTime) {
                 const loginTime = new Date(adminLoginTime);
                 const now = new Date();
                 const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
                 
-                if (hoursDiff > 24) {
-                    console.log('Admin 페이지 - 관리자 세션 만료');
+                if (hoursDiff > 24) { // 24시간 초과 시 세션 만료
                     sessionStorage.removeItem('adminLoggedIn');
                     sessionStorage.removeItem('adminLoginTime');
                     navigate('/admin-login');
                     return;
                 }
             }
-
-            console.log('Admin 페이지 - 관리자 로그인 확인됨');
-            setIsAdminUser(true);
+            setIsAdminUser(true); // 관리자 세션 유효 확인
         };
 
         checkAdminLogin();
     }, [navigate]);
 
-    // 데이터 로드
+    // 데이터 로드(관리자 로그인 확인 후 실행)
     useEffect(() => {
         if (!isAdminUser) return;
 
         const loadData = async () => {
             setDataLoading(true);
             try {
+                // 신고 목록과 사용자 목록을 병렬로 조회
                 const [reportsData, usersData] = await Promise.all([
                     getReports(),
                     getAllUsers()
@@ -75,7 +73,7 @@ function Admin() {
         loadData();
     }, [isAdminUser]);
 
-    // 사용자 차단
+    // 사용자 차단 핸들러
     const handleBanUser = async (userId) => {
         if (!window.confirm('정말로 이 사용자를 차단하시겠습니까?')) return;
 
@@ -83,10 +81,7 @@ function Admin() {
             await banUser(userId);
             alert('사용자가 차단되었습니다.');
             // 데이터 새로고침
-            const [reportsData, usersData] = await Promise.all([
-                getReports(),
-                getAllUsers()
-            ]);
+            const [reportsData, usersData] = await Promise.all([ getReports(), getAllUsers() ]);
             setReports(reportsData);
             setUsers(usersData);
         } catch (error) {
@@ -95,7 +90,7 @@ function Admin() {
         }
     };
 
-    // 사용자 차단 해제
+    // 사용자 차단 해제 핸들러
     const handleUnbanUser = async (userId) => {
         if (!window.confirm('정말로 이 사용자의 차단을 해제하시겠습니까?')) return;
 
@@ -103,10 +98,7 @@ function Admin() {
             await unbanUser(userId);
             alert('사용자 차단이 해제되었습니다.');
             // 데이터 새로고침
-            const [reportsData, usersData] = await Promise.all([
-                getReports(),
-                getAllUsers()
-            ]);
+            const [reportsData, usersData] = await Promise.all([ getReports(), getAllUsers() ]);
             setReports(reportsData);
             setUsers(usersData);
         } catch (error) {
@@ -115,14 +107,15 @@ function Admin() {
         }
     };
 
-    // 댓글 삭제
+    // 댓글 삭제 핸들러
     const handleDeleteComment = async (commentId, recordId) => {
         if (!window.confirm('정말로 이 댓글을 삭제하시겠습니까?')) return;
 
         try {
+            // deleteComment API 호출
             await deleteComment(commentId, recordId);
             alert('댓글이 삭제되었습니다.');
-            // 데이터 새로고침
+            // 신고 목록만 새로고침
             const reportsData = await getReports();
             setReports(reportsData);
         } catch (error) {
@@ -131,40 +124,27 @@ function Admin() {
         }
     };
 
-    // 기록 삭제
+    // 기록 삭제 핸들러 (게시물 삭제)
     const handleDeleteRecord = async (recordId) => {
         if (!window.confirm('정말로 이 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
 
         try {
-            // 먼저 기록 데이터를 가져와서 이미지 URL 확인
             let recordData = null;
+            // records 컬렉션에서 데이터 조회 시도 (Base64 이미지 URL을 가져오기 위해)
             try {
-                const outfitRef = doc(db, "outfits", recordId);
-                const outfitSnap = await getDoc(outfitRef);
-                if (outfitSnap.exists()) {
-                    recordData = outfitSnap.data();
+                const recordRef = doc(db, "records", recordId);
+                const recordSnap = await getDoc(recordRef);
+                if (recordSnap.exists()) {
+                    recordData = recordSnap.data();
                 }
             } catch (error) {
-                console.log("outfits 컬렉션에서 데이터 조회 실패, records 컬렉션에서 시도");
-                try {
-                    const recordRef = doc(db, "records", recordId);
-                    const recordSnap = await getDoc(recordRef);
-                    if (recordSnap.exists()) {
-                        recordData = recordSnap.data();
-                    }
-                } catch (recordError) {
-                    console.error("records 컬렉션에서도 데이터 조회 실패:", recordError);
-                }
+                console.error("records 컬렉션에서 데이터 조회 실패:", error);
             }
-
-            const imageUrls = recordData?.imageUrls || [];
-            console.log("삭제할 이미지 URL들:", imageUrls);
-
-            // 기록 삭제 (이미지 포함)
-            await deleteAnyRecord(recordId, imageUrls);
+            // deleteAnyRecord 호출 (outfits, records 컬렉션 모두 시도)
+            await deleteAnyRecord(recordId, recordData?.imageUrls || []);
             alert('기록이 삭제되었습니다.');
             
-            // 데이터 새로고침
+            // 신고 목록 새로고침
             const reportsData = await getReports();
             setReports(reportsData);
         } catch (error) {
@@ -177,22 +157,20 @@ function Admin() {
     const handleAdminLogout = () => {
         sessionStorage.removeItem('adminLoggedIn');
         sessionStorage.removeItem('adminLoginTime');
-        navigate('/admin-login');
+        navigate('/admin-login'); // 로그인 페이지로 리디렉션
     };
 
-    // 신고 3회 이상인 사용자 수 계산
+    // 신고 3회 이상인 사용자 수 계산 (알림 뱃지용)
     const highReportUsers = users.filter(user => user.reportCount >= 3).length;
 
-    if (loading) {
-        return <div className="p-6">사용자 인증을 확인하는 중...</div>;
-    }
-
-    if (!isAdminUser) {
-        return <div className="p-6">권한을 확인하는 중...</div>;
-    }
-
-    if (dataLoading) {
-        return <div className="p-6">데이터를 불러오는 중...</div>;
+    if (loading || !isAdminUser || dataLoading) {
+        return (
+            <div className="p-6 text-center mt-20">
+                {loading && "사용자 인증을 확인하는 중..."}
+                {!isAdminUser && !loading && "권한을 확인하는 중..."}
+                {isAdminUser && dataLoading && "데이터를 불러오는 중..."}
+            </div>
+        );
     }
 
     return (
@@ -221,6 +199,7 @@ function Admin() {
                     >
                         로그아웃
                     </button>
+                    {/* 위험 알림 뱃지 (신고 3회 이상 사용자 수) */}
                     {highReportUsers > 0 && (
                         <div className="relative">
                             <BellIcon className="w-6 h-6 text-red-500" />
@@ -258,6 +237,7 @@ function Admin() {
 
             {/* 콘텐츠 */}
             <div className="flex-1 p-6">
+                {/* 신고 기록 탭 */}
                 {activeTab === 'reports' && (
                     <div className="bg-white rounded-lg shadow">
                         <div className="p-6">
@@ -271,7 +251,7 @@ function Admin() {
                                             key={report.id}
                                             className={`p-4 border rounded-lg ${
                                                 report.reportCount >= 3
-                                                    ? 'border-red-300 bg-red-50'
+                                                    ? 'border-red-300 bg-red-50' // 3회 이상 신고 시 강조
                                                     : 'border-gray-200'
                                             }`}
                                         >
@@ -283,7 +263,7 @@ function Admin() {
                                                         </span>
                                                         <span className={`text-xs px-2 py-1 rounded ${
                                                             report.isDeleted 
-                                                                ? 'bg-red-100 text-red-600' 
+                                                                ? 'bg-red-100 text-red-600' // 삭제된 게시물/댓글 표시
                                                                 : report.hasError
                                                                 ? 'bg-yellow-100 text-yellow-600'
                                                                 : 'bg-gray-100'
@@ -292,6 +272,7 @@ function Admin() {
                                                             {report.isDeleted && ' (삭제됨)'}
                                                             {report.hasError && ' (오류)'}
                                                         </span>
+                                                        {/* 신고 횟수 뱃지 */}
                                                         {report.reportCount >= 3 && (
                                                             <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
                                                                 신고 {report.reportCount}회
@@ -305,91 +286,27 @@ function Admin() {
                                                         사유: {report.reason}
                                                     </p>
                                                     <p className="text-xs text-gray-500 mb-2">
+                                                        {/* Firestore Timestamp를 로컬 시간 문자열로 변환 */}
                                                         {new Date(report.date.seconds * 1000).toLocaleString('ko-KR')}
                                                     </p>
-                                                    {/* 게시물 보기 링크 */}
-                                                    {report.targetType === 'post' ? (
-                                                        <button
-                                                            onClick={async () => {
-                                                                try {
-                                                                    console.log('게시물 보기 클릭:', {
-                                                                        reportId: report.id,
-                                                                        targetId: report.targetId,
-                                                                        recordId: report.recordId,
-                                                                        isDeleted: report.isDeleted,
-                                                                        hasError: report.hasError
-                                                                    });
-                                                                    
-                                                                    if (report.isDeleted) {
-                                                                        alert('해당 게시물이 삭제되어 더 이상 볼 수 없습니다.');
-                                                                        return;
-                                                                    }
-                                                                    
-                                                                    if (report.hasError) {
-                                                                        alert('게시물 정보를 불러올 수 없습니다.');
-                                                                        return;
-                                                                    }
-                                                                    
-                                                                    const url = `/feed-detail/${report.recordId || report.targetId}`;
-                                                                    console.log('게시물 ID로 이동:', url);
-                                                                    navigate(url);
-                                                                } catch (error) {
-                                                                    console.error('게시물 조회 실패:', error);
-                                                                    alert('게시물을 불러올 수 없습니다.');
-                                                                }
-                                                            }}
-                                                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                                                        >
-                                                            📄 게시물 보기
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={async () => {
-                                                                try {
-                                                                    console.log('댓글 게시물 보기 클릭:', {
-                                                                        reportId: report.id,
-                                                                        targetId: report.targetId,
-                                                                        recordId: report.recordId,
-                                                                        targetUserId: report.targetUserId,
-                                                                        targetType: report.targetType,
-                                                                        isDeleted: report.isDeleted,
-                                                                        hasError: report.hasError
-                                                                    });
-                                                                    
-                                                                    const { doc, getDoc } = await import('firebase/firestore');
-                                                                    const { db } = await import('../firebase');
-                                                                    
-                                                                    // 댓글 문서 확인
-                                                                    const commentRef = doc(db, 'comments', report.targetId);
-                                                                    const commentSnap = await getDoc(commentRef);
-                                                                    
-                                                                    if (commentSnap.exists()) {
-                                                                        // 댓글 문서가 존재하면 댓글이 포함된 게시물
-                                                                        const commentData = commentSnap.data();
-                                                                        const originalPostId = report.targetId; // 댓글 문서 ID = 게시물 ID
-                                                                        const url = `/feed-detail/${originalPostId}`;
-                                                                        
-                                                                        console.log('댓글 원본 게시물 ID:', originalPostId);
-                                                                        console.log('댓글 데이터:', commentData);
-                                                                        
-                                                                        navigate(url);
-                                                                    } else {
-                                                                        // 댓글 문서가 없으면 삭제된 댓글
-                                                                        console.log('댓글이 삭제되었습니다:', report.targetId);
-                                                                        alert('해당 댓글이 삭제되어 게시물을 찾을 수 없습니다.');
-                                                                    }
-                                                                } catch (error) {
-                                                                    console.error('댓글 게시물 조회 실패:', error);
-                                                                    alert('댓글 게시물을 불러올 수 없습니다.');
-                                                                }
-                                                            }}
-                                                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                                                        >
-                                                            💬 댓글이 포함된 게시물 보기
-                                                        </button>
-                                                    )}
+                                                    {/* 게시물/댓글이 포함된 게시물 보기 링크 */}
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (report.isDeleted || report.hasError) {
+                                                                alert('대상이 삭제되었거나 정보를 불러올 수 없습니다.');
+                                                                return;
+                                                            }
+                                                            // 게시물 상세 페이지로 이동
+                                                            const url = `/feed-detail/${report.recordId || report.targetId}`;
+                                                            navigate(url);
+                                                        }}
+                                                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                                                    >
+                                                        {report.targetType === 'post' ? '📄 게시물 보기' : '💬 댓글이 포함된 게시물 보기'}
+                                                    </button>
                                                 </div>
                                                 <div className="flex gap-2 ml-4">
+                                                    {/* 댓글 삭제 버튼 */}
                                                     {report.targetType === 'comment' && !report.isDeleted && (
                                                         <button
                                                             onClick={() => handleDeleteComment(report.targetId, report.targetUserId)}
@@ -398,6 +315,7 @@ function Admin() {
                                                             댓글 삭제
                                                         </button>
                                                     )}
+                                                    {/* 기록 삭제 버튼 */}
                                                     {report.targetType === 'post' && !report.isDeleted && (
                                                         <button
                                                             onClick={() => handleDeleteRecord(report.targetId)}
@@ -450,7 +368,7 @@ function Admin() {
                                                         }`}
                                                     >
                                                         {user.status === 'banned' ? '차단됨' : '활성'}
-                                                    </span>
+                                                    </span> {/* 🚨 이 부분이 닫히지 않아 에러 발생 🚨 */}
                                                 </td>
                                                 <td className="py-3 px-4">
                                                     <span
@@ -469,7 +387,7 @@ function Admin() {
                                                             onClick={() => handleUnbanUser(user.id)}
                                                             className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
                                                         >
-                                                            취소
+                                                            차단 해제
                                                         </button>
                                                     ) : (
                                                         <button

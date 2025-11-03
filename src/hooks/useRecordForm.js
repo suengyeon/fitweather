@@ -7,53 +7,55 @@ import { useAuth } from "../contexts/AuthContext";
 import { getStyleLabel } from "../utils/styleUtils"; 
 import { outfitOptionTexts } from "../constants/outfitOptionTexts"; 
 
+/**
+ * 착장 기록(Record) 페이지의 모든 폼 상태, 핸들러, CRUD 로직을 관리하는 커스텀 훅
+ */
 export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, regionName, profile, compressImage, weatherService) => {
     const navigate = useNavigate();
     const { user } = useAuth();
 
     // 폼 상태
-    const [imageFiles, setImageFiles] = useState([]);
-    const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] });
+    const [imageFiles, setImageFiles] = useState([]); 
+    const [outfit, setOutfit] = useState({ outer: [], top: [], bottom: [], shoes: [], acc: [] }); 
     const [selectedItems, setSelectedItems] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" });
     const [customInputMode, setCustomInputMode] = useState({ outer: false, top: false, bottom: false, shoes: false, acc: false });
-    const [customInputs, setCustomInputs] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" });
-    const [feeling, setFeeling] = useState("");
-    const [style, setStyle] = useState("");
-    const [memo, setMemo] = useState("");
-    const [isPublic, setIsPublic] = useState(false);
-    const [submitLoading, setSubmitLoading] = useState(false);
+    const [customInputs, setCustomInputs] = useState({ outer: "", top: "", bottom: "", shoes: "", acc: "" }); 
+    const [feeling, setFeeling] = useState(""); 
+    const [style, setStyle] = useState(""); 
+    const [memo, setMemo] = useState(""); 
+    const [isPublic, setIsPublic] = useState(false); 
+    const [submitLoading, setSubmitLoading] = useState(false); 
     const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
     
     // 수정 모드 상태
     const [isEditMode, setIsEditMode] = useState(false);
     const [recordId, setRecordId] = useState(null);
 
-    // 기존 기록 데이터 로드 (수정 모드 진입)
+    // 기존 기록 데이터 로드(수정 모드 진입)
     useEffect(() => {
         if (existingRecord) {
             setIsEditMode(true);
             setRecordId(existingRecord.id);
-            // existingRecord.styleCode가 없으면, style(레이블)을 코드로 변환하여 사용합니다.
+            // 기존 데이터로 폼 필드 초기화
             setStyle(existingRecord.styleCode || getStyleCode(existingRecord.style) || "");
-            
             setOutfit(existingRecord.outfit || { outer: [], top: [], bottom: [], shoes: [], acc: [] });
             setFeeling(existingRecord.feeling || "");
             setMemo(existingRecord.memo || "");
             setIsPublic(existingRecord.isPublic || false);
-            // URL로 된 기존 이미지를 isUrl: true 플래그와 함께 로드
+            // 기존 URL 이미지를 isUrl 플래그와 함께 로드
             setImageFiles(existingRecord.imageUrls?.map((url) => ({ name: url, isUrl: true })) || []);
             setImagePreviewIdx(0);
         }
     }, [existingRecord]);
 
     // --- 이미지 핸들러 ---
-
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files).filter(f => f && f.name);
         if (!files.length) return;
 
         const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
         const maxSizeMB = 3;
+        // 파일 타입 및 크기 유효성 검사
         for (const file of files) {
             if (!allowedTypes.includes(file.type)) {
                 alert("jpg, png, gif 형식의 이미지 파일만 업로드 가능합니다.");
@@ -64,7 +66,6 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
                 return;
             }
         }
-
         setImageFiles((prev) => {
             const newList = [...prev, ...files];
             if (prev.length === 0 && newList.length > 0) {
@@ -80,8 +81,10 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
         const confirmDelete = window.confirm("현재 사진을 삭제하시겠어요?");
         if (!confirmDelete) return;
 
+        // 현재 인덱스의 이미지 파일 삭제
         setImageFiles((prev) => {
             const newList = prev.filter((_, index) => index !== imagePreviewIdx);
+            // 프리뷰 인덱스 조정(리스트 길이를 초과하지 않도록)
             if (newList.length === 0) {
                 setImagePreviewIdx(0);
             } else if (imagePreviewIdx >= newList.length) {
@@ -92,10 +95,9 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
     };
 
     // --- 옷차림 선택 핸들러 ---
-
     const handleSelectChange = (category, value) => {
         if (value === "custom") {
-            setCustomInputMode((prev) => ({ ...prev, [category]: true }));
+            setCustomInputMode((prev) => ({ ...prev, [category]: true })); // 커스텀 모드 전환
             setSelectedItems((prev) => ({ ...prev, [category]: "" }));
         } else {
             setCustomInputMode((prev) => ({ ...prev, [category]: false }));
@@ -108,6 +110,7 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
     };
 
     const handleBackToDropdown = (category) => {
+        // 커스텀 모드 해제 및 값 초기화
         setCustomInputMode((prev) => ({ ...prev, [category]: false }));
         setCustomInputs((prev) => ({ ...prev, [category]: "" }));
         setSelectedItems((prev) => ({ ...prev, [category]: "" }));
@@ -117,22 +120,27 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
         let valueToAdd = "";
 
         if (customInputMode[category]) {
+            // 커스텀 입력 모드일 때
             valueToAdd = customInputs[category];
             if (!valueToAdd.trim()) return;
+            // 입력 후 상태 초기화
             setCustomInputMode((prev) => ({ ...prev, [category]: false }));
             setCustomInputs((prev) => ({ ...prev, [category]: "" }));
         } else {
+            // 드롭다운 선택 모드일 때
             const selectedValue = selectedItems[category];
             if (!selectedValue) return;
-            // 옵션 텍스트가 있다면 텍스트 사용, 없다면 코드(value) 사용
+            // 옵션 코드를 한글 텍스트로 변환하여 사용
             valueToAdd = outfitOptionTexts[category][selectedValue] || selectedValue;
             setSelectedItems((prev) => ({ ...prev, [category]: "" }));
         }
 
+        // 해당 카테고리 outfit 배열에 항목 추가
         setOutfit((prev) => ({ ...prev, [category]: [...prev[category], valueToAdd] }));
     };
 
     const handleRemoveItem = (category, idx) => {
+        // 해당 카테고리 outfit 배열에서 특정 인덱스 항목 제거
         setOutfit((prev) => ({
             ...prev,
             [category]: prev[category].filter((_, i) => i !== idx)
@@ -140,16 +148,16 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
     };
 
     // --- CRUD 함수 ---
-
     const handleDelete = async () => {
         if (!recordId) return;
         const confirmDelete = window.confirm("정말 삭제하시겠어요?");
         if (!confirmDelete) return;
 
         try {
+            // Firestore 'records' 문서 삭제
             await deleteDoc(doc(db, "records", recordId));
             toast.success("기록이 삭제되었어요!", { autoClose: 1200 });
-            setTimeout(() => navigate("/calendar"), 1300);
+            setTimeout(() => navigate("/calendar"), 1300); // 캘린더 페이지로 리디렉션
         } catch (err) {
             console.error("삭제 오류:", err);
             toast.error("삭제에 실패했습니다.");
@@ -157,18 +165,10 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
     };
 
     const handleSubmit = async () => {
-        if (!user) {
-            toast.error("로그인이 필요합니다.");
-            return;
-        }
-        if (!imageFiles.length || imageFiles.some(f => !f || (!f.name && !f.isUrl))) {
-            toast.error("사진을 업로드해주세요.");
-            return;
-        }
-        if (!feeling) {
-            toast.error("체감을 선택해주세요.");
-            return;
-        }
+        // 폼 유효성 검사
+        if (!user) { toast.error("로그인이 필요합니다."); return; }
+        if (!imageFiles.length || imageFiles.some(f => !f || (!f.name && !f.isUrl))) { toast.error("사진을 업로드해주세요."); return; }
+        if (!feeling) { toast.error("체감을 선택해주세요."); return; }
         if (typeof weather?.temp === "undefined" || typeof weather?.rain === "undefined") {
             toast.error("날씨 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
             return;
@@ -177,7 +177,7 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
         setSubmitLoading(true);
 
         try {
-            // 1. 중복 체크 (수정 모드가 아닐 때만)
+            // 1. 중복 체크(수정 모드가 아닐 때만)
             if (!isEditMode) {
                 const q = query(
                     collection(db, "records"),
@@ -192,18 +192,17 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
                 }
             }
             
-            // 2. 이미지 처리
+            // 2. 이미지 처리 및 Base64 변환
             if (!compressImage) throw new Error("compressImage 함수가 전달되지 않았습니다.");
 
             const imageUrls = await Promise.all(
                 imageFiles.map(async (file) => {
-                    if (file.isUrl) return file.name;
+                    if (file.isUrl) return file.name; // 기존 URL은 그대로 반환
                     
-                    const compressedBase64 = await compressImage(file);
+                    const compressedBase64 = await compressImage(file); // 이미지 압축 및 Base64 변환
                     
                     const maxSize = 500 * 1024; // 500KB
                     if (compressedBase64.length > maxSize * 1.5) {
-                         // 이미지 처리 후에도 너무 크면 오류 발생시키기
                          throw new Error(`이미지 크기가 너무 큽니다. (처리 후: ${(compressedBase64.length / 1024).toFixed(2)}KB)`);
                     }
                     return compressedBase64;
@@ -211,7 +210,7 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
             );
 
             // 3. 데이터 준비
-            const convertedStyle = getStyleLabel(style);
+            const convertedStyle = getStyleLabel(style); // 스타일 코드를 한글 레이블로 변환
             const dateObj = new Date(dateStr);
             
             const recordData = {
@@ -224,7 +223,7 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
                     rain: weather.rain ?? null,
                     humidity: weather.humidity ?? null,
                     icon: weather.icon ?? null,
-                    // ✅ new 연산자 제거: weatherService.getSeason() 형태로 수정
+                    // weatherService를 사용하여 계절 정보 추가
                     season: (weather.temp !== undefined && weather.temp !== null && weatherService && weatherService.getSeason) 
                             ? weatherService.getSeason(weather.temp, dateObj) 
                             : null,
@@ -232,7 +231,7 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
                 outfit,
                 feeling,
                 style: convertedStyle, // 한글 레이블
-                styleCode: style, // 영문 코드 (스타일 선택 시 사용)
+                styleCode: style, // 영문 코드
                 memo,
                 isPublic,
                 imageUrls,
@@ -244,16 +243,18 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
             if (isEditMode && recordId) {
                 const updateData = { ...recordData };
                 delete updateData.createdAt; // createdAt 필드는 수정하지 않음
-                await updateDoc(doc(db, "records", recordId), updateData);
+                // Firestore 'records' 문서 업데이트
+                await updateDoc(doc(db, "records", recordId), updateData); 
                 toast.success("기록이 수정되었어요!", { autoClose: 1200 });
             } else {
                 recordData.createdAt = new Date();
-                recordData.likes = [];
-                await addDoc(collection(db, "records"), recordData);
+                recordData.likes = []; // 새 기록이므로 좋아요 배열 초기화
+                // Firestore 'records' 컬렉션에 새 문서 추가
+                await addDoc(collection(db, "records"), recordData); 
                 toast.success("기록이 저장되었어요!", { autoClose: 1200 });
             }
 
-            // 5. 페이지 이동
+            // 5. 페이지 이동(캘린더로 이동하며 기록 날짜 상태 전달)
             if (isEditMode) {
                 setTimeout(() => navigate("/calendar", { state: { selectedDate: dateStr } }), 1300);
             } else {
@@ -282,7 +283,7 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
     };
 };
 
-// 💡 Record.js에서 스타일 한글을 영문 코드로 변환하는 getStyleCode 함수가 필요하므로 여기에 임시로 추가합니다.
+// Record.js에서 스타일 한글을 영문 코드로 변환하는 getStyleCode 함수(임시)
 function getStyleCode(styleLabel) {
     const styleOptions = [
         { value: 'modern', label: '모던/시크' },

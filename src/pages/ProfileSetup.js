@@ -6,18 +6,23 @@ import { HomeIcon, Bars3Icon } from "@heroicons/react/24/solid";
 import { useAuth } from "../contexts/AuthContext";
 import { regionMap } from "../constants/regionData";
 
+/**
+ * ProfileSetup 컴포넌트 - 소셜 로그인 후 신규 사용자가 닉네임과 지역 등 추가 정보를 설정하는 페이지
+ */
 function ProfileSetup() {
-  const location = useLocation();
+  const location = useLocation(); 
   const navigate = useNavigate();
-  const { setSocialUser } = useAuth();
+  const { setSocialUser } = useAuth(); 
 
+  // 전달받은 사용자 정보
   const uid = location.state?.uid;
   const email = location.state?.email || "";
   const displayName = location.state?.displayName || "";
   const provider = location.state?.provider || "google";
 
+  // 입력 필드 상태
   const [nickname, setNickname] = useState(displayName);
-  const [userEmail, setUserEmail] = useState(email);
+  const [userEmail, setUserEmail] = useState(email); 
   const [region, setRegion] = useState("");
   const [error, setError] = useState("");
 
@@ -30,18 +35,21 @@ function ProfileSetup() {
     emailExists: !!email
   });
 
+  // 지역 이름을 대문자 시작으로 포맷하는 함수(Firestore 저장 위해)
   function capitalizeRegion(region) {
     if (!region) return "";
     return region.charAt(0).toUpperCase() + region.slice(1).toLowerCase();
   }
 
+  // 저장 버튼 클릭 핸들러
   const handleSave = async () => {
+    // 필수 입력 검사
     if (!nickname || !region) {
       setError("닉네임과 지역을 모두 입력해주세요!");
       return;
     }
 
-    // 카카오 사용자이고 이메일이 없는 경우 이메일 입력 필수
+    // 카카오 사용자이며 이메일을 제공하지 않은 경우 이메일 입력 필수
     if (provider === 'kakao' && !email && !userEmail) {
       setError("이메일을 입력해주세요!");
       return;
@@ -67,7 +75,7 @@ function ProfileSetup() {
 
       let nicknameDuplicated = false;
       nicknameSnapshot.forEach((docSnap) => {
-        if (docSnap.id !== uid) nicknameDuplicated = true;
+        if (docSnap.id !== uid) nicknameDuplicated = true; // 자기 자신 제외
       });
 
       if (nicknameDuplicated) {
@@ -75,7 +83,7 @@ function ProfileSetup() {
         return;
       }
 
-      // 이메일 중복 검사 (사용자가 입력한 이메일이 있는 경우)
+      // 이메일 중복 검사(사용자가 새로 입력하거나 수정한 이메일이 있는 경우)
       if (userEmail && userEmail !== email) {
         console.log('이메일 중복 검사 시작...');
         const emailQuery = query(
@@ -87,7 +95,7 @@ function ProfileSetup() {
 
         let emailDuplicated = false;
         emailSnapshot.forEach((docSnap) => {
-          if (docSnap.id !== uid) emailDuplicated = true;
+          if (docSnap.id !== uid) emailDuplicated = true; // 자기 자신 제외
         });
 
         if (emailDuplicated) {
@@ -96,21 +104,24 @@ function ProfileSetup() {
         }
       }
 
+      // Firestore에 저장할 사용자 데이터
       const userData = {
         nickname,
         region: capitalizeRegion(region),
-        email: userEmail || email, // 사용자가 입력한 이메일 또는 기존 이메일
+        email: userEmail || email, // 사용자가 입력한 최종 이메일 사용
         provider,
         createdAt: new Date()
       };
 
+      // Firestore 문서 저장(uid를 문서 ID로 사용)
       console.log('사용자 데이터 저장 시작...', userData);
       await setDoc(doc(db, "users", uid), userData);
       console.log('사용자 데이터 저장 완료');
 
-      // 로그인 상태 설정
+      // 앱의 전역 로그인 상태 설정
       setSocialUser({ uid, ...userData });
 
+      // 홈 페이지로 이동
       navigate("/");
     } catch (err) {
       console.error('프로필 저장 오류:', err);
@@ -147,6 +158,7 @@ function ProfileSetup() {
       {/* 콘텐츠 영역 */}
       <div className="flex flex-col items-center justify-start flex-1 px-4 mt-12">
         <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-md mb-8">
+          {/* 닉네임 입력 */}
           <div className="mb-6">
             <label className="block font-semibold mb-2">닉네임</label>
             <input
@@ -157,7 +169,7 @@ function ProfileSetup() {
             />
           </div>
 
-          {/* 카카오 사용자이고 이메일이 없는 경우 이메일 입력 필드 표시 */}
+          {/* 카카오 사용자이고 이메일이 없는 경우 : 이메일 입력 필드 표시(필수) */}
           {provider === 'kakao' && !email && (
             <div className="mb-6">
               <label className="block font-semibold mb-2">
@@ -173,7 +185,7 @@ function ProfileSetup() {
             </div>
           )}
 
-          {/* 기존 이메일이 있는 경우 표시 (수정 불가) */}
+          {/* 기존 이메일이 있는 경우 : 이메일 표시(수정 불가) */}
           {email && (
             <div className="mb-6">
               <label className="block font-semibold mb-2">이메일</label>
@@ -188,6 +200,7 @@ function ProfileSetup() {
             </div>
           )}
 
+          {/* 지역 선택 */}
           <div className="mb-6">
             <label className="block font-semibold mb-2">지역</label>
             <select
@@ -195,6 +208,7 @@ function ProfileSetup() {
               onChange={e => setRegion(e.target.value)}
               className="w-full border border-gray-300 px-4 py-2 rounded bg-white"
             >
+              {/* 지역 옵션 렌더링 */}
               {Object.entries(regionMap).map(([key, label]) => (
                 <option key={key} value={key}>
                   {label}
@@ -203,11 +217,13 @@ function ProfileSetup() {
             </select>
           </div>
 
+          {/* 에러 메시지 */}
           {error && (
             <p className="text-red-500 text-sm mb-4">{error}</p>
           )}
 
           <div className="flex justify-center">
+            {/* 저장 버튼 */}
             <button
               onClick={handleSave}
               className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded w-auto"

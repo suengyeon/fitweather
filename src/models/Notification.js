@@ -67,8 +67,6 @@ export const NOTIFICATION_TYPES = {
 
 /**
  * 알림 생성 시 유효성 검사
- * @param {CreateNotificationData} data - 알림 생성 데이터
- * @returns {Object} 유효성 검사 결과
  */
 export function validateNotificationData(data) {
   const errors = [];
@@ -108,8 +106,6 @@ export function validateNotificationData(data) {
 
 /**
  * 알림 데이터를 API 응답 형식으로 변환
- * @param {Object} notificationDoc - Firestore 문서 데이터
- * @returns {NotificationResponse} API 응답 형식 데이터
  */
 export function formatNotificationResponse(notificationDoc) {
   const data = notificationDoc.data();

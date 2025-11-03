@@ -18,16 +18,20 @@ import { getWeatherEmoji } from "../utils/weatherUtils";
 // 지역 드롭다운 옵션 목록 생성
 const regionOptions = Object.entries(regionMap).map(([key, label]) => ({ value: key, label }));
 
+/**
+ * Home 컴포넌트 - 메인 화면을 렌더링하며, 날씨 정보 기반의 착장 추천 기능을 제공
+ */
 function Home() {
-  const { profile, loading: profileLoading } = useUserProfile();
-  const { user } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile(); // 사용자 프로필 훅
+  const { user } = useAuth(); // 인증 정보 훅
   const nickname = profile?.nickname || "회원";
   const navigate = useNavigate();
 
+  // 지역, 사이드바 상태 관리
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // 🔔 알림 사이드바 훅 (상태/로직 모두 훅에서 관리)
+  // 알림 사이드바 훅
   const {
     alarmOpen, setAlarmOpen,
     notifications, unreadCount,
@@ -38,36 +42,30 @@ function Home() {
   const [recommendations, setRecommendations] = useState([]);
   const [currentRecommendationIndex, setCurrentRecommendationIndex] = useState(0);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedStyle, setSelectedStyle] = useState(""); // 기본값: 전체
+  const [isRefreshing, setIsRefreshing] = useState(false); 
+  const [selectedStyle, setSelectedStyle] = useState("");
 
-  // 날씨 정보 가져오기
+  // 날씨 정보 가져오기 훅
   const { weather, loading: weatherLoading } = useWeather(selectedRegion);
 
+  // 사용자 프로필 지역이 로드되면 선택 지역으로 설정
   useEffect(() => {
     if (profile?.region) {
       setSelectedRegion(profile.region);
     }
   }, [profile?.region]);
 
-  // 추천 데이터 가져오기
+  // 추천 데이터 가져오기(지역, 스타일, 계절 변경 시 재실행)
   useEffect(() => {
     const fetchRecommendations = async () => {
       if (!selectedRegion) return;
       setRecommendationLoading(true);
       try {
-        console.log("🔍 추천 데이터 가져오기 시작:", { selectedRegion, selectedStyle });
-
-        // 홈화면 추천 로직 사용 (계절별 + 스타일 필터링, 지역 무관)
+        // 홈화면 추천 로직(계절 및 스타일 기반)
         const data = await getHomeRecommendations(selectedStyle, weather?.season);
-        console.log("추천 결과:", data.length, "개");
-
-        console.log("최종 추천 데이터:", data);
         setRecommendations(data);
-        setCurrentRecommendationIndex(prev => {
-          const newIndex = (prev + 1) % Math.max(data.length, 1);
-          return newIndex;
-        });
+        // 다음 추천으로 인덱스 업데이트
+        setCurrentRecommendationIndex(prev => (prev + 1) % Math.max(data.length, 1));
       } catch (error) {
         console.error("추천 데이터 가져오기 실패:", error);
         setRecommendations([]);
@@ -78,17 +76,14 @@ function Home() {
     fetchRecommendations();
   }, [selectedRegion, selectedStyle, weather?.season]);
 
-  // 새로고침 버튼 클릭 핸들러
+  // 새로고침 버튼 클릭 핸들러(랜덤 추천으로 업데이트)
   const handleRefreshRecommendation = async () => {
     if (!selectedRegion) return;
 
     setIsRefreshing(true);
     try {
-      console.log("🔄 새로고침 추천 요청:", { selectedRegion, selectedStyle });
-
-      // 랜덤 추천 로직 사용 (지역 무관)
+      // 랜덤 추천 로직 실행
       const newData = await getRandomHomeRecommendations(selectedStyle, weather?.season);
-      console.log("새로고침 추천 결과:", newData.length, "개");
 
       if (newData.length > 0) {
         setRecommendations(newData);
@@ -97,13 +92,14 @@ function Home() {
     } catch (error) {
       console.error("새로고침 추천 실패:", error);
     } finally {
+      // 1초 후 새로고침 애니메이션 종료
       setTimeout(() => setIsRefreshing(false), 1000);
     }
   };
 
-  const loading = profileLoading || weatherLoading;
+  const loading = profileLoading || weatherLoading; // 통합 로딩 상태
 
-  // 현재 표시할 추천 데이터 계산
+  // 현재 표시할 추천 데이터 계산 (useMemo로 성능 최적화)
   const currentRecommendation = useMemo(() => {
     if (recommendations.length === 0) return null;
     return recommendations[currentRecommendationIndex];
@@ -122,7 +118,7 @@ function Home() {
     </select>
   );
 
-  // 스타일 선택 드롭다운 렌더링 함수 (재사용)
+  // 스타일 선택 드롭다운 렌더링 함수
   const renderStyleSelect = () => (
     <select
       value={selectedStyle}
@@ -139,9 +135,11 @@ function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       {profile ? (
+        // 로그인 상태
         <div className="w-full min-h-screen bg-gray-100 flex flex-col relative">
-          {/* 사이드바들 */}
+          {/* 메뉴 사이드바 */}
           <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          {/* 알림 사이드바 */}
           <NotiSidebar
             isOpen={alarmOpen}
             onClose={() => setAlarmOpen(false)}
@@ -153,6 +151,7 @@ function Home() {
           />
           {/* 상단 네비게이션 */}
           <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+            {/* 메뉴 버튼 */}
             <button
               className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -160,18 +159,22 @@ function Home() {
               <Bars3Icon className="w-5 h-5" />
             </button>
             <div className="flex items-center space-x-4">
+              {/* 로그아웃 버튼 */}
               <button onClick={logout} className="text-sm font-medium hover:underline">
                 logout
               </button>
+              {/* 회원정보 버튼 */}
               <button
                 onClick={() => navigate("/mypage_userinfo")}
                 className="text-sm font-medium hover:underline"
               >
                 회원정보
               </button>
+              {/* 사용자 닉네임 표시 */}
               <div className="bg-blue-200 px-3 py-1 rounded text-sm font-semibold">
                 {nickname}님
               </div>
+              {/* 알림 버튼 */}
               <button
                 className="relative flex items-center justify-center 
                   bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
@@ -179,6 +182,7 @@ function Home() {
                 aria-label="알림 열기"
               >
                 <BellIcon className="w-5 h-5" />
+                {/* 읽지 않은 알림 개수 인디케이터 */}
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
                 )}
@@ -186,20 +190,20 @@ function Home() {
             </div>
           </div>
 
-          {/* 타이틀 */}
+          {/* 앱 타이틀 */}
           <div className="mt-8 flex justify-center">
             <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
           </div>
 
-          {/* 콘텐츠 */}
+          {/* 메인 콘텐츠 */}
           <div className="flex flex-col items-center mt-8 px-4 flex-1">
-            {/* 지역 선택 드롭다운 (분리된 함수 사용) */}
+            {/* 지역 선택 드롭다운 */}
             {renderRegionSelect()}
 
             {/* 오늘의 날씨 섹션 */}
             {weather && (
               <div className="w-full max-w-md flex flex-col items-center">
-                {/* 날씨 요약 */}
+                {/* 날씨 요약 및 온도 */}
                 <div className="flex items-center gap-4 mb-2">
                   <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
                     <span className="text-3xl animate-bounce">
@@ -210,7 +214,7 @@ function Home() {
                     {weather.temp}°C
                   </div>
                 </div>
-                {/* 날씨 메시지 */}
+                {/* 날씨에 따른 추천 메시지 */}
                 <div className="text-center text-gray-600">
                   <p className="text-lg">
                     오늘의 날씨는{" "}
@@ -234,6 +238,7 @@ function Home() {
 
             {/* 추천 섹션 */}
             {recommendationLoading ? (
+              // 로딩 중 표시
               <div className="w-full max-w-md mt-6">
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
                   <div className="text-center text-gray-500">
@@ -242,11 +247,11 @@ function Home() {
                 </div>
               </div>
             ) : currentRecommendation ? (
+              // 추천 데이터 표시
               <div className="w-full max-w-md mt-6">
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
-                  {/* 카드 헤더 */}
+                  {/* 카드 헤더(스타일 선택 및 새로고침 버튼) */}
                   <div className="flex items-center justify-between mb-4">
-                    {/* 스타일 선택 드롭다운 (분리된 함수 사용) */}
                     {renderStyleSelect()}
                     <button
                       onClick={handleRefreshRecommendation}
@@ -268,6 +273,7 @@ function Home() {
                     <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
                       <div className="text-sm font-medium text-gray-800 mb-1">아우터</div>
                       <div className="flex flex-wrap gap-1">
+                        {/* 아우터 아이템 목록 렌더링 */}
                         {currentRecommendation.outfit?.outer?.length > 0 ? (
                           currentRecommendation.outfit.outer.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
@@ -286,7 +292,8 @@ function Home() {
                     <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
                       <div className="text-sm font-medium text-gray-800 mb-1">하의</div>
                       <div className="flex flex-wrap gap-1">
-                        {currentRecommendation.outfit?.bottom?.length > 0 ? (
+                        {/* 하의 아이템 목록 렌더링 */}
+                        {currentRecommendation.outfit.bottom?.length > 0 ? (
                           currentRecommendation.outfit.bottom.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
                               {item}
@@ -304,6 +311,7 @@ function Home() {
                     <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
                       <div className="text-sm font-medium text-gray-800 mb-1">상의</div>
                       <div className="flex flex-wrap gap-1">
+                        {/* 상의 아이템 목록 렌더링 */}
                         {currentRecommendation.outfit?.top?.length > 0 ? (
                           currentRecommendation.outfit.top.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
@@ -322,6 +330,7 @@ function Home() {
                     <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px" }}>
                       <div className="text-sm font-medium text-gray-800 mb-1">신발</div>
                       <div className="flex flex-wrap gap-1">
+                        {/* 신발 아이템 목록 렌더링 */}
                         {currentRecommendation.outfit?.shoes?.length > 0 ? (
                           currentRecommendation.outfit.shoes.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
@@ -336,10 +345,11 @@ function Home() {
                       </div>
                     </div>
 
-                    {/* 악세서리 - 두 열을 모두 차지 */}
+                    {/* 악세서리 */}
                     <div style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", padding: "12px", gridColumn: "1 / -1" }}>
                       <div className="text-sm font-medium text-gray-800 mb-1">악세서리</div>
                       <div className="flex flex-wrap gap-1">
+                        {/* 악세서리 아이템 목록 렌더링 */}
                         {currentRecommendation.outfit?.acc?.length > 0 ? (
                           currentRecommendation.outfit.acc.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
@@ -355,7 +365,7 @@ function Home() {
                     </div>
                   </div>
 
-                  {/* 착장 보기 링크 */}
+                  {/* 착장 상세 보기 링크 */}
                   <div className="flex justify-end mt-4">
                     <button
                       onClick={() => navigate(`/feed-detail/${currentRecommendation.id}`)}
@@ -367,13 +377,13 @@ function Home() {
                 </div>
               </div>
             ) : (
+              // 추천 데이터가 없을 때 표시
               <div className="w-full max-w-md mt-6">
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
-                  {/* 스타일 선택 드롭다운 (분리된 함수 사용) */}
+                  {/* 스타일 선택 드롭다운 */}
                   <div className="flex items-center justify-center mb-4">
                     {renderStyleSelect()}
                   </div>
-
                   <div className="text-center text-gray-500">
                     <p>오늘의 추천 착장이 없습니다.</p>
                     <p className="text-sm mt-2">스타일을 선택하여 다른 추천을 찾아보세요.</p>
@@ -382,13 +392,15 @@ function Home() {
               </div>
             )}
 
-            {/* 버튼들 */}
+            {/* 메인 버튼들 */}
             <div className="flex gap-4 mt-6">
+              {/* 기록하기 버튼 */}
               <button
                 className="bg-blue-400 hover:bg-blue-500 px-6 py-2 rounded text-white font-semibold"
+                // 오늘 날짜의 기록이 있는지 확인하고 있으면 수정, 없으면 새로 기록 페이지로 이동
                 onClick={async () => {
                   const today = new Date();
-                  const todayStr = today.toLocaleDateString("sv-SE"); // YYYY-MM-DD
+                  const todayStr = today.toLocaleDateString("sv-SE");
 
                   if (user?.uid) {
                     try {
@@ -417,6 +429,7 @@ function Home() {
                 기록하기
               </button>
 
+              {/* 추천보기 버튼(추천 목록 페이지로 이동) */}
               <button
                 className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded font-semibold"
                 onClick={() => navigate("/recommend-view")}
@@ -427,7 +440,7 @@ function Home() {
           </div>
         </div>
       ) : (
-        // 로그인 안 된 경우
+        // 로그아웃 상태(로그인 유도 화면)
         <div className="w-full h-screen bg-gray-100 flex flex-col">
           <div className="flex justify-end items-center px-4 py-3 bg-blue-100 shadow">
             <button
@@ -442,7 +455,7 @@ function Home() {
           </div>
         </div>
       )}
-      {/* 좌측 하단 임시 피드 버튼 */}
+      {/* 좌측 하단 임시 피드 버튼(개발/테스트용) */}
       <button
         style={{
           position: "fixed",
@@ -462,7 +475,7 @@ function Home() {
         피드로
       </button>
 
-      {/* 우측 하단 임시 달력 버튼 */}
+      {/* 우측 하단 임시 달력 버튼(개발/테스트용) */}
       <button
         style={{
           position: "fixed",

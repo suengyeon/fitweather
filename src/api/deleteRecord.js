@@ -3,9 +3,6 @@ import { db } from "../firebase";
 
 /**
  * 기록 삭제(Firestore 문서만 - Base64 이미지는 자동 삭제)
- * @param {string} recordId - 기록 ID
- * @param {Array} imageUrls - 삭제할 이미지 URL 배열(Base64는 자동 삭제)
- * @returns {Promise<void>}
  */
 export async function deleteRecord(recordId, imageUrls = []) {
   try {

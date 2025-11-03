@@ -1,4 +1,3 @@
-// src/pages/Record.js
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useUserProfile from "../hooks/useUserProfile";
@@ -22,9 +21,10 @@ import { weatherService } from "../api/weatherService";
 import { getStyleCode } from "../utils/styleUtils";
 import { navBtnStyle, indicatorStyle, dotStyle } from "../components/ImageCarouselStyles";
 
-// 이미지 압축 함수 (더 강력한 압축) - Record.js 내에 유지
+// 이미지 압축 함수
 const compressImage = (file, maxWidth = 600, quality = 0.6) => {
   return new Promise((resolve, reject) => {
+    // ... 이미지 압축 로직
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
@@ -49,10 +49,13 @@ const compressImage = (file, maxWidth = 600, quality = 0.6) => {
   });
 };
 
+/**
+ * Record 컴포넌트 - 착장 기록을 작성/수정하는 페이지
+ */
 function Record() {
   const navigate = useNavigate();
   const location = useLocation();
-  const existingRecord = location.state?.existingRecord || null;
+  const existingRecord = location.state?.existingRecord || null; // 기존 기록 데이터(수정 모드)
   const passedDateStr = location.state?.date || null;
   const dateStr = existingRecord?.date || passedDateStr;
   const dateObj = dateStr ? new Date(dateStr) : new Date();
@@ -61,8 +64,9 @@ function Record() {
   const { profile, loading: profileLoading } = useUserProfile();
   const { user } = useAuth();
   
-  const [isCommentViewVisible, setIsCommentViewVisible] = useState(false);
+  const [isCommentViewVisible, setIsCommentViewVisible] = useState(false); // 댓글 섹션 토글
   
+  // 현재 날짜인지 확인하는 유틸리티
   const isToday = (ds) => {
     const today = new Date();
     const targetDate = new Date(ds);
@@ -77,6 +81,7 @@ function Record() {
   const handleRegionChange = (newRegion) => setSelectedRegion(newRegion);
   const regionName = regionMap[selectedRegion] || selectedRegion; 
 
+  // 사용자 프로필 지역 설정(최초 로드 시)
   useEffect(() => {
     if (profile?.region && !existingRecord?.region) {
       const isTodayDate = isToday(dateStr);
@@ -88,13 +93,16 @@ function Record() {
     }
   }, [profile?.region, existingRecord?.region, dateStr, location.state?.selectedRegion]);
 
+  // 오늘 날짜의 날씨
   const { weather: apiWeather, loading: apiWeatherLoading } = useWeather(
     isToday(dateStr) ? selectedRegion : null
   );
 
+  // 과거 날씨 데이터 상태
   const [pastWeather, setPastWeather] = useState(null);
   const [pastWeatherLoading, setPastWeatherLoading] = useState(false);
 
+  // 과거 날씨 데이터 로드 및 저장 로직
   useEffect(() => {
     const loadPastWeather = async () => {
       if (isToday(dateStr) || !selectedRegion) {
@@ -104,11 +112,14 @@ function Record() {
 
       setPastWeatherLoading(true);
       try {
+        // Firestore에서 저장된 과거 날씨 데이터 확인
         const savedData = await getPastWeatherData(dateStr, selectedRegion);
         if (savedData) {
           if (dateStr === "2025-09-12") {
+            // 특정 날짜의 테스트 데이터 삭제 로직
             await deletePastWeatherData(dateStr, selectedRegion);
           } else {
+            // 저장된 데이터 사용
             setPastWeather({
               temp: savedData.avgTemp, rain: savedData.avgRain, humidity: savedData.avgHumidity,
               icon: savedData.iconCode, season: savedData.season, sky: savedData.sky, pty: savedData.pty
@@ -118,20 +129,24 @@ function Record() {
           }
         }
 
+        // KMA API에서 과거 날씨 가져오기 및 저장
         let pastData = await fetchKmaPastWeather(dateStr, selectedRegion);
         if (pastData) {
           await savePastWeatherData(dateStr, selectedRegion, pastData);
         } else {
+          // KMA 실패 시 대체 API 사용 
           const fallbackData = await fetchAndSavePastWeather(dateStr, selectedRegion);
           if (fallbackData) pastData = fallbackData;
         }
 
+        // 최종 날씨 설정 또는 기본값 설정
         if (pastData) {
           setPastWeather({
             temp: pastData.avgTemp, rain: pastData.avgRain, humidity: pastData.avgHumidity,
             icon: pastData.iconCode, season: pastData.season, sky: pastData.sky, pty: pastData.pty
           });
         } else {
+          // 최종 실패 시 기본 날씨 값 설정
           setPastWeather({ temp: "20", rain: "0", humidity: "60", icon: "rain", season: "초가을", sky: "1", pty: "1" });
         }
       } catch (error) {
@@ -145,6 +160,7 @@ function Record() {
     loadPastWeather();
   }, [dateStr, selectedRegion]);
 
+  // 최종 날씨 결정(기존 기록 > 오늘 API > 과거 API/기본값)
   const weather = existingRecord?.weather ||
     (isToday(dateStr) ? apiWeather : pastWeather) || {
     temp: 20, rain: 0, humidity: 60, icon: "sunny", season: "초가을"
@@ -164,13 +180,14 @@ function Record() {
     existingRecord, 
     dateStr, 
     weather, 
-    selectedRegion, 
+    selectedRegion,
     regionName, 
     profile, 
-    compressImage, // compressImage 함수 전달
-    weatherService // ✅ weatherService 클래스 전달
+    compressImage, 
+    weatherService 
   );
   
+  // 기존 기록의 스타일을 폼 상태에 설정
   useEffect(() => {
     if (existingRecord?.style) {
       const styleCode = getStyleCode(existingRecord.style);
@@ -187,6 +204,8 @@ function Record() {
 
   // --- 4. 기타 UI 및 상태 ---
   const regionOptions = Object.entries(regionMap).map(([key, value]) => ({ value: key, label: value }));
+  
+  // 알림 및 메뉴 사이드바 훅
   const { alarmOpen, setAlarmOpen,
     notifications, unreadCount,
     markAllRead, handleDeleteSelected,
@@ -194,6 +213,7 @@ function Record() {
   } = useNotiSidebar();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // 체감 옵션 텍스트 포맷팅
   const getFeelingTextForOption = (feelingCode) => {
     const result = feelingToEmoji(feelingCode);
     if (result && result.includes(' ')) {
@@ -224,6 +244,7 @@ function Record() {
 
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
+        {/* 뒤로가기 버튼 */}
         <button
           onClick={() => navigate(-1)}
           className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
@@ -232,12 +253,14 @@ function Record() {
         </button>
         <h2 className="font-bold text-lg">{formattedDate}</h2>
         <div className="flex items-center space-x-4">
+          {/* 홈 버튼 */}
           <button
             onClick={() => navigate("/")}
             className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
           >
             <HomeIcon className="w-5 h-5" />
           </button>
+          {/* 알림 버튼 */}
           <button
             className="relative flex items-center justify-center 
               bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
@@ -254,12 +277,12 @@ function Record() {
 
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row md:items-start md:justify-center gap-6 overflow-y-auto">
-        {/* 왼쪽: 날씨 카드 또는 댓글 섹션 */}
+        {/* 왼쪽 : 날씨 카드 또는 댓글 섹션 */}
         <div className="relative w-full md:w-1/3 bg-gray-200 h-[705px] rounded-lg">
           {!isCommentViewVisible ? (
             // 날씨 정보 뷰
             <div className="px-6 py-6 text-center h-full flex flex-col">
-              {/* +댓글 보기 버튼 - 기존 기록이 있을 때만 표시 */}
+              {/* +댓글 보기 버튼 - 기존 기록(수정 모드)이 있을 때만 표시 */}
               {existingRecord && (
                 <div className="mb-4 flex justify-start">
                   <button
@@ -391,7 +414,7 @@ function Record() {
                 onCommentSubmit={handleCommentSubmit}
                 onCommentDelete={handleCommentDelete}
                 onReply={handleReply}
-                onClose={() => setIsCommentViewVisible(false)}
+                onClose={() => setIsCommentViewVisible(false)} // 댓글 뷰 닫기
                 onRefresh={handleRefreshComments}
                 isRefreshing={isRefreshing}
                 replyToCommentId={replyToCommentId}
@@ -410,7 +433,7 @@ function Record() {
         <div className="w-full md:w-2/3 bg-white px-6 py-6 items-center min-h-[705px] rounded-lg">
           {/* 입력폼 상단 바 */}
           <div className="flex items-center justify-between bg-gray-200 mb-4 px-4 h-12">
-            {/* 피드 체크박스 */}
+            {/* 피드 공개 체크박스 */}
             <div className="flex items-center gap-2 ml-2">
               <input
                 type="checkbox"
@@ -424,7 +447,7 @@ function Record() {
               </label>
             </div>
 
-            {/* 우측 액션: 저장 → 삭제 */}
+            {/* 우측 액션 : 저장 / 삭제 */}
             <div className="flex items-center">
               <button
                 onClick={handleSubmit}
@@ -450,6 +473,7 @@ function Record() {
             {/* 이미지 미리보기 영역 */}
             <div className="w-full md:w-1/2 flex flex-col items-center justify-center ">
               {imageFiles.length === 0 ? (
+                // 이미지 없을 때 : 업로드 버튼
                 <label
                   htmlFor="imageUpload"
                   className="w-72 aspect-[3/4] border-2 border-gray-300 bg-gray-100 rounded-md flex justify-center items-center text-gray-600 cursor-pointer hover:bg-gray-200"
@@ -465,8 +489,9 @@ function Record() {
                   />
                 </label>
               ) : (
+                // 이미지 있을 때 : 미리보기 및 컨트롤
                 <div className="w-72 aspect-[3/4] relative rounded overflow-hidden border bg-gray-100 mt-2 p-2">
-                  {/* 이미지 미리보기 */}
+                  {/* 이미지 표시 */}
                   <img
                     src={
                       imageFiles[imagePreviewIdx]?.isUrl
@@ -477,7 +502,7 @@ function Record() {
                     className="w-full h-full object-cover rounded object-cover"
                   />
 
-                  {/* ◀ / ▶ 이미지 전환 버튼 */}
+                  {/* 이미지 전환 버튼(캐러셀) */}
                   {imageFiles.length > 1 && (
                     <>
                       <button
@@ -507,7 +532,7 @@ function Record() {
                     </>
                   )}
 
-                  {/* ✅ + 사진 추가 버튼 (좌상단) */}
+                  {/* + 사진 추가 버튼(좌상단) */}
                   <label
                     htmlFor="imageUpload"
                     className="absolute top-3 left-3 bg-white bg-opacity-70 text-sm text-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-opacity-90 z-10"
@@ -535,13 +560,14 @@ function Record() {
               )}
             </div>
 
-            {/* 착장 선택 드롭다운 */}
+            {/* 착장 선택 드롭다운 (Outer, Top, Bottom, Shoes, Acc) */}
             <div className="w-full md:w-1/2 space-y-4 max-h-96 overflow-y-auto pr-10">
-              {/* Outer 드롭다운 */}
+              {/* Outer 드롭다운/입력 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Outer</label>
                 <div className="flex gap-2 items-center">
                   {customInputMode.outer ? (
+                    // 직접 입력 모드
                     <div className="flex gap-2 items-center w-80">
                       <input
                         type="text"
@@ -560,6 +586,7 @@ function Record() {
                       </button>
                     </div>
                   ) : (
+                    // 드롭다운 선택 모드
                     <select
                       className="w-80 px-3 py-2 border rounded bg-white"
                       value={selectedItems.outer}
@@ -581,6 +608,7 @@ function Record() {
                     +
                   </button>
                 </div>
+                {/* 선택된 아이템 목록 */}
                 {outfit.outer.length > 0 && (
                   <ul className="ml-2 mt-1 text-sm text-gray-600">
                     {outfit.outer.map((item, idx) => (
@@ -599,7 +627,7 @@ function Record() {
                 )}
               </div>
 
-              {/* Top 드롭다운 */}
+              {/* Top 드롭다운/입력 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Top</label>
                 <div className="flex gap-2 items-center">
@@ -661,7 +689,7 @@ function Record() {
                 )}
               </div>
 
-              {/* Bottom 드롭다운 */}
+              {/* Bottom 드롭다운/입력 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Bottom</label>
                 <div className="flex gap-2 items-center">
@@ -723,7 +751,7 @@ function Record() {
                 )}
               </div>
 
-              {/* Shoes 드롭다운 */}
+              {/* Shoes 드롭다운/입력 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Shoes</label>
                 <div className="flex gap-2 items-center">
@@ -785,7 +813,7 @@ function Record() {
                 )}
               </div>
 
-              {/* Acc 드롭다운 */}
+              {/* Acc 드롭다운/입력 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Acc</label>
                 <div className="flex gap-2 items-center">

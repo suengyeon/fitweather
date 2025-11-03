@@ -1,6 +1,5 @@
 /**
- * 알림 서비스
- * 알림 CRUD 및 비즈니스 로직 처리
+ * 알림 서비스 - 알림 CRUD 및 비즈니스 로직 처리
  */
 
 import { 
@@ -29,8 +28,6 @@ import {
 
 /**
  * 알림 생성
- * @param {Object} notificationData - 알림 생성 데이터
- * @returns {Promise<string>} 생성된 알림 ID
  */
 export async function createNotification(notificationData) {
   try {
@@ -76,11 +73,6 @@ export async function createNotification(notificationData) {
 
 /**
  * 사용자의 모든 알림 조회 (최신순)
- * @param {string} userId - 사용자 ID
- * @param {Object} options - 조회 옵션
- * @param {number} [options.limit=50] - 조회할 알림 개수
- * @param {string} [options.startAfter] - 페이징을 위한 시작점
- * @returns {Promise<Object>} 알림 목록과 메타데이터
  */
 export async function getUserNotifications(userId, options = {}) {
   try {
@@ -133,8 +125,6 @@ export async function getUserNotifications(userId, options = {}) {
 
 /**
  * 읽지 않은 알림 개수 조회
- * @param {string} userId - 사용자 ID
- * @returns {Promise<number>} 읽지 않은 알림 개수
  */
 export async function getUnreadNotificationCount(userId) {
   try {
@@ -154,8 +144,6 @@ export async function getUnreadNotificationCount(userId) {
 
 /**
  * 모든 읽지 않은 알림을 읽음 처리
- * @param {string} userId - 사용자 ID
- * @returns {Promise<number>} 읽음 처리된 알림 개수
  */
 export async function markAllNotificationsAsRead(userId) {
   try {
@@ -194,9 +182,6 @@ export async function markAllNotificationsAsRead(userId) {
 
 /**
  * 특정 알림을 읽음 처리
- * @param {string} notificationId - 알림 ID
- * @param {string} userId - 사용자 ID (권한 확인용)
- * @returns {Promise<boolean>} 처리 성공 여부
  */
 export async function markNotificationAsRead(notificationId, userId) {
   try {
@@ -226,9 +211,6 @@ export async function markNotificationAsRead(notificationId, userId) {
 
 /**
  * 알림 삭제
- * @param {string[]} notificationIds - 삭제할 알림 ID 목록
- * @param {string} userId - 사용자 ID (권한 확인용)
- * @returns {Promise<number>} 삭제된 알림 개수
  */
 export async function deleteNotifications(notificationIds, userId) {
   try {
@@ -266,10 +248,6 @@ export async function deleteNotifications(notificationIds, userId) {
 
 /**
  * 구독 알림 생성
- * @param {string} followerId - 구독한 사용자 ID
- * @param {string} followerNickname - 구독한 사용자 닉네임
- * @param {string} followingId - 구독받은 사용자 ID
- * @param {string} [followerAvatarUrl] - 구독한 사용자 프로필 사진 URL
  */
 export async function createFollowNotification(followerId, followerNickname, followingId, followerAvatarUrl = null) {
   try {
@@ -301,12 +279,6 @@ export async function createFollowNotification(followerId, followerNickname, fol
 
 /**
  * 댓글 알림 생성
- * @param {string} commenterId - 댓글 작성자 ID
- * @param {string} commenterNickname - 댓글 작성자 닉네임
- * @param {string} postOwnerId - 게시물 소유자 ID
- * @param {string} postId - 게시물 ID
- * @param {string} commentContent - 댓글 내용
- * @param {string} [commenterAvatarUrl] - 댓글 작성자 프로필 사진 URL
  */
 export async function createCommentNotification(commenterId, commenterNickname, postOwnerId, postId, commentContent, commenterAvatarUrl = null) {
   try {
@@ -332,12 +304,6 @@ export async function createCommentNotification(commenterId, commenterNickname, 
 
 /**
  * 답글 알림 생성
- * @param {string} replierId - 답글 작성자 ID
- * @param {string} replierNickname - 답글 작성자 닉네임
- * @param {string} commentOwnerId - 댓글 소유자 ID
- * @param {string} postId - 게시물 ID
- * @param {string} replyContent - 답글 내용
- * @param {string} [replierAvatarUrl] - 답글 작성자 프로필 사진 URL
  */
 export async function createReplyNotification(replierId, replierNickname, commentOwnerId, postId, replyContent, replierAvatarUrl = null) {
   try {

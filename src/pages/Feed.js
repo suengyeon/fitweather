@@ -7,26 +7,30 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
-import { regionMap } from "../constants/regionData";
-import { styleOptions } from "../constants/styleOptions";
-import useWeather from "../hooks/useWeather";
-import { getWeatherEmoji } from "../utils/weatherUtils";
-import { useFeedConfig } from "../hooks/useFeedConfig";
-import { useFeedData } from "../hooks/useFeedData";
-import { useSortedFeed } from "../hooks/useSortedFeed";
-import { useDateSelectors } from "../hooks/useDateSelectors";
+import { regionMap } from "../constants/regionData"; 
+import { styleOptions } from "../constants/styleOptions"; 
+import useWeather from "../hooks/useWeather"; 
+import { getWeatherEmoji } from "../utils/weatherUtils"; 
+import { useFeedConfig } from "../hooks/useFeedConfig"; 
+import { useFeedData } from "../hooks/useFeedData"; 
+import { useSortedFeed } from "../hooks/useSortedFeed"; 
+import { useDateSelectors } from "../hooks/useDateSelectors"; 
 
+/**
+ * Feed 컴포넌트 - 지역 피드 및 기록 목록을 표시하고 필터링, 정렬 기능을 제공
+ */
 function Feed() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  // 피드 설정 훅 : 지역 및 날짜 상태 관리
   const { region, setRegion, dateState, setDateState } = useFeedConfig(user);
 
-  // 기존 상태 유지 (필터 및 UI 관련)
-  const [order, setOrder] = useState("popular"); // 인기순 or 최신순
-  const [style, setStyle] = useState(""); // 스타일 필터
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // 필터 및 UI 상태
+  const [order, setOrder] = useState("popular");
+  const [style, setStyle] = useState(""); 
+  const [sidebarOpen, setSidebarOpen] = useState(false); 
   
-  // useNotiSidebar 훅 사용 (개별 함수로 비구조화 할당)
+  // 알림 로직 훅
   const {
     alarmOpen, setAlarmOpen,
     notifications, unreadCount,
@@ -34,52 +38,51 @@ function Feed() {
     markOneRead, handleAlarmItemClick,
   } = useNotiSidebar();
 
-  // 날씨 정보 가져오기 (유지)
+  // 날씨 정보 가져오기
   const { weather, loading: weatherLoading } = useWeather(region);
 
-  // 1. useFeedData 훅 적용
+  // 1. useFeedData 훅 : 데이터 조회 및 좋아요 토글 관리
   const { 
     outfits, 
-    selectedDate, 
+    selectedDate, // YYYY-MM-DD 형식의 현재 선택된 날짜
     isLoading: isFeedLoading, 
     handleToggleLike 
   } = useFeedData(region, order, style, dateState);
 
-  // 2. useSortedFeed 훅 적용
+  // 2. useSortedFeed 훅 : 데이터 정렬 및 TOP3 분리
   const isPopular = order === "popular";
   const { 
     top3, 
-    rest, 
+    rest, // TOP3 제외 나머지 목록(인기순 정렬)
     isLoadingReactions 
   } = useSortedFeed(outfits, isPopular);
 
-  // 3. useDateSelectors 훅 적용
+  // 3. useDateSelectors 훅 : 날짜 드롭다운 옵션 생성 및 핸들러 제공
   const { 
     years, 
     months, 
     days, 
-    handleDateChange 
+    handleDateChange // 날짜 변경 핸들러
   } = useDateSelectors(dateState, setDateState);
   
-  // 최종 로딩 상태
+  // 최종 로딩 상태(피드 데이터 로딩 중이거나, 인기순 정렬을 위한 반응 데이터 로딩 중일 때)
   const isLoading = isFeedLoading || (isPopular && isLoadingReactions);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
-      {/* 사이드바 */}
+      {/* 메뉴 및 알림 사이드바 */}
       <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <NotiSidebar
         isOpen={alarmOpen}
         onClose={() => setAlarmOpen(false)}
         notifications={notifications}
-        // ✅ 오류 수정: notiHandlers 대신 개별 함수를 직접 전달
         onMarkAllRead={markAllRead} 
         onDeleteSelected={handleDeleteSelected}
         onMarkOneRead={markOneRead}
         onItemClick={handleAlarmItemClick}
       />
 
-      {/* 상단 네비게이션 (유지) */}
+      {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button
           className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
@@ -102,6 +105,7 @@ function Feed() {
             aria-label="알림 열기"
           >
             <BellIcon className="w-5 h-5" />
+            {/* 읽지 않은 알림 수 표시 */}
             {unreadCount > 0 && (
               <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
             )}
@@ -111,11 +115,11 @@ function Feed() {
 
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex md:flex-row gap-6 h-[700px]">
-        {/* 왼쪽: 지역/정렬/날씨 카드 영역 (유지) */}
+        {/* 왼쪽 : 지역/정렬/날씨 카드 영역 */}
         <div className="w-full md:w-1/4 bg-gray-200 px-6 py-6 text-center overflow-hidden rounded-lg h-[700px]">
           <h3 className="text-lg font-semibold mb-3">{regionMap[region] || region}</h3>
 
-          {/* 날씨 표시 (유지) */}
+          {/* 날씨 표시 */}
           <div className="flex justify-center items-center mb-6" style={{ minHeight: 120 }}>
             {weather ? (
               <div className="flex flex-col items-center gap-2">
@@ -133,7 +137,7 @@ function Feed() {
           </div>
 
           <div className="flex flex-col items-center gap-8 mt-6">
-            {/* 지역 선택 (유지) */}
+            {/* 지역 선택 드롭다운 */}
             <div className="flex items-center justify-between gap-4 w-60">
               <label htmlFor="region" className="font-semibold">지역</label>
               <select
@@ -151,7 +155,7 @@ function Feed() {
               </select>
             </div>
 
-            {/* 정렬 선택 (유지) */}
+            {/* 정렬 선택 드롭다운 */}
             <div className="flex items-center justify-between gap-4 w-60">
               <label htmlFor="sort" className="font-semibold">정렬</label>
               <select
@@ -166,7 +170,7 @@ function Feed() {
               </select>
             </div>
 
-            {/* 스타일 선택 (유지) */}
+            {/* 스타일 선택 드롭다운 */}
             <div className="flex items-center justify-between gap-4 w-60">
               <label htmlFor="style" className="font-semibold">스타일</label>
               <select
@@ -183,18 +187,18 @@ function Feed() {
             </div>
           </div>
 
-          {/* 로고 (유지) */}
+          {/* 로고 */}
           <div className="flex justify-center items-center pt-32">
             <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
           </div>
         </div>
 
-        {/* 오른쪽: 피드 카드 영역 */}
+        {/* 오른쪽 : 피드 카드 영역 */}
         <div className="w-full md:w-3/4 bg-white rounded-lg flex flex-col h-[700px]">
-          {/* 선택된 날짜 드롭다운 - 훅의 값 사용 */}
+          {/* 선택된 날짜 드롭다운 */}
           <div className="px-6 py-4 bg-gray-50 border-b rounded-t-lg">
             <div className="flex justify-center items-center gap-3 mb-2">
-              {/* 연도 드롭다운 - years와 handleDateChange 사용 */}
+              {/* 연도 드롭다운 */}
               <div className="flex items-center gap-1">
                 <select
                   value={dateState.year}
@@ -208,7 +212,7 @@ function Feed() {
                 <span className="text-sm font-medium">년</span>
               </div>
 
-              {/* 월 드롭다운 - months와 handleDateChange 사용 */}
+              {/* 월 드롭다운 (useDateSelectors 훅의 값 사용) */}
               <div className="flex items-center gap-1">
                 <select
                   value={dateState.month}
@@ -216,13 +220,14 @@ function Feed() {
                   className="px-2 py-1 rounded bg-white text-sm text-center w-[60px]"
                 >
                   {months.map((month) => (
+                    // month 배열이 숫자 [1, 2, ...]로 가정하고 렌더링
                     <option key={month} value={month}>{month}</option>
                   ))}
                 </select>
                 <span className="text-sm font-medium">월</span>
               </div>
 
-              {/* 일 드롭다운 - days와 handleDateChange 사용 */}
+              {/* 일 드롭다운 */}
               <div className="flex items-center gap-1">
                 <select
                   value={dateState.day}
@@ -242,7 +247,7 @@ function Feed() {
             </p>
           </div>
 
-          {/* TOP3 강조 - top3 사용 */}
+          {/* TOP3 강조(인기순일 경우에만 표시) */}
           {isPopular && top3.length > 0 && (
             <div className="w-full bg-gray-200 px-6 pb-4 pt-4 overflow-x-auto">
               <div className="flex justify-center gap-20 min-w-max">
@@ -251,7 +256,7 @@ function Feed() {
                     key={outfit.id}
                     record={outfit}
                     currentUserUid={user?.uid}
-                    onToggleLike={handleToggleLike}
+                    onToggleLike={handleToggleLike} 
                     rank={idx + 1}
                     selectedDate={selectedDate}
                     selectedYear={dateState.year}
@@ -273,7 +278,7 @@ function Feed() {
                 <p className="text-gray-500">해당 날짜에 기록이 없습니다.</p>
               </div>
             ) : (
-              // isPopular일 경우 rest 사용, 아닐 경우 outfits(최신순) 사용
+              // 인기순이면 rest 사용, 최신순이면 outfits(이미 최신순 정렬됨) 사용
               <div className="grid grid-cols-5 gap-4">
                 {(isPopular ? rest : outfits).map(outfit => (
                   <FeedCard

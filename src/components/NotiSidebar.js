@@ -3,7 +3,7 @@ import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon, UserPlusIcon, Cha
 import { useNavigate } from "react-router-dom";
 
 // --- 유틸리티 함수 ---
-// 간단한 유틸 : 클래스 합치기(Conditional Classnames)
+// 간단한 유틸 : 클래스 합치기
 const cx = (...arr) => arr.filter(Boolean).join(" ");
 
 // 사용자 이름 가져오기(nickname 사용)
@@ -11,7 +11,7 @@ const getUserName = (sender) => {
   return sender?.nickname || '알 수 없음';
 };
 
-// 알림 제목 생성 함수
+// 알림 제목 생성 함수(알림 타입에 따라 동적 생성)
 const getNotificationTitle = (notification) => {
   switch (notification.type) {
     case 'follow':
@@ -31,9 +31,8 @@ const getNotificationMessage = (notification) => {
     case 'follow':
       return `${getUserName(notification.sender)}님이 나를 구독하기 시작했어요.`;
     case 'comment_on_my_post':
-      return `${getUserName(notification.sender)}: '${notification.message || '댓글 내용'}'`;
     case 'reply_to_my_comment':
-      return `답글: '${notification.message || '답글 내용'}'`;
+      return `답변: '${notification.message || '댓글 내용'}'`;
     default:
       return notification.message || '';
   }
@@ -56,7 +55,7 @@ const getNotificationIcon = (type) => {
 const timeAgo = (dateish) => {
     let d;
     
-    // Firestore Timestamp 객체, 문자열, Date 객체 등 다양한 날짜 형식 처리
+    // 다양한 날짜 형식(Timestamp, 문자열, Date 객체) 처리
     if (dateish && typeof dateish === 'object' && dateish.toDate) {
         d = dateish.toDate();
     }
@@ -84,54 +83,53 @@ const timeAgo = (dateish) => {
 };
 
 /**
- * NotiSidebar 컴포넌트 - 알림 목록을 표시&관리하는 오른쪽 슬라이드 사이드바
+ * NotiSidebar 컴포넌트 - 알림 목록을 표시하고 관리하는 오른쪽 슬라이드 사이드바
  */
 export default function NotiSidebar({
     isOpen,
     onClose,
-    notifications = [], // 알림 데이터 배열
-    onItemClick,        // 알림 클릭 시 실행될 콜백(클릭 시 링크 이동 덮어쓸 수 있음)
-    onMarkAllRead,      // 모두 읽음 처리 콜백
-    onDeleteSelected,   // 선택된 알림 삭제 콜백
-    onMarkOneRead       // 개별 알림 읽음 처리 콜백
+    notifications = [], 
+    onItemClick,        
+    onMarkAllRead,      
+    onDeleteSelected,   
+    onMarkOneRead       
 }) {
     const navigate = useNavigate();
     
     // --- 상태 관리 ---
-    const [isDeleteMode, setIsDeleteMode] = useState(false); // 선택 삭제 모드 활성화 여부
-    const [selectedIds, setSelectedIds] = useState(new Set()); // 삭제 위해 선택된 알림 ID 집합
+    const [isDeleteMode, setIsDeleteMode] = useState(false); 
+    const [selectedIds, setSelectedIds] = useState(new Set()); 
 
-    // 읽지 않은 알림 수 계산(notifications 배열 변경될 때만 재계산)
+    // 읽지 않은 알림 수 계산(notifications 배열 변경될 때만 useMemo로 최적화)
     const unreadCount = useMemo(
         () => notifications.filter((n) => !n.read).length,
         [notifications]
     );
 
     /**
-     * 알림 항목 클릭 핸들러
-     * @param {Object} n - 클릭된 알림 객체
+     * 알림 항목 클릭 핸들러(읽음 처리, 페이지 이동, 사이드바 닫기)
      */
     const handleItemClick = (n) => {
-        // 1. 삭제 모드 - 클릭 이벤트 무시(체크박스만 동작하도록)
+        // 1. 삭제 모드에서는 클릭 이벤트 무시
         if (isDeleteMode) return;
         
         // 2. 읽음 처리
         onMarkOneRead?.(n.id);
         
-        // 3. 페이지 이동
-        if (onItemClick) onItemClick(n); // props로 전달된 커스텀 핸들러 있으면 사용
-        else if (n.link) navigate(n.link); // link 필드 이용해 페이지 이동
+        // 3. 페이지 이동 (커스텀 핸들러 > link 필드 > 무시)
+        if (onItemClick) onItemClick(n); 
+        else if (n.link) navigate(n.link); 
         
         // 4. 사이드바 닫기
         onClose?.(); 
     };
 
     /**
-     * 삭제 모드 토글 핸들러 - 삭제 모드 진입/종료 및 선택된 항목 삭제 처리
+     * 삭제 모드 토글 핸들러(삭제 모드 진입/종료 및 선택된 항목 삭제 처리)
      */
     const handleDeleteModeToggle = () => {
         if (isDeleteMode) {
-            // 삭제 모드 종료 - 선택된 항목 있으면 삭제 콜백 호출
+            // 삭제 모드 종료 : 선택된 항목 있으면 삭제 콜백 호출
             if (selectedIds.size > 0) {
                 onDeleteSelected?.(Array.from(selectedIds));
             }
@@ -146,23 +144,22 @@ export default function NotiSidebar({
 
     /**
      * 체크박스 변경 핸들러
-     * @param {string} notificationId - 체크박스 변경된 알림 ID
-     * @param {React.ChangeEvent} event - 이벤트 객체
      */
     const handleCheckboxChange = (notificationId, event) => {
         event.stopPropagation(); // 버튼 클릭 시 버블링 방지(handleItemClick 방지)
         
         const newSelectedIds = new Set(selectedIds);
         if (newSelectedIds.has(notificationId)) {
-            newSelectedIds.delete(notificationId); // 이미 선택되어 있으면 제거
+            newSelectedIds.delete(notificationId); // 선택 해제
         } else {
-            newSelectedIds.add(notificationId); // 선택되어 있지 않으면 추가
+            newSelectedIds.add(notificationId); // 선택
         }
         setSelectedIds(newSelectedIds);
     };
 
     // --- 렌더링 ---
     return (
+        // 전체 모달 컨테이너(열려있지 않으면 클릭 이벤트 무시)
         <div className={cx("fixed inset-0 z-50 flex", !isOpen && "pointer-events-none")}>
             {/* 1. 배경 오버레이(클릭 시 닫기) */}
             <div
@@ -173,7 +170,7 @@ export default function NotiSidebar({
                 onClick={onClose}
             />
 
-            {/* 2. 사이드바 본체(오른쪽에서 슬라이드) */}
+            {/* 2. 사이드바 본체(오른쪽에서 슬라이드 인/아웃 애니메이션) */}
             <aside
                 className={cx(
                     "fixed right-0 top-0 h-full w-80 bg-gray-200 shadow-lg transform transition-transform duration-500 ease-out",
@@ -185,7 +182,7 @@ export default function NotiSidebar({
                 <div className="px-5 py-4 border-b border-gray-300 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <h2 className="text-xl font-bold">알림</h2>
-                        {/* 읽지 않은 알림 카운트 뱃지 */}
+                        {/* 읽지 않은 알림 카운트 뱃지(unreadCount > 0일 때만 표시) */}
                         {unreadCount > 0 && (
                             <span className=" text-xs px-2 py-0.5 bg-red-500 text-white rounded-full">
                                 {unreadCount}
@@ -222,7 +219,7 @@ export default function NotiSidebar({
                     </div>
                 </div>
 
-                {/* 알림 목록 영역 */}
+                {/* 알림 목록 영역(스크롤 가능) */}
                 <div className="h-[calc(100%-56px)] overflow-y-auto p-4">
                     {notifications.length === 0 ? (
                         <EmptyState onClose={onClose} /> // 알림 없을 때 빈 상태 컴포넌트 표시
@@ -232,7 +229,7 @@ export default function NotiSidebar({
                                 <li key={n.id}>
                                     <button
                                         onClick={() => handleItemClick(n)}
-                                        // 읽음 상태 따라 텍스트 색상 및 스타일 변경
+                                        // 읽음 상태(n.read)에 따라 스타일 변경
                                         className={cx(
                                             "w-full text-left bg-white rounded-xl shadow-sm border border-gray-300 px-3 py-3",
                                             "hover:shadow-md transition-all",
@@ -247,7 +244,6 @@ export default function NotiSidebar({
                                                         type="checkbox"
                                                         checked={selectedIds.has(n.id)}
                                                         onChange={(e) => handleCheckboxChange(n.id, e)}
-                                                        // 클릭 이벤트 막기 위해 handleCheckboxChange에서 e.stopPropagation() 처리
                                                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                                                     />
                                                 </div>

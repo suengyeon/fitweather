@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
     // onAuthStateChanged 리스너 : 로그인/로그아웃 상태 바뀔 때마다 실행
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // 사용자가 로그인된 경우(user 객체가 존재)
+        // 사용자가 로그인된 경우
         try {
           // Firestore에서 해당 사용자의 'users' 문서 조회
           const userRef = doc(db, "users", user.uid);
@@ -29,22 +29,22 @@ export function AuthProvider({ children }) {
           if (userSnap.exists()) {
             const userData = userSnap.data();
             
-            // 사용자 status=='banned'인지 확인
+            // 사용자 status가 'banned'인지 확인
             if (userData.status === 'banned') {
               setIsBanned(true); // 차단 상태 설정
               setUser(null); // user 상태 null로 설정하여 앱에서 로그아웃 처리
               setLoading(false);
-              return; // 차단된 경우 여기서 로직 종료
+              return; // 차단된 경우 로직 종료
             }
           }
         } catch (error) {
           console.error('사용자 상태 확인 실패:', error);
-          // Firestore 조회 실패 시에도 로그인 상태 유지하도록 처리
+          // Firestore 조회 실패 시에도 로그인 상태 유지
         }
       }
       
       // 차단되지 않았거나, 로그아웃 상태인 경우
-      setUser(user); // user 상태 업데이트(null 또는 User 객체)
+      setUser(user); // user 상태 업데이트
       setIsBanned(false); // 차단 상태 초기화
       setLoading(false); // 초기 로딩 완료
     });
@@ -55,7 +55,6 @@ export function AuthProvider({ children }) {
 
   /**
    * 소셜 로그인 등 외부 로직을 통해 사용자 객체를 수동으로 설정하는 함수
-   * @param {Object} socialUser - 설정할 사용자 객체
    */
   const setSocialUser = (socialUser) => {
     setUser(socialUser);
@@ -71,7 +70,6 @@ export function AuthProvider({ children }) {
 
 /**
  * useAuth 훅 - 다른 컴포넌트에서 인증 상태&함수를 쉽게 가져올 수 있도록 하는 커스텀 훅
- * @returns {{user: Object|null, loading: boolean, setSocialUser: function, isBanned: boolean}} 인증 컨텍스트 값
  */
 export function useAuth() {
   return useContext(AuthContext);

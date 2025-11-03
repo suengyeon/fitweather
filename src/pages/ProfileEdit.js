@@ -1,140 +1,192 @@
-import { useAuth } from "../contexts/AuthContext";
+import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
-import { doc, getDoc, updateDoc, query, collection, where, getDocs } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
-import { BellIcon } from "@heroicons/react/24/outline";
-import MenuSidebar from "../components/MenuSidebar";
-import NotiSidebar from "../components/NotiSidebar";
-import useNotiSidebar from "../hooks/useNotiSidebar";
+import { doc, setDoc, query, collection, where, getDocs } from "firebase/firestore";
+import { useState } from "react";
+import { HomeIcon, Bars3Icon } from "@heroicons/react/24/solid";
+import { useAuth } from "../contexts/AuthContext";
 import { regionMap } from "../constants/regionData";
 
-function ProfileEdit() {
-  const { user } = useAuth();
+/**
+ * ProfileSetup 컴포넌트 - 소셜 로그인 후 신규 사용자가 닉네임과 지역 등 추가 정보를 설정하는 페이지
+ */
+function ProfileSetup() {
+  const location = useLocation(); 
   const navigate = useNavigate();
-  const [nickname, setNickname] = useState("");
+  const { setSocialUser } = useAuth(); 
+
+  // 전달받은 사용자 정보
+  const uid = location.state?.uid;
+  const email = location.state?.email || "";
+  const displayName = location.state?.displayName || "";
+  const provider = location.state?.provider || "google";
+
+  // 입력 필드 상태
+  const [nickname, setNickname] = useState(displayName);
+  const [userEmail, setUserEmail] = useState(email); 
   const [region, setRegion] = useState("");
-  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [infoMsg, setInfoMsg] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { alarmOpen, setAlarmOpen,
-    notifications, unreadCount,
-    markAllRead, handleDeleteSelected,
-    markOneRead, handleAlarmItemClick,
-  } = useNotiSidebar();
 
-  // 1. 기존 정보 불러오기
-  useEffect(() => {
-    if (!user) return;
-    const fetchProfile = async () => {
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        setNickname(userSnap.data().nickname);
-        setRegion(userSnap.data().region);
-        setEmail(userSnap.data().email);
-      }
-    };
-    fetchProfile();
-  }, [user]);
+  // 지역 이름을 대문자 시작으로 포맷하는 함수(Firestore 저장 위해)
+  function capitalizeRegion(region) {
+    if (!region) return "";
+    return region.charAt(0).toUpperCase() + region.slice(1).toLowerCase();
+  }
 
-  // 2. 저장 함수 (닉네임 중복 검사)
+  // 저장 버튼 클릭 핸들러
   const handleSave = async () => {
+    // 필수 입력 검사
     if (!nickname || !region) {
       setError("닉네임과 지역을 모두 입력해주세요!");
-      setInfoMsg("");
       return;
     }
+
+    // 카카오 사용자이며 이메일을 제공하지 않은 경우 이메일 입력 필수
+    if (provider === 'kakao' && !email && !userEmail) {
+      setError("이메일을 입력해주세요!");
+      return;
+    }
+
+    // 이메일 형식 검증
+    if (userEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
+      setError("올바른 이메일 형식을 입력해주세요!");
+      return;
+    }
+
     try {
-      // 닉네임 중복 체크 (자기자신 제외)
-      const q = query(
+      // 닉네임 중복 검사
+      const nicknameQuery = query(
         collection(db, "users"),
         where("nickname", "==", nickname)
       );
-      const querySnapshot = await getDocs(q);
-      let duplicated = false;
-      querySnapshot.forEach((docSnap) => {
-        if (docSnap.id !== user.uid) duplicated = true;
+      const nicknameSnapshot = await getDocs(nicknameQuery);
+
+      let nicknameDuplicated = false;
+      nicknameSnapshot.forEach((docSnap) => {
+        if (docSnap.id !== uid) nicknameDuplicated = true; // 자기 자신 제외
       });
-      if (duplicated) {
+
+      if (nicknameDuplicated) {
         setError("이미 사용 중인 닉네임입니다!");
-        setInfoMsg("");
         return;
       }
 
-      await updateDoc(doc(db, "users", user.uid), {
+      // 이메일 중복 검사(사용자가 새로 입력하거나 수정한 이메일이 있는 경우)
+      if (userEmail && userEmail !== email) {
+        const emailQuery = query(
+          collection(db, "users"),
+          where("email", "==", userEmail)
+        );
+        const emailSnapshot = await getDocs(emailQuery);
+
+        let emailDuplicated = false;
+        emailSnapshot.forEach((docSnap) => {
+          if (docSnap.id !== uid) emailDuplicated = true; // 자기 자신 제외
+        });
+
+        if (emailDuplicated) {
+          setError("이미 사용 중인 이메일입니다!");
+          return;
+        }
+      }
+
+      // Firestore에 저장할 사용자 데이터
+      const userData = {
         nickname,
-        region,
-      });
-      setInfoMsg("수정 완료!");
-      setError("");
+        region: capitalizeRegion(region),
+        email: userEmail || email, // 사용자가 입력한 최종 이메일 사용
+        provider,
+        createdAt: new Date()
+      };
+
+      // Firestore 문서 저장(uid를 문서 ID로 사용)
+      await setDoc(doc(db, "users", uid), userData);
+
+      // 앱의 전역 로그인 상태 설정
+      setSocialUser({ uid, ...userData });
+
+      // 홈 페이지로 이동
+      navigate("/");
     } catch (err) {
+      console.error('프로필 저장 오류:', err);
       setError("저장 중 에러: " + err.message);
-      setInfoMsg("");
     }
   };
 
   return (
-    <div className="h-screen bg-gray-100 flex flex-col">
-      {/* 사이드바 */}
-      <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <NotiSidebar
-        isOpen={alarmOpen}
-        onClose={() => setAlarmOpen(false)}
-        notifications={notifications}
-        onMarkAllRead={markAllRead}
-        onDeleteSelected={handleDeleteSelected}
-        onMarkOneRead={markOneRead}
-        onItemClick={handleAlarmItemClick}
-      />
-
-      {/* 네비게이션 바 */}
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
-        <button
-          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
+        <button className="bg-blue-300 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-400">
           <Bars3Icon className="w-5 h-5" />
         </button>
-        <h2 className="font-bold text-lg">내 정보 수정</h2>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate("/")}
-            className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
-          >
-            <HomeIcon className="w-5 h-5" />
-          </button>
-          <button
-            className="relative flex items-center justify-center 
-              bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
-            onClick={() => setAlarmOpen(true)}
-            aria-label="알림 열기"
-          >
-            <BellIcon className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            )}
-          </button>
-        </div>
+        <h2 className="font-bold text-lg">회원 정보 입력</h2>
+        <button
+          onClick={() => navigate("/")}
+          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+        >
+          <HomeIcon className="w-5 h-5" />
+        </button>
       </div>
 
+      {/* 로고 */}
       <div className="mt-10 flex justify-center">
         <h1 className="text-5xl font-lilita text-indigo-500">Fitweather</h1>
       </div>
 
-      {/* 중앙 콘텐츠 */}
+      {/* 콘텐츠 영역 */}
       <div className="flex flex-col items-center justify-start flex-1 px-4 mt-12">
-        <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-xl mb-8">
-          {/* 입력 항목 */}
-          <div className="mb-10 flex items-center">
-            <label className="w-28 font-semibold text-base">지역</label>
+        <div className="bg-white rounded-lg shadow px-8 py-8 w-full max-w-md mb-8">
+          {/* 닉네임 입력 */}
+          <div className="mb-6">
+            <label className="block font-semibold mb-2">닉네임</label>
+            <input
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+              placeholder="닉네임을 입력하세요."
+              className="w-full border border-gray-300 px-4 py-2 rounded"
+            />
+          </div>
+
+          {/* 카카오 사용자이고 이메일이 없는 경우 : 이메일 입력 필드 표시(필수) */}
+          {provider === 'kakao' && !email && (
+            <div className="mb-6">
+              <label className="block font-semibold mb-2">
+                이메일 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={userEmail}
+                onChange={e => setUserEmail(e.target.value)}
+                placeholder="이메일을 입력해주세요 (예: user@example.com)"
+                className="w-full border border-gray-300 px-4 py-2 rounded focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+          )}
+
+          {/* 기존 이메일이 있는 경우 : 이메일 표시(수정 불가) */}
+          {email && (
+            <div className="mb-6">
+              <label className="block font-semibold mb-2">이메일</label>
+              <input
+                value={email}
+                disabled
+                className="w-full border border-gray-300 px-4 py-2 rounded bg-gray-100"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {provider === 'kakao' ? '카카오에서 제공한 이메일입니다.' : '소셜 로그인에서 제공한 이메일입니다.'}
+              </p>
+            </div>
+          )}
+
+          {/* 지역 선택 */}
+          <div className="mb-6">
+            <label className="block font-semibold mb-2">지역</label>
             <select
               value={region}
               onChange={e => setRegion(e.target.value)}
-              className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
+              className="w-full border border-gray-300 px-4 py-2 rounded bg-white"
             >
+              {/* 지역 옵션 렌더링 */}
               {Object.entries(regionMap).map(([key, label]) => (
                 <option key={key} value={key}>
                   {label}
@@ -142,48 +194,25 @@ function ProfileEdit() {
               ))}
             </select>
           </div>
-          <div className="mb-10 flex items-center">
-            <label className="w-28 font-semibold text-base">닉네임</label>
-            <input
-              type="text"
-              value={nickname}
-              onChange={e => setNickname(e.target.value)}
-              className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
-            />
-          </div>
-          <div className="mb-10 flex items-center">
-            <label className="w-28 font-semibold text-base">이메일</label>
-            <input
-              type="text"
-              value={email}
-              readOnly
-              className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
-            />
+
+          {/* 에러 메시지 */}
+          {error && (
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+          )}
+
+          <div className="flex justify-center">
+            {/* 저장 버튼 */}
+            <button
+              onClick={handleSave}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded w-auto"
+            >
+              저장
+            </button>
           </div>
         </div>
-
-        {/* 버튼 영역 */}
-        <div className="flex gap-4">
-          <button
-            onClick={handleSave}
-            className="bg-blue-400 hover:bg-blue-500 text-white px-6 py-2 rounded-md font-medium"
-          >
-            저장
-          </button>
-          <button
-            onClick={() => navigate(-1)}
-            className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-md font-medium"
-          >
-            이전
-          </button>
-        </div>
-
-        {/* 메시지 */}
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-        {infoMsg && <p className="text-black0 mt-4">{infoMsg}</p>}
       </div>
     </div>
   );
 }
 
-export default ProfileEdit;
+export default ProfileSetup;

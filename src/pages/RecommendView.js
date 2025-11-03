@@ -13,78 +13,79 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { sortRecords } from "../utils/sortingUtils";
 
+/**
+ * RecommendView 컴포넌트 - 사용자가 설정한 기본 날씨 필터에 따라 코디를 추천하여 보여줌
+ */
 function RecommendView() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [outfits, setOutfits] = useState([]);
+  const [outfits, setOutfits] = useState([]); 
   const [filteredOutfits, setFilteredOutfits] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // 알림 사이드바 훅
   const { alarmOpen, setAlarmOpen,
     notifications, unreadCount,
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
   } = useNotiSidebar();
 
-  const [userFilters, setUserFilters] = useState(null);
+  // 사용자 설정 필터 및 지역 상태
+  const [userFilters, setUserFilters] = useState(null); 
   const [userRegion, setUserRegion] = useState("");
+  
+  // 추가 체크박스 필터 상태
   const [excludeMyRecords, setExcludeMyRecords] = useState(false);
   const [onlyMyRecords, setOnlyMyRecords] = useState(false);
   const [onlySubscribedUsers, setOnlySubscribedUsers] = useState(false);
+  
+  // 구독한 사용자 ID 목록
   const [subscribedUsers, setSubscribedUsers] = useState([]);
 
-  // 사용자 필터 가져오기
+  // 사용자 필터(온도/강수량/습도) 및 지역 가져오기
   useEffect(() => {
     if (!user) return;
-
     const fetchUserFilters = async () => {
       try {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const data = userSnap.data();
-          console.log("User data:", data);
           if (data.filters && data.region) {
-            console.log("Setting user filters:", data.filters);
-            console.log("Setting user region:", data.region);
             setUserFilters(data.filters);
             setUserRegion(data.region);
-          } else {
-            console.log("No filters or region found in user data");
           }
         }
       } catch (error) {
         console.error("Error fetching user filters:", error);
       }
     };
-
     fetchUserFilters();
   }, [user]);
 
   // 구독한 사용자 목록 가져오기
   useEffect(() => {
     if (!user) return;
-
     const fetchSubscribedUsers = async () => {
       try {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const data = userSnap.data();
-          if (data.subscribedUsers) {
+          // Firestore users 컬렉션에 subscribedUsers 필드가 있다고 가정
+          if (data.subscribedUsers) { 
             setSubscribedUsers(data.subscribedUsers);
-            console.log("Subscribed users:", data.subscribedUsers);
           }
         }
       } catch (error) {
         console.error("Error fetching subscribed users:", error);
       }
     };
-
     fetchSubscribedUsers();
   }, [user]);
 
-  // FeedDetail에서의 반응 변경 이벤트 감지
+  // FeedDetail에서의 반응 변경 이벤트 감지 및 반영
   useEffect(() => {
     const handleReactionUpdate = (event) => {
       const { recordId, type, isActive } = event.detail;
@@ -92,6 +93,7 @@ function RecommendView() {
         prevOutfits.map(outfit => {
           if (outfit.id === recordId) {
             const updatedOutfit = { ...outfit };
+            // 좋아요/싫어요 카운트 업데이트 로직
             if (type === 'thumbsUp') {
               if (isActive) {
                 updatedOutfit.thumbsUpCount = (updatedOutfit.thumbsUpCount || 0) + 1;
@@ -116,7 +118,7 @@ function RecommendView() {
     return () => window.removeEventListener('reactionUpdated', handleReactionUpdate);
   }, []);
 
-  // 모든 기록 가져오기
+  // 모든 기록 가져오기(최신 30개)
   useEffect(() => {
     const fetchAllRecords = async () => {
       try {
@@ -130,41 +132,26 @@ function RecommendView() {
     fetchAllRecords();
   }, []);
 
-  // 필터 적용
+  // 필터 적용(필터, 지역, 전체 기록, 체크박스 상태 변경 시 재실행)
   useEffect(() => {
-    console.log("Filtering with:", { userFilters, userRegion, outfitsCount: outfits.length, excludeMyRecords, onlySubscribedUsers });
-
+    // 필수 데이터가 없으면 필터링 스킵
     if (!userFilters || !userRegion || outfits.length === 0) {
-      console.log("Missing data for filtering:", { userFilters: !!userFilters, userRegion: !!userRegion, outfitsCount: outfits.length });
+      setFilteredOutfits([]);
       return;
     }
 
     const filtered = outfits.filter(record => {
-      // 나의 기록만 체크박스가 체크되어 있으면 나의 기록만 표시
-      if (onlyMyRecords && record.uid !== user?.uid) {
-        console.log(`Record ${record.id} filtered out by onlyMyRecords`);
-        return false;
-      }
+      // 나의 기록만 / 제외 체크박스 필터
+      if (onlyMyRecords && record.uid !== user?.uid) return false;
+      if (excludeMyRecords && record.uid === user?.uid) return false;
 
-      // 나의 기록 제외 체크박스가 체크되어 있으면 나의 기록 제외
-      if (excludeMyRecords && record.uid === user?.uid) {
-        console.log(`Record ${record.id} filtered out by excludeMyRecords`);
-        return false;
-      }
+      // 구독한 사람만 필터
+      if (onlySubscribedUsers && !subscribedUsers.includes(record.uid)) return false;
 
-      // 구독한 사람만 체크박스가 체크되어 있으면 구독한 사용자의 기록만 표시
-      if (onlySubscribedUsers && !subscribedUsers.includes(record.uid)) {
-        console.log(`Record ${record.id} filtered out by onlySubscribedUsers`);
-        return false;
-      }
+      // 지역 필터 (사용자 지역과 일치해야 함)
+      if (record.region !== userRegion) return false;
 
-      // 지역 필터 (AND 조건)
-      if (record.region !== userRegion) {
-        console.log(`Record ${record.id} filtered out by region: ${record.region} !== ${userRegion}`);
-        return false;
-      }
-
-      // 온도 필터
+      // 온도 필터 (weather 필드 또는 record.temp 사용)
       const temp = record.temp || record.weather?.temp;
       const tempMatch = temp !== null && temp !== undefined &&
         temp >= userFilters.tempRange.min && temp <= userFilters.tempRange.max;
@@ -179,39 +166,22 @@ function RecommendView() {
       const humidityMatch = humidity !== null && humidity !== undefined &&
         humidity >= userFilters.humidityRange.min && humidity <= userFilters.humidityRange.max;
 
-      console.log(`Record ${record.id}:`, {
-        region: record.region,
-        temp: temp,
-        rain: rain,
-        humidity: humidity,
-        tempMatch,
-        rainMatch,
-        humidityMatch,
-        filters: {
-          tempRange: userFilters.tempRange,
-          rainRange: userFilters.rainRange,
-          humidityRange: userFilters.humidityRange
-        }
-      });
-
-      // 모든 조건을 만족해야 함 (AND 조건)
+      // 모든 날씨 조건을 만족해야 함 (AND 조건)
       return tempMatch && rainMatch && humidityMatch;
     });
 
-    console.log("Filtered results:", filtered.length);
-    console.log("Sample filtered record:", filtered[0]);
-
-    // 정렬 유틸리티 사용
+    // 인기 순으로 정렬
     const sortedFiltered = sortRecords(filtered, "popular");
     setFilteredOutfits(sortedFiltered);
   }, [outfits, userFilters, userRegion, excludeMyRecords, onlyMyRecords, onlySubscribedUsers, subscribedUsers, user]);
 
-  // 좋아요 토글
+  // 좋아요 토글 핸들러
   const handleToggleLike = async (recordId, liked) => {
     if (!user) return;
 
     try {
       await toggleLike(recordId, user.uid, liked);
+      // 필터링된 목록만 업데이트 (즉각적인 반영)
       setFilteredOutfits(prev =>
         prev.map(record =>
           record.id === recordId
@@ -286,6 +256,7 @@ function RecommendView() {
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 py-6">
         {!userFilters ? (
+          // 필터 설정이 없을 경우
           <div className="text-center py-12">
             <p className="text-gray-500 mb-2">추천필터 설정이 필요합니다</p>
             <p className="text-sm text-gray-400">추천필터 설정에서 온도, 강수량, 습도 범위를 설정해주세요</p>
@@ -308,7 +279,7 @@ function RecommendView() {
               </button>
             </div>
 
-            {/* 체크박스들 */}
+            {/* 체크박스 필터 */}
             <div className="mb-4 space-y-2">
               <div className="flex items-center">
                 <input
@@ -316,8 +287,9 @@ function RecommendView() {
                   id="excludeMyRecords"
                   checked={excludeMyRecords}
                   onChange={(e) => {
-                    setExcludeMyRecords(e.target.checked);
-                    if (e.target.checked) {
+                    const checked = e.target.checked;
+                    setExcludeMyRecords(checked);
+                    if (checked) {
                       setOnlyMyRecords(false);
                       setOnlySubscribedUsers(false);
                     }
@@ -334,8 +306,9 @@ function RecommendView() {
                   id="onlyMyRecords"
                   checked={onlyMyRecords}
                   onChange={(e) => {
-                    setOnlyMyRecords(e.target.checked);
-                    if (e.target.checked) {
+                    const checked = e.target.checked;
+                    setOnlyMyRecords(checked);
+                    if (checked) {
                       setExcludeMyRecords(false);
                       setOnlySubscribedUsers(false);
                     }
@@ -352,8 +325,9 @@ function RecommendView() {
                   id="onlySubscribedUsers"
                   checked={onlySubscribedUsers}
                   onChange={(e) => {
-                    setOnlySubscribedUsers(e.target.checked);
-                    if (e.target.checked) {
+                    const checked = e.target.checked;
+                    setOnlySubscribedUsers(checked);
+                    if (checked) {
                       setExcludeMyRecords(false);
                       setOnlyMyRecords(false);
                     }
@@ -367,11 +341,13 @@ function RecommendView() {
             </div>
 
             {filteredOutfits.length === 0 ? (
+              // 필터링 결과가 없을 때
               <div className="text-center py-12">
                 <p className="text-gray-500 mb-2">조건에 맞는 코디가 없습니다</p>
                 <p className="text-sm text-gray-400">필터를 조정해보세요</p>
               </div>
             ) : (
+              // 코디 목록
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredOutfits.map((record) => (
                   <FeedCard
@@ -390,4 +366,4 @@ function RecommendView() {
   );
 }
 
-export default RecommendView; 
+export default RecommendView;

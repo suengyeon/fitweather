@@ -3,13 +3,12 @@ import { db } from "../firebase";
 
 /**
  * 사용자의 모든 알림 조회
- * @param {string} userId - 사용자 ID
- * @returns {Promise<Array>} 알림 목록
  */
 export async function fetchUserNotifications(userId) {
   try {
     console.log("📢 알림 조회 API 호출:", userId);
     
+    // 알림 컬렉션에서 해당 사용자를 수신자로 하는 문서 쿼리
     const q = query(
       collection(db, "notifications"),
       where("recipient", "==", userId)
@@ -18,19 +17,20 @@ export async function fetchUserNotifications(userId) {
     const querySnapshot = await getDocs(q);
     const notifications = [];
     
+    // 스냅샷에서 데이터 추출 및 read 필드 추가
     querySnapshot.forEach((doc) => {
       notifications.push({
         id: doc.id,
         ...doc.data(),
-        read: doc.data().isRead || false
+        read: doc.data().isRead || false // UI 호환성을 위해 read 필드 추가
       });
     });
     
-    // 클라이언트 사이드에서 최신순 정렬
+    // 클라이언트 사이드에서 createdAt 기준 최신순 정렬
     notifications.sort((a, b) => {
       let dateA, dateB;
       
-      // Firestore Timestamp 객체 처리
+      // Firestore Timestamp 또는 일반 Date 객체 처리
       if (a.createdAt?.toDate) {
         dateA = a.createdAt.toDate();
       } else {
@@ -43,11 +43,11 @@ export async function fetchUserNotifications(userId) {
         dateB = new Date(b.createdAt);
       }
       
-      // 유효한 날짜인지 확인
+      // 유효하지 않은 날짜에 대한 안전장치
       if (isNaN(dateA.getTime())) dateA = new Date(0);
       if (isNaN(dateB.getTime())) dateB = new Date(0);
       
-      return dateB - dateA; // 최신순
+      return dateB - dateA; // 내림차순(최신순) 정렬
     });
     
     console.log("✅ 알림 조회 성공:", notifications.length, "개");
@@ -60,14 +60,12 @@ export async function fetchUserNotifications(userId) {
 
 /**
  * 읽지 않은 알림 개수 조회
- * @param {string} userId - 사용자 ID
- * @returns {Promise<number>} 읽지 않은 알림 개수
  */
 export async function fetchUnreadNotificationCount(userId) {
   try {
     console.log("📢 읽지 않은 알림 개수 조회 API 호출:", userId);
     
-    // 모든 알림을 가져와서 클라이언트에서 필터링
+    // 사용자 수신 알림 쿼리
     const q = query(
       collection(db, "notifications"),
       where("recipient", "==", userId)
@@ -76,6 +74,7 @@ export async function fetchUnreadNotificationCount(userId) {
     const querySnapshot = await getDocs(q);
     let count = 0;
     
+    // 클라이언트에서 isRead가 false인 알림 개수 카운트
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       if (!data.isRead) {
@@ -93,13 +92,12 @@ export async function fetchUnreadNotificationCount(userId) {
 
 /**
  * 모든 읽지 않은 알림을 읽음 처리
- * @param {string} userId - 사용자 ID
- * @returns {Promise<number>} 읽음 처리된 알림 개수
  */
 export async function markAllNotificationsAsReadAPI(userId) {
   try {
     console.log("📢 모든 알림 읽음 처리 API 호출:", userId);
     
+    // 사용자 수신 알림 쿼리
     const q = query(
       collection(db, "notifications"),
       where("recipient", "==", userId)
@@ -111,17 +109,19 @@ export async function markAllNotificationsAsReadAPI(userId) {
     
     querySnapshot.forEach((docSnapshot) => {
       const data = docSnapshot.data();
+      // 읽지 않은 알림만 업데이트 Promise 배열에 추가
       if (!data.isRead) {
         updatePromises.push(
           updateDoc(doc(db, "notifications", docSnapshot.id), {
             isRead: true,
-            read: true // UI에서 사용하는 필드도 함께 업데이트
+            read: true // UI 호환성을 위해 read 필드 함께 업데이트
           })
         );
         count++;
       }
     });
     
+    // 모든 업데이트 Promise를 병렬로 실행
     await Promise.all(updatePromises);
     
     console.log("✅ 모든 알림 읽음 처리 완료:", count);
@@ -134,17 +134,15 @@ export async function markAllNotificationsAsReadAPI(userId) {
 
 /**
  * 특정 알림을 읽음 처리
- * @param {string} notificationId - 알림 ID
- * @param {string} userId - 사용자 ID
- * @returns {Promise<boolean>} 처리 성공 여부
  */
 export async function markNotificationAsReadAPI(notificationId, userId) {
   try {
     console.log("📢 개별 알림 읽음 처리 API 호출:", { notificationId, userId });
     
+    // 특정 알림 문서의 isRead 및 read 필드를 true로 업데이트
     await updateDoc(doc(db, "notifications", notificationId), {
       isRead: true,
-      read: true // UI에서 사용하는 필드도 함께 업데이트
+      read: true // UI 호환성을 위해 read 필드 함께 업데이트
     });
     
     console.log("✅ 개별 알림 읽음 처리 완료");
@@ -157,18 +155,17 @@ export async function markNotificationAsReadAPI(notificationId, userId) {
 
 /**
  * 선택된 알림들 삭제
- * @param {string[]} notificationIds - 삭제할 알림 ID 목록
- * @param {string} userId - 사용자 ID
- * @returns {Promise<number>} 삭제된 알림 개수
  */
 export async function deleteSelectedNotificationsAPI(notificationIds, userId) {
   try {
     console.log("🗑️ 선택된 알림 삭제 API 호출:", { notificationIds, userId });
     
+    // 각 알림 ID에 대한 deleteDoc Promise 배열 생성
     const deletePromises = notificationIds.map(id => 
       deleteDoc(doc(db, "notifications", id))
     );
     
+    // 모든 삭제 Promise를 병렬로 실행
     await Promise.all(deletePromises);
     const count = notificationIds.length;
     

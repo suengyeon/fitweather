@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { setAdminUser, checkAdminUser, removeAdminUser } from '../utils/setAdmin';
 
+/**
+ * SetAdmin 컴포넌트 - 특정 이메일 계정에 대해 관리자 권한을 설정, 확인, 제거하는 관리 도구
+ */
 function SetAdmin() {
-  const [email, setEmail] = useState('jme0706611@gmail.com');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState('jme0706611@gmail.com'); 
+  const [loading, setLoading] = useState(false); 
+  const [message, setMessage] = useState(''); 
 
+  // 관리자 권한 설정 핸들러
   const handleSetAdmin = async () => {
     setLoading(true);
     setMessage('');
@@ -24,6 +28,7 @@ function SetAdmin() {
     }
   };
 
+  // 관리자 권한 확인 핸들러
   const handleCheckAdmin = async () => {
     setLoading(true);
     setMessage('');
@@ -38,6 +43,7 @@ function SetAdmin() {
     }
   };
 
+  // 관리자 권한 제거 핸들러
   const handleRemoveAdmin = async () => {
     setLoading(true);
     setMessage('');
@@ -63,6 +69,7 @@ function SetAdmin() {
           관리자 계정 설정
         </h1>
         
+        {/* 이메일 입력 필드 */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             이메일 주소
@@ -76,7 +83,9 @@ function SetAdmin() {
           />
         </div>
 
+        {/* 액션 버튼들 */}
         <div className="space-y-3">
+          {/* 관리자 설정 버튼 */}
           <button
             onClick={handleSetAdmin}
             disabled={loading}
@@ -85,6 +94,7 @@ function SetAdmin() {
             {loading ? '처리 중...' : '관리자로 설정'}
           </button>
 
+          {/* 권한 확인 버튼 */}
           <button
             onClick={handleCheckAdmin}
             disabled={loading}
@@ -93,6 +103,7 @@ function SetAdmin() {
             {loading ? '확인 중...' : '관리자 권한 확인'}
           </button>
 
+          {/* 권한 제거 버튼 */}
           <button
             onClick={handleRemoveAdmin}
             disabled={loading}
@@ -102,12 +113,14 @@ function SetAdmin() {
           </button>
         </div>
 
+        {/* 결과 메시지 표시 영역 */}
         {message && (
           <div className="mt-4 p-3 bg-gray-100 rounded-md">
             <p className="text-sm text-gray-700">{message}</p>
           </div>
         )}
 
+        {/* 관리자 페이지 링크 */}
         <div className="mt-6 text-center">
           <a 
             href="/admin" 

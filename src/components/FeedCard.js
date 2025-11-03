@@ -9,10 +9,6 @@ import { navBtnStyle, indicatorStyle, dotStyle } from "../components/ImageCarous
 
 /**
  * 피드 카드 컴포넌트 - 개별 착장 기록 표시, 상호작용 처리
- * @param {Object} props.record - 표시할 착장 기록 데이터
- * @param {string} props.currentUserUid - 현재 로그인한 사용자 UID
- * @param {function} props.onToggleLike - (외부에서 정의된) 좋아요 토글 핸들러
- * @param {number} props.rank - 순위(TOP3 표시)
  */
 function FeedCard({
   record,
@@ -30,10 +26,10 @@ function FeedCard({
   // 내 기록인지 확인
   const isMyRecord = record.uid === currentUserUid;
 
-  // 1. 구독 상태(Follow)
+  // 1. 구독 상태(Follow/Save)
   const [isSaved, setIsSaved] = useState(false);
 
-  // 2. 좋아요/싫어요(thumbs up/down) 상태(reactions 컬렉션 기반)
+  // 2. 좋아요/싫어요(Thumbs Reaction) 상태 및 카운트
   const [thumbsUpCount, setThumbsUpCount] = useState(0);
   const [thumbsDownCount, setThumbsDownCount] = useState(0);
   const [isThumbsUp, setIsThumbsUp] = useState(false);
@@ -42,7 +38,7 @@ function FeedCard({
   // --- Effect : 구독 상태 확인(Follow) ---
   useEffect(() => {
     const checkSubscriptionStatus = async () => {
-      // 내 기록orUID 없으면 확인 불필요
+      // 내 기록이거나 UID 없으면 확인 불필요
       if (!currentUserUid || !record.uid || currentUserUid === record.uid) return;
 
       try {
@@ -54,21 +50,19 @@ function FeedCard({
     };
 
     checkSubscriptionStatus();
-  }, [currentUserUid, record.uid]); // 사용자or기록 작성자 UID 바뀔 때 실행
+  }, [currentUserUid, record.uid]); // 사용자 또는 기록 작성자 UID 바뀔 때 실행
 
   // --- Effect : 좋아요/싫어요(Thumbs Reaction) 초기 상태 로드 ---
   useEffect(() => {
-    let mounted = true; // 언마운트 시 상태 업데이트 방지 플래그
+    let mounted = true; // 언마운트 시 상태 업데이트 방지
     const load = async () => {
       try {
-        // 반응 요약 정보(카운트)&내 반응 상태 병렬 조회
+        // 반응 요약 정보(카운트)와 내 반응 상태를 병렬 조회
         const [summary, myReaction] = await Promise.all([
           getReactionSummary(record.id),
           currentUserUid ? getUserReaction(record.id, currentUserUid) : Promise.resolve({ isThumbsUp: false, isThumbsDown: false })
         ]);
         if (!mounted) return;
-
-        console.log('FeedCard - 반응 데이터 로드:', { summary, myReaction, recordId: record.id });
 
         // 상태 업데이트
         setThumbsUpCount(summary.thumbsUpCount || 0);
@@ -90,11 +84,11 @@ function FeedCard({
 
   // --- 유틸리티 : 체감 이모지 매핑 ---
   const feelingEmojiMap = {
-    steam: "🥟",
-    hot: "🥵",
-    nice: "👍🏻",
-    cold: "💨",
-    ice: "🥶",
+    steam: "🥟", 
+    hot: "🥵",   
+    nice: "👍🏻",  
+    cold: "💨",  
+    ice: "🥶",   
   };
   const feelingEmoji = feelingEmojiMap[record.feeling] || "";
 
@@ -103,12 +97,12 @@ function FeedCard({
     e.stopPropagation(); // 카드 클릭 이벤트 방지
 
     if (!currentUserUid || !record.uid) {
-      console.error("❌ 사용자 정보가 없습니다:", { currentUserUid, recordUid: record.uid });
+      console.error("❌ 사용자 정보가 없습니다.");
       return;
     }
 
     const previousState = isSaved;
-    // Optimistic Update
+    // Optimistic Update: 상태를 먼저 변경
     setIsSaved(!isSaved);
 
     try {
@@ -116,7 +110,7 @@ function FeedCard({
       await toggleSubscription(currentUserUid, record.uid);
     } catch (err) {
       console.error("❌ 구독 API 오류:", err);
-      // Rollback
+      // Rollback: 오류 발생 시 이전 상태로 되돌림
       setIsSaved(previousState);
     }
   };
@@ -129,7 +123,7 @@ function FeedCard({
     const prevUp = isThumbsUp;
     const prevDown = isThumbsDown;
 
-    // Optimistic Update
+    // Optimistic Update : 상태 선적용
     if (prevDown) { // 싫어요(down) 상태였다면 해제
       setIsThumbsDown(false);
       setThumbsDownCount((p) => Math.max(0, p - 1));
@@ -141,17 +135,17 @@ function FeedCard({
     try {
       const result = await toggleThumbsUp(record.id, currentUserUid); // 서버 API 호출
 
-      // 서버 응답 기반으로 최종 상태 재정규화(롤백 - catch 블록에서 처리)
+      // 서버 응답 기반으로 최종 상태 재정규화(롤백은 catch에서 처리)
       if (result === "up") {
         setIsThumbsUp(true);
       } else {
         setIsThumbsUp(false);
       }
-      if (prevDown) { // 서버 응답에 의해 싫어요 해제
+      if (prevDown) { // 싫어요 해제 상태 유지
         setIsThumbsDown(false);
       }
 
-      // 다른 컴포넌트or페이지에 상태 변경 이벤트 전송
+      // 상태 변경 이벤트 전송(좋아요 카운트 업데이트용)
       window.dispatchEvent(new CustomEvent('reactionUpdated', {
         detail: {
           recordId: record.id,
@@ -161,7 +155,7 @@ function FeedCard({
       }));
     } catch (err) {
       console.error("FeedCard - 반응(👍) 업데이트 실패:", err);
-      // Rollback
+      // Rollback : 오류 발생 시 이전 상태로 되돌림
       setIsThumbsUp(prevUp);
       setThumbsUpCount((p) => (prevUp ? p + 1 : Math.max(0, p - 1)));
       if (prevDown) {
@@ -179,7 +173,7 @@ function FeedCard({
     const prevUp = isThumbsUp;
     const prevDown = isThumbsDown;
 
-    // Optimistic Update
+    // Optimistic Update : 상태 선적용
     if (prevUp) { // 좋아요(up) 상태였다면 해제
       setIsThumbsUp(false);
       setThumbsUpCount((p) => Math.max(0, p - 1));
@@ -197,11 +191,11 @@ function FeedCard({
       } else {
         setIsThumbsDown(false);
       }
-      if (prevUp) {
+      if (prevUp) { // 좋아요 해제 상태 유지
         setIsThumbsUp(false);
       }
 
-      // 다른 컴포넌트or페이지에 상태 변경 이벤트 전송
+      // 상태 변경 이벤트 전송
       window.dispatchEvent(new CustomEvent('reactionUpdated', {
         detail: {
           recordId: record.id,
@@ -211,7 +205,7 @@ function FeedCard({
       }));
     } catch (err) {
       console.error("FeedCard - 반응(👎) 업데이트 실패:", err);
-      // Rollback
+      // Rollback : 오류 발생 시 이전 상태로 되돌림
       setIsThumbsDown(prevDown);
       setThumbsDownCount((p) => (prevDown ? p + 1 : Math.max(0, p - 1)));
       if (prevUp) {
@@ -223,12 +217,12 @@ function FeedCard({
 
   // --- 핸들러 : 이미지 슬라이드 네비게이션 ---
   const handlePrev = (e) => {
-    e.stopPropagation();
+    e.stopPropagation(); // 이벤트 전파 방지
     setImageIndex((prev) => (prev - 1 + record.imageUrls.length) % record.imageUrls.length);
   };
 
   const handleNext = (e) => {
-    e.stopPropagation();
+    e.stopPropagation(); // 이벤트 전파 방지
     setImageIndex((prev) => (prev + 1) % record.imageUrls.length);
   };
 
@@ -238,7 +232,7 @@ function FeedCard({
       // 내 기록 : 기록 수정 페이지로 이동
       navigate("/record", { state: { existingRecord: record } });
     } else {
-      // 다른 사람 기록 : 상세 피드 페이지로 이동
+      // 다른 사람 기록 : 상세 피드 페이지로 이동(필터링 정보 함께 전달)
       const isFromRecommend = window.location.pathname.includes("/recommend");
       navigate(`/feed-detail/${record.id}`, {
         state: {
@@ -280,7 +274,7 @@ function FeedCard({
       {!isMyRecord && (
         <button
           onClick={handleSaveClick}
-          // 마우스 버튼 다운 이벤트 전파를 막아 카드 클릭 이벤트(handleClick) 실행 방지
+          // 마우스 이벤트 전파 방지(카드 클릭 이벤트 실행 방지)
           onMouseDown={(e) => e.stopPropagation()}
           style={{
             position: "absolute",
@@ -298,9 +292,11 @@ function FeedCard({
             zIndex: 2,
             transition: "all 0.2s ease",
           }}
+          // 마우스 호버 효과
           onMouseEnter={(e) => { e.target.style.background = "rgba(255, 255, 255, 1)"; }}
           onMouseLeave={(e) => { e.target.style.background = "rgba(255, 255, 255, 1)"; }}
         >
+          {/* 구독 상태에 따른 아이콘 변경 */}
           {isSaved ? <HeartIconSolid className="w-5 h-5 text-red-500" /> : <HeartIcon className="w-5 h-5 text-gray-600" />}
         </button>
       )}
@@ -309,12 +305,15 @@ function FeedCard({
       <div style={{ height: "230px", position: "relative" }}>
         {record.imageUrls?.length > 0 ? (
           <>
+            {/* 현재 인덱스 이미지 표시 */}
             <img src={record.imageUrls[imageIndex]} alt="코디" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             {/* 이미지 네비게이션 버튼 및 인디케이터 */}
             {record.imageUrls.length > 1 && (
               <>
+                {/* 좌우 버튼 */}
                 <button onClick={handlePrev} style={navBtnStyle("left")}>‹</button>
                 <button onClick={handleNext} style={navBtnStyle("right")}>›</button>
+                {/* 인디케이터(점) */}
                 <div style={indicatorStyle}>
                   {record.imageUrls.map((_, i) => (
                     <div key={i} style={dotStyle(i === imageIndex)} />
@@ -363,6 +362,7 @@ function FeedCard({
                 }`
               }
             >
+              {/* 아이콘 및 카운트 */}
               <HandThumbUpIcon className={`w-4 h-4 ${isThumbsUp ? 'text-blue-500' : 'text-gray-500'}`} />
               <span className="text-[9px] font-semibold pointer-events-none select-none">
                 {thumbsUpCount}
@@ -384,6 +384,7 @@ function FeedCard({
                 }`
               }
             >
+              {/* 아이콘 및 카운트 */}
               <HandThumbDownIcon className={`w-4 h-4 ${isThumbsDown ? 'text-red-500' : 'text-gray-500'}`} />
               <span className="text-[9px] font-semibold pointer-events-none select-none">
                 {thumbsDownCount}
@@ -391,15 +392,9 @@ function FeedCard({
             </button>
           </div>
 
-          {/* 체감 이모지 및 내 기록 표시 */}
+          {/* 체감 이모지 */}
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            {record.uid === currentUserUid ? (
-              <>
-                <span style={{ fontSize: 16 }}>{feelingEmoji}</span>
-              </>
-            ) : (
-              <span style={{ fontSize: 18 }}>{feelingEmoji}</span>
-            )}
+            <span style={{ fontSize: 18 }}>{feelingEmoji}</span>
           </div>
         </div>
       </div>

@@ -4,22 +4,20 @@ import { saveCalendarSharingSettings, getCalendarSharingSettings } from '../util
 
 /**
  * CalendarSharingSettings 컴포넌트 - 사용자의 캘린더 공유 및 공개 설정 관리하는 모달 UI
- * @param {Object} props - 컴포넌트 속성
- * @param {() => void} props.onClose - 모달 닫는 함수
  */
 function CalendarSharingSettings({ onClose }) {
-  const { user } = useAuth(); // 현재 로그인한 사용자 정보(user.uid 포함)
+  const { user } = useAuth(); // 현재 로그인한 사용자 정보
   
   // --- 상태 관리 ---
   const [settings, setSettings] = useState({
-    isPublic: false,      // 캘린더 공개 여부(토글)
-    shareLevel: 'private', // 공개 범위('private', 'public', 'followers')
-    allowComments: false,  // 댓글 허용 여부
-    allowLikes: true,      // 좋아요 허용 여부
-    showPersonalInfo: false // 닉네임, 지역 등 개인 정보 표시 여부
+    isPublic: false,      
+    shareLevel: 'private', 
+    allowComments: false,  
+    allowLikes: true,      
+    showPersonalInfo: false 
   });
-  const [loading, setLoading] = useState(true); // 설정 로딩 상태
-  const [saving, setSaving] = useState(false);  // 설정 저장 중 상태
+  const [loading, setLoading] = useState(true); 
+  const [saving, setSaving] = useState(false);  
 
   // --- 데이터 로딩(Mount 시 및 user 변경 시) ---
   useEffect(() => {
@@ -52,12 +50,11 @@ function CalendarSharingSettings({ onClose }) {
     if (!user) return; // 사용자 정보 없으면 종료
     
     setSaving(true);
-    // 
+    
     try {
       // 유틸리티 함수 이용해 변경된 설정 저장
       await saveCalendarSharingSettings(user.uid, settings);
       // 저장 성공 알림 및 모달 닫기
-      // NOTE: alert() 대신 커스텀 모달 UI를 사용하는 것이 권장되나, 현재 코드에서는 alert 사용
       alert('캘린더 공유 설정이 저장되었습니다.'); 
       onClose?.(); 
     } catch (error) {
@@ -70,8 +67,6 @@ function CalendarSharingSettings({ onClose }) {
 
   /**
    * 개별 설정 항목의 값이 변경될 때 상태 업데이트하는 범용 핸들러
-   * @param {string} key - 변경할 설정 항목 키(예: 'isPublic')
-   * @param {any} value - 변경할 새로운 값
    */
   const handleSettingChange = (key, value) => {
     setSettings(prev => ({
@@ -83,7 +78,7 @@ function CalendarSharingSettings({ onClose }) {
   // --- 렌더링 : 로딩 중 상태 ---
   if (loading) {
     return (
-      // 모달 배경 및 로딩 스피너
+      // 모달 배경 및 로딩 스피너 UI
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6">
           <div className="text-center">
@@ -97,7 +92,7 @@ function CalendarSharingSettings({ onClose }) {
 
   // --- 렌더링 : 설정 모달 UI ---
   return (
-    // 모달 컨테이너 (고정 위치, 배경 반투명 오버레이)
+    // 모달 컨테이너
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-md max-h-96 overflow-hidden">
         
@@ -112,7 +107,7 @@ function CalendarSharingSettings({ onClose }) {
           </button>
         </div>
 
-        {/* 설정 내용(스크롤 가능 영역) */}
+        {/* 설정 내용(스크롤 가능한 영역) */}
         <div className="p-4 space-y-4 overflow-y-auto max-h-80">
           
           {/* 1. 캘린더 공개 여부(토글 스위치) */}
@@ -133,7 +128,7 @@ function CalendarSharingSettings({ onClose }) {
             </label>
           </div>
 
-          {/* 2. 공개 범위(isPublic==true일 때만 표시) */}
+          {/* 2. 공개 범위(isPublic이 true일 때만 표시) */}
           {settings.isPublic && (
             <div>
               <h3 className="font-medium text-gray-800 mb-2">공개 범위</h3>
@@ -166,7 +161,7 @@ function CalendarSharingSettings({ onClose }) {
             </div>
           )}
 
-          {/* 3. 좋아요 허용(isPublic==true일 때만 표시) */}
+          {/* 3. 좋아요 허용(isPublic이 true일 때만 표시) */}
           {settings.isPublic && (
             <div className="flex items-center justify-between">
               <div>
@@ -186,7 +181,7 @@ function CalendarSharingSettings({ onClose }) {
             </div>
           )}
 
-          {/* 4. 댓글 허용(isPublic==true일 때만 표시) */}
+          {/* 4. 댓글 허용(isPublic이 true일 때만 표시) */}
           {settings.isPublic && (
             <div className="flex items-center justify-between">
               <div>
@@ -206,7 +201,7 @@ function CalendarSharingSettings({ onClose }) {
             </div>
           )}
 
-          {/* 5. 개인정보 표시(isPublic==true일 때만 표시) */}
+          {/* 5. 개인정보 표시(isPubli이 true일 때만 표시) */}
           {settings.isPublic && (
             <div className="flex items-center justify-between">
               <div>
@@ -236,7 +231,7 @@ function CalendarSharingSettings({ onClose }) {
           >
             취소
           </button>
-          {/* 저장 버튼(saving 중일 때 비활성화 및 로딩 텍스트 표시) */}
+          {/* 저장 버튼 (saving 중일 때 비활성화) */}
           <button
             onClick={handleSave}
             disabled={saving}

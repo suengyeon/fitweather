@@ -1,16 +1,15 @@
 /**
  * 예보 데이터 배열에서 다음 시간대 예보 추출하는 함수
- * @param {Array} items - KMA 예보 item 배열
- * @returns {Object|null} - 다음 예보 { temp, rainAmount, humidity, sky, pty, iconCode, fcstTime }
  */
 export function selectNextForecast(items) {
     if (!items || !Array.isArray(items)) return null;
   
     const now = new Date();
     const currHour = now.getHours();
+    // 현재 시간(HH00 형식) 계산
     const currTime = `${currHour.toString().padStart(2, "0")}00`;
   
-    // 다음 시간대 찾기(TMP 기준)
+    // TMP(기온) 기준으로 현재 시각 이후의 다음 예보 찾기
     const tmpList = items.filter((item) => item.category === "TMP");
     const nextTmp = tmpList.find((item) => item.fcstTime >= currTime);
   
@@ -18,28 +17,29 @@ export function selectNextForecast(items) {
   
     const fcstTime = nextTmp.fcstTime;
   
-    // 같은 시간대 다른 예보값 찾기
+    // 같은 시간대 다른 예보값 찾기 헬퍼 함수
     const findValue = (category) =>
       items.find((i) => i.category === category && i.fcstTime === fcstTime)?.fcstValue;
   
     const sky = findValue("SKY") || "1";  // 하늘 상태
     const pty = findValue("PTY") || "0";  // 강수 형태
-    const tavg = findValue("TAVG") || nextTmp.fcstValue;  // 일평균 기온 (없으면 현재 기온 사용)
+    const tavg = findValue("TAVG") || nextTmp.fcstValue;  // 일평균 기온(없으면 현재 기온 사용)
   
-    // 계절 구분 로직 실행(절기 + 온도 조합)
+    // 계절 및 감성 표현 결정
     const season = getSeason(tavg, new Date());
     const weatherExpression = getWeatherExpression(season, nextTmp.fcstValue);
     
+    // 표준화된 결과 객체 반환
     return {
       temp: nextTmp.fcstValue,
-      tavg: tavg,                          // 일평균 기온
-      rainAmount: findValue("RN1") || "0",  // 1시간 강수량
-      humidity: findValue("REH") || null,   // 습도(REH: 상대습도)
-      sky: sky,                             // 하늘 상태(SKY)
-      pty: pty,                             // 강수 형태(PTY)
-      iconCode: getWeatherIcon(sky, pty),   // SKY&PTY를 조합한 아이콘 코드
-      season: season,                       // 계절 분류
-      weatherExpression: weatherExpression, // 감성적인 날씨 표현
+      tavg: tavg,                          
+      rainAmount: findValue("RN1") || "0",  
+      humidity: findValue("REH") || null,   
+      sky: sky,                             
+      pty: pty,                             
+      iconCode: getWeatherIcon(sky, pty),   // SKY & PTY 조합 아이콘
+      season: season,                       // 절기 기반 계절 분류
+      weatherExpression: weatherExpression, 
       seasonColor: getSeasonColor(season),  // 계절별 색상
       expressionColor: getExpressionColor(weatherExpression), // 감성 표현별 색상
       fcstTime,
@@ -47,54 +47,32 @@ export function selectNextForecast(items) {
   }
 
 /**
- * SKY(하늘 상태)&PTY(강수 형태)를 조합하여 날씨 아이콘 코드 반환
- * @param {string} sky - 하늘 상태(1: 맑음, 3: 구름많음, 4: 흐림)
- * @param {string} pty - 강수 형태(0: 없음, 1: 비, 2: 비/눈, 3: 눈, 4: 소나기)
- * @returns {string} - 날씨 아이콘 코드
+ * SKY(하늘 상태) & PTY(강수 형태)를 조합하여 날씨 아이콘 코드 반환
  */
 function getWeatherIcon(sky, pty) {
-  // PTY 조건문 순서대로 실행
-  if (pty === "1") {
-    return "rain";      // 비 - 🌧️
-  }
+  // PTY(강수 형태) 우선 체크
+  if (pty === "1") return "rain";      
+  if (pty === "2") return "snow_rain"; 
+  if (pty === "3") return "snow";      
+  if (pty === "4") return "shower";    
   
-  if (pty === "2") {
-    return "snow_rain"; // 비/눈 - 🌨️
-  }
+  // PTY가 0일 때 SKY 조건 체크
+  if (pty === "0" && sky === "1") return "sunny";     
+  if (pty === "0" && sky === "3") return "cloudy";    
+  if (pty === "0" && sky === "4") return "overcast";  
   
-  if (pty === "3") {
-    return "snow";      // 눈 - ❄️
-  }
-  
-  if (pty === "4") {
-    return "shower";    // 소나기 - 🌦️
-  }
-  
-  // PTY==0이고 SKY 조건문 실행
-  if (pty === "0" && sky === "1") {
-    return "sunny";     // 맑음 - ☀️
-  }
-  
-  if (pty === "0" && sky === "3") {
-    return "cloudy";    // 구름 많음 - ☁️
-  }
-  
-  if (pty === "0" && sky === "4") {
-    return "overcast";  // 흐림 - 🌥️
-  }
-  
-  // 예외 처리 : 위의 어떤 조건도 해당하지 않으면
+  // 예외 처리
   console.error(`날씨 아이콘 조건 오류 - PTY: ${pty}, SKY: ${sky}`);
-  return "cloudy";      // 기본값 : 구름 - ☁️
+  return "cloudy";      // 기본값
 }
 
 /**
- * 절기 기준 세부 계절 판별 - (24절기 기반, 온도 미사용)
+ * 절기 기준 세부 계절 판별 (24절기 기반)
  */
 export function getDetailedSeasonByLunar(date = new Date()) {
   const y = date.getFullYear();
 
-  // 평균 절기 날짜(±1일 오차)
+  // 평균 절기 날짜(24절기 중 12개)
   const terms = {
     입춘: new Date(y, 1, 4),
     춘분: new Date(y, 2, 21),
@@ -110,7 +88,7 @@ export function getDetailedSeasonByLunar(date = new Date()) {
     동지: new Date(y, 11, 22),
   };
 
-  // 순차적 비교
+  // 순차적으로 날짜 범위 비교하여 세부 계절 반환
   if (date >= terms.입춘 && date < terms.춘분) return "초봄";
   if (date >= terms.춘분 && date < terms.입하) return "봄";
   if (date >= terms.입하 && date < terms.하지) return "늦봄";
@@ -129,26 +107,18 @@ export function getDetailedSeasonByLunar(date = new Date()) {
 
 /**
  * 절기 기반 세부 계절 구분(기존 함수 호환성 유지)
- * @param {string} tavg - 일평균 기온(사용하지 않음)
- * @param {Date} date - 날짜 객체(기본값 : 현재 날짜)
- * @returns {string} - 계절명
  */
 export function getSeason(tavg, date = new Date()) {
   return getDetailedSeasonByLunar(date);
 }
 
-
-
 /**
- * 계절에 따른 감성적인 날씨 표현 반환하는 함수
- * @param {string} season - 계절명
- * @param {string} temp - 현재 기온
- * @returns {string} - 감성적인 날씨 표현
+ * 계절에 따른 감성적인 날씨 표현 반환하는 함수(온도 기반)
  */
 function getWeatherExpression(season, temp) {
   const temperature = parseFloat(temp);
   
-  // 봄(초봄, 봄, 늦봄)
+  // 계절별 온도 범위에 따라 표현 결정
   if (season.includes("봄")) {
     if (temperature >= 20) return "따뜻해요";
     if (temperature >= 15) return "포근해요";
@@ -156,7 +126,6 @@ function getWeatherExpression(season, temp) {
     return "쌀쌀해요";
   }
   
-  // 여름(초여름, 여름, 늦여름)
   if (season.includes("여름")) {
     if (temperature >= 33) return "너무 더워요";
     if (temperature >= 30) return "무척 더워요";
@@ -165,7 +134,6 @@ function getWeatherExpression(season, temp) {
     return "시원해요";
   }
   
-  // 가을(초가을, 가을, 늦가을)
   if (season.includes("가을")) {
     if (temperature >= 20) return "따뜻해요";
     if (temperature >= 15) return "선선해요";
@@ -173,7 +141,6 @@ function getWeatherExpression(season, temp) {
     return "쌀쌀해요";
   }
   
-  // 겨울(초겨울, 겨울, 늦겨울)
   if (season.includes("겨울")) {
     if (temperature >= 5) return "쌀쌀해요";
     if (temperature >= 0) return "추워요";
@@ -181,71 +148,35 @@ function getWeatherExpression(season, temp) {
     return "꽁꽁 얼겠어요";
   }
   
-  // 예외 처리 : 계절 판단할 수 없는 경우
+  // 예외 처리
   console.error(`날씨 표현 조건 오류 - 계절: ${season}, 기온: ${temp}`);
-  return "시원해요"; // 기본값
+  return "시원해요"; 
 }
 
 /**
  * 계절별 텍스트 색상 반환하는 함수
- * @param {string} season - 계절명
- * @returns {string} - 색상 코드
  */
 function getSeasonColor(season) {
-  // 봄(초봄, 봄, 늦봄) : 연두색
-  if (season.includes("봄")) {
-    return "#8BC34A";
-  }
-  // 여름(초여름, 여름, 늦여름) : 파란색
-  else if (season.includes("여름")) {
-    return "#2196F3";
-  }
-  // 가을(초가을, 가을, 늦가을) : 갈색
-  else if (season.includes("가을")) {
-    return "#795548";
-  }
-  // 겨울(초겨울, 겨울, 늦겨울) : 진한 파란색
-  else if (season.includes("겨울")) {
-    return "#1A237E";
-  }
-  // 기본값
-  else {
-    return "#795548";
-  }
+  // 계절별 색상 코드 반환
+  if (season.includes("봄")) return "#8BC34A";      
+  else if (season.includes("여름")) return "#2196F3"; 
+  else if (season.includes("가을")) return "#795548"; 
+  else if (season.includes("겨울")) return "#1A237E"; 
+  else return "#795548"; 
 }
 
 /**
  * 감성 표현별 텍스트 색상 반환하는 함수
- * @param {string} expression - 감성적인 날씨 표현
- * @returns {string} - 색상 코드
  */
 function getExpressionColor(expression) {
-  // 강렬한 더위 표현 : 빨간색
-  if (expression === "너무 더워요" || expression === "무척 더워요") {
-    return "#F44336";
-  }
-  // 따뜻한 표현 : 주황색
-  else if (expression === "따뜻해요" || expression === "포근해요") {
-    return "#FF9800";
-  }
-  // 시원한 표현 : 하늘색
-  else if (expression === "시원해요" || expression === "선선해요") {
-    return "#03A9F4";
-  }
-  // 쌀쌀한 표현 : 남색
-  else if (expression === "쌀쌀해요") {
-    return "#3F51B5";
-  }
-  // 추위 표현 : 밝은 파란색
-  else if (expression === "추워요" || expression === "꽁꽁 얼겠어요") {
-    return "#81D4FA";
-  }
-  // 기본값
-  else {
-    return "#03A9F4";
-  }
+  // 감성 표현에 따른 색상 코드 반환
+  if (expression === "너무 더워요" || expression === "무척 더워요") return "#F44336"; 
+  else if (expression === "따뜻해요" || expression === "포근해요") return "#FF9800"; 
+  else if (expression === "시원해요" || expression === "선선해요") return "#03A9F4"; 
+  else if (expression === "쌀쌀해요") return "#3F51B5"; 
+  else if (expression === "추워요" || expression === "꽁꽁 얼겠어요") return "#81D4FA"; 
+  else return "#03A9F4"; 
 }
 
 // 함수들을 export
 export { getWeatherExpression, getExpressionColor };
-  

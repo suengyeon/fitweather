@@ -1,7 +1,5 @@
 /**
  * 날씨 아이콘 코드에 따른 이모지 반환
- * @param {string} iconCode - 날씨 아이콘 코드
- * @returns {string} 날씨 이모지
  */
 export function getWeatherEmoji(iconCode) {
     switch (iconCode) {

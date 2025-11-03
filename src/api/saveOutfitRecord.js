@@ -3,22 +3,6 @@ import { collection, addDoc } from "firebase/firestore";
 
 /**
  * 착장 레코드를 Firestore 'outfits' 컬렉션에 새 문서로 저장
- *
- * @param {Object} record - 저장할 착장 기록 데이터 객체
- * @param {string} record.uid           - 사용자 UID(작성자)
- * @param {string} record.region        - 기록된 지역명(예: "Seoul")
- * @param {string} record.date          - 기록 날짜(ISO 문자열 등)
- * @param {number} record.temp          - 기록 당시의 기온(추가된 필드)
- * @param {number} record.rain          - 기록 당시의 강수량(추가된 필드)
- * @param {string} record.feeling       - 체감 이모지(예: "👍")
- * @param {string[]} record.weatherEmojis - 날씨 이모지 배열(최대 2개)
- * @param {string[]} record.imageUrls   - 업로드된 이미지 URL 배열
- * @param {string} record.feedback      - 사용자의 피드백 텍스트
- * @param {Object} record.outfit        - 옷 항목 객체(outer, top, bottom, shoes, acc 등의 배열 포함)
- * @param {string[]} record.styles      - 착장의 스타일 태그 배열(추가된 필드)
- * @param {string[]} record.season      - 착장의 계절 정보 배열(추가된 필드)
- * @param {boolean} record.isPublic     - 지역피드 공개 여부
- * @returns {Promise<string>} 새로 생성된 Firestore 문서의 ID
  */
 export const saveOutfitRecord = async (record) => {
   try {
@@ -41,27 +25,27 @@ export const saveOutfitRecord = async (record) => {
       });
     }
 
-    // 1. Firestore 'outfits' 컬렉션에 새 문서(레코드) 추가
+    // 1. Firestore 'outfits' 컬렉션 참조 및 새 문서 추가
     const docRef = await addDoc(collection(db, "outfits"), {
       uid: record.uid,
       region: record.region,
       date: record.date,
-      temp: record.temp, // 기온
-      rain: record.rain, // 강수량
+      temp: record.temp, // 기온 저장
+      rain: record.rain, // 강수량 저장
       feeling: record.feeling,
       weatherEmojis: record.weatherEmojis,
       imageUrls: record.imageUrls,
       feedback: record.feedback,
       outfit: record.outfit,
-      styles: record.styles, // 스타일 정보
-      season: record.season, // 계절 정보
-      isPublic: record.isPublic // 공개 여부
+      styles: record.styles, // 스타일 정보 저장
+      season: record.season, // 계절 정보 저장
+      isPublic: record.isPublic // 공개 여부 저장
     });
 
     // 2. 새로 저장된 문서 ID 반환
     return docRef.id;
   } catch (error) {
-    // 레코드 저장 과정에서 심각한 오류가 발생 시 에러 출력 후 다시 던짐
+    // 레코드 저장 실패 시 에러 출력 후 다시 던짐
     console.error("⚠️ 레코드 저장 실패:", error);
     throw error;
   }
