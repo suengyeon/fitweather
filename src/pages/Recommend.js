@@ -135,29 +135,78 @@ function Recommend() {
     fetchAllRecords();
   }, []);
 
-  // 구독한 사용자 목록 가져오기
+  const [likedRecordIds, setLikedRecordIds] = useState([]); // 내가 좋아요한 기록 ID 목록
+
+  // 구독한 사용자 목록 가져오기 (follows 컬렉션에서 조회)
   useEffect(() => {
     if (!user) return;
 
     const fetchSubscribedUsers = async () => {
       try {
-        const { doc, getDoc } = await import("firebase/firestore");
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
         const { db } = await import("../firebase");
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          if (data.subscribedUsers) {
-            setSubscribedUsers(data.subscribedUsers);
-            console.log("Subscribed users:", data.subscribedUsers);
-          }
+        
+        // ✅ DB Check 1: User document exists 확인
+        console.log("✅ DB Check 1: User document exists.", { uid: user.uid });
+        
+        // follows 컬렉션에서 현재 사용자가 팔로우하는 사용자 목록 조회
+        const followsQuery = query(
+          collection(db, "follows"),
+          where("followerId", "==", user.uid)
+        );
+        
+        const followsSnapshot = await getDocs(followsQuery);
+        const followingIds = followsSnapshot.docs.map(doc => doc.data().followingId);
+        
+        if (followingIds.length > 0) {
+          setSubscribedUsers(followingIds);
+          console.log("✅ 구독한 사용자 목록 로드 성공:", followingIds);
+        } else {
+          console.log("ℹ️ 구독한 사용자가 없습니다.");
+          setSubscribedUsers([]);
         }
       } catch (error) {
-        console.error("Error fetching subscribed users:", error);
+        console.error("❌ 구독 사용자 목록 조회 실패:", error);
+        setSubscribedUsers([]); // 에러 발생 시 빈 배열로 초기화
       }
     };
 
     fetchSubscribedUsers();
+  }, [user]);
+
+  // 내가 좋아요한 기록 ID 목록 가져오기 (reactions 컬렉션에서 조회)
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchLikedRecords = async () => {
+      try {
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        const { db } = await import("../firebase");
+        
+        // reactions 컬렉션에서 현재 사용자가 좋아요(type="up")한 기록 ID 목록 조회
+        const reactionsQuery = query(
+          collection(db, "reactions"),
+          where("uid", "==", user.uid),
+          where("type", "==", "up")
+        );
+        
+        const reactionsSnapshot = await getDocs(reactionsQuery);
+        const likedIds = reactionsSnapshot.docs.map(doc => doc.data().recordId);
+        
+        if (likedIds.length > 0) {
+          setLikedRecordIds(likedIds);
+          console.log("✅ 좋아요한 기록 목록 로드 성공:", likedIds);
+        } else {
+          console.log("ℹ️ 좋아요한 기록이 없습니다.");
+          setLikedRecordIds([]);
+        }
+      } catch (error) {
+        console.error("❌ 좋아요 기록 목록 조회 실패:", error);
+        setLikedRecordIds([]); // 에러 발생 시 빈 배열로 초기화
+      }
+    };
+
+    fetchLikedRecords();
   }, [user]);
 
   // 다른 페이지에서 전달된 필터 적용 (region/feeling만 유지하던 기존 로직)
@@ -239,11 +288,10 @@ function Recommend() {
         if (record.uid !== user.uid) return false;
       }
 
-      // 내가 좋아요 한 코디
+      // 내가 좋아요 한 코디 (reactions 컬렉션 기반)
       if (likedOnly) {
         if (!user?.uid) return false;
-        const likesArr = Array.isArray(record.likes) ? record.likes : [];
-        if (!likesArr.includes(user.uid)) return false;
+        if (!likedRecordIds.includes(record.id)) return false;
       }
 
       // 구독한 사람만
@@ -287,6 +335,7 @@ function Recommend() {
     excludeMyRecords,
     onlyMyRecords,
     likedOnly,
+    likedRecordIds, // ✅ 좋아요한 기록 ID 목록 추가
     onlySubscribedUsers,
     subscribedUsers,
     user,
@@ -410,9 +459,9 @@ function Recommend() {
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setExcludeMyRecords(checked);
+                  // "나의 기록만"과는 상호 배타적
                   if (checked) {
                     setOnlyMyRecords(false);
-                    setLikedOnly(false);
                   }
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
@@ -429,9 +478,9 @@ function Recommend() {
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setOnlyMyRecords(checked);
+                  // "나의 기록 제외"와는 상호 배타적
                   if (checked) {
                     setExcludeMyRecords(false);
-                    setLikedOnly(false);
                   }
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
@@ -446,13 +495,8 @@ function Recommend() {
                 id="likedOnly"
                 checked={likedOnly}
                 onChange={(e) => {
-                  const checked = e.target.checked;
-                  setLikedOnly(checked);
-                  if (checked) {
-                    setOnlyMyRecords(false);
-                    setExcludeMyRecords(false);
-                    setOnlySubscribedUsers(false);
-                  }
+                  setLikedOnly(e.target.checked);
+                  // 다른 필터와 함께 선택 가능
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />
@@ -466,13 +510,8 @@ function Recommend() {
                 id="onlySubscribedUsers"
                 checked={onlySubscribedUsers}
                 onChange={(e) => {
-                  const checked = e.target.checked;
-                  setOnlySubscribedUsers(checked);
-                  if (checked) {
-                    setOnlyMyRecords(false);
-                    setExcludeMyRecords(false);
-                    setLikedOnly(false);
-                  }
+                  setOnlySubscribedUsers(e.target.checked);
+                  // 다른 필터와 함께 선택 가능
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />

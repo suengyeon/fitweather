@@ -121,20 +121,80 @@ function CalendarPage() {
 
   // 🔄 사용자 기록 불러오기
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      console.log("⚠️ currentUserId가 없어서 기록을 로드할 수 없습니다.");
+      return;
+    }
 
     const fetchData = async () => {
+      console.log("📅 캘린더 기록 조회 시작, UID:", currentUserId);
+      
+      // records 컬렉션 조회 (Record.js에서 실제로 저장하는 컬렉션)
       const q = query(collection(db, "records"), where("uid", "==", currentUserId));
       const snap = await getDocs(q);
 
       const map = {};
+      console.log("📅 캘린더 기록 로드 시작, 조회된 문서 수:", snap.size);
+      
+      // 디버깅: 첫 번째 문서 샘플 출력
+      if (snap.size > 0) {
+        const firstDoc = snap.docs[0];
+        console.log("🔍 첫 번째 문서 샘플:", {
+          id: firstDoc.id,
+          data: firstDoc.data(),
+          uid: firstDoc.data().uid,
+          date: firstDoc.data().date,
+          recordedDate: firstDoc.data().recordedDate
+        });
+      }
+      
       snap.forEach((doc) => {
         const data = doc.data();
-        if (data.date) {
-          map[data.date] = { ...data, id: doc.id };
+        // date 필드 또는 recordedDate 필드에서 날짜 추출
+        const recordDate = data.recordedDate || data.date;
+        if (recordDate) {
+          // recordedDate가 이미 YYYY-MM-DD 형식이거나, date가 ISO 문자열인 경우 처리
+          let dateStr;
+          if (data.recordedDate) {
+            // recordedDate는 이미 YYYY-MM-DD 형식
+            dateStr = data.recordedDate;
+          } else if (data.date) {
+            // date는 ISO 문자열이므로 YYYY-MM-DD로 변환
+            // ISO 문자열 또는 다른 형식 처리
+            if (typeof data.date === 'string') {
+              if (data.date.includes('T')) {
+                dateStr = data.date.split('T')[0];
+              } else if (data.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                // 이미 YYYY-MM-DD 형식
+                dateStr = data.date;
+              } else {
+                // 다른 형식이면 Date 객체로 변환 시도
+                try {
+                  const dateObj = new Date(data.date);
+                  dateStr = formatDateLocal(dateObj);
+                } catch (e) {
+                  console.warn("날짜 파싱 실패:", data.date);
+                  return;
+                }
+              }
+            } else if (data.date?.toDate) {
+              // Firestore Timestamp
+              dateStr = formatDateLocal(data.date.toDate());
+            }
+          }
+          
+          if (dateStr) {
+            map[dateStr] = { ...data, id: doc.id };
+            console.log("✅ 기록 추가:", dateStr, doc.id);
+          } else {
+            console.warn("⚠️ 날짜 형식 처리 실패:", data.recordedDate, data.date);
+          }
+        } else {
+          console.warn("⚠️ 날짜 필드 없음:", doc.id);
         }
       });
 
+      console.log("📅 최종 outfitMap:", Object.keys(map).length, "개 날짜", map);
       setOutfitMap(map);
     };
 
@@ -170,7 +230,7 @@ function CalendarPage() {
         navigate(`/record`, { state: { existingRecord } });
       } else {
         // 다른 사용자의 기록: FeedDetail 페이지로 이동
-        navigate(`/feed/${existingRecord.id}`, {
+        navigate(`/feed-detail/${existingRecord.id}`, {
           state: {
             fromCalendar: true,
             targetUserId: currentUserId
@@ -221,6 +281,12 @@ function CalendarPage() {
 
     const dateStr = formatDateLocal(date);
     const record = outfitMap[dateStr];
+    
+    // 디버깅용 로그 (특정 날짜에만 출력)
+    if (dateStr === formatDateLocal(new Date()) && Object.keys(outfitMap).length > 0) {
+      console.log("🔍 타일 렌더링:", { dateStr, hasRecord: !!record, outfitMapKeys: Object.keys(outfitMap).slice(0, 5) });
+    }
+    
     const weatherEmoji = getWeatherEmoji(record?.weather?.icon ?? record?.icon ?? "");
     const feelingText = record?.feeling ? feelingToEmoji(record.feeling) : null;
     const feelingEmoji = feelingText ? feelingText.split(' ')[0] : "";
@@ -230,10 +296,10 @@ function CalendarPage() {
         {/* 상단: 날짜와 날씨 이모지 */}
         <div className="calendar-tile-top">
           <span className="calendar-date">{date.getDate()}</span>
-          <span className="calendar-weather">{weatherEmoji}</span>
+          {record && <span className="calendar-weather">{weatherEmoji}</span>}
         </div>
         {/* 하단: 체감 이모지 */}
-        {feelingEmoji && <div className="calendar-feeling">{feelingEmoji}</div>}
+        {record && feelingEmoji && <div className="calendar-feeling">{feelingEmoji}</div>}
       </div>
     );
   };

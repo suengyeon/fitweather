@@ -9,8 +9,7 @@
 export const NOTIFICATION_TYPES = {
   FOLLOW: 'follow',
   COMMENT_ON_MY_POST: 'comment_on_my_post',
-  REPLY_TO_MY_COMMENT: 'reply_to_my_comment',
-  NEW_POST_FROM_FOLLOWING: 'new_post_from_following'
+  REPLY_TO_MY_COMMENT: 'reply_to_my_comment'
 };
 
 /**
@@ -99,8 +98,6 @@ export function validateNotificationData(data) {
     if (!data.message) {
       errors.push('message is required for reply notifications');
     }
-  } else if (data.type === NOTIFICATION_TYPES.NEW_POST_FROM_FOLLOWING) {
-    // 새 기록 알림 : 추가 메시지 불필요
   }
 
   return {

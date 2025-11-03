@@ -1,10 +1,8 @@
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore"; 
-import { notifyFollowersAboutNewPost } from "../services/notificationService";
 
 /**
  * 착장 레코드를 Firestore 'outfits' 컬렉션에 새 문서로 저장
- * 저장 완료 후, 레코드가 공개(isPublic: true)일 경우 팔로워에 알림 전송
  *
  * @param {Object} record - 저장할 착장 기록 데이터 객체
  * @param {string} record.uid           - 사용자 UID(작성자)
@@ -60,24 +58,7 @@ export const saveOutfitRecord = async (record) => {
       isPublic: record.isPublic // 공개 여부
     });
 
-    // 2. 레코드가 공개 : 팔로워에 알림 전송
-    if (record.isPublic) {
-      console.log('📢 공개 기록이므로 구독자들에게 알림 전송 시작...');
-      try {
-        // notificationService를 호출하여 알림 전송
-        const notificationCount = await notifyFollowersAboutNewPost(record.uid, docRef.id);
-        console.log(`📢 ${notificationCount}명의 구독자에게 새 기록 알림 전송 완료`);
-      } catch (notificationError) {
-        // 알림 전송 실패 시 기록 저장은 성공으로 간주 후 진행
-        console.error("⚠️ 알림 전송 실패 (기록 저장은 성공):", notificationError);
-        console.error("⚠️ 오류 상세:", notificationError.message);
-        console.error("⚠️ 스택 트레이스:", notificationError.stack);
-      }
-    } else {
-      console.log('🔒 비공개 기록이므로 알림을 전송하지 않습니다.');
-    }
-
-    // 3. 새로 저장된 문서 ID 반환
+    // 2. 새로 저장된 문서 ID 반환
     return docRef.id;
   } catch (error) {
     // 레코드 저장 과정에서 심각한 오류가 발생 시 에러 출력 후 다시 던짐

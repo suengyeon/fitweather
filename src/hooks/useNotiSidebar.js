@@ -86,12 +86,12 @@ export default function useNotiSidebar() {
 
     // 댓글/답글 알림 : 게시물이 본인 기록인지 확인하여 라우팅 경로 변경
     if ((n.type === "comment_on_my_post" || n.type === "reply_to_my_comment") && n.link) {
-      // 알림 링크에서 recordId 추출
-      const recordId = n.link.split("/feed-detail/")[1];
+      // 알림 링크에서 recordId 추출 (/feed-detail/ 또는 /feed/ 경로 모두 처리)
+      let recordId = n.link.split("/feed-detail/")[1] || n.link.split("/feed/")[1];
       if (recordId) {
         try {
-          // Firestore에서 해당 기록 문서 조회
-          const ref = doc(db, "records", recordId);
+          // Firestore에서 해당 기록 문서 조회 (outfits 컬렉션)
+          const ref = doc(db, "outfits", recordId);
           const snap = await getDoc(ref);
           
           // 기록이 존재, 해당 기록의 UID가 현재 사용자 UID와 일치하면
@@ -108,7 +108,13 @@ export default function useNotiSidebar() {
     }
 
     // 기본 링크 이동(댓글/답글 외 알림or기록 조회 실패 시)
-    if (n.link) navigate(n.link);
+    // /feed/ 경로를 /feed-detail/로 변환 (하위 호환성)
+    if (n.link) {
+      const correctedLink = n.link.startsWith("/feed/") && !n.link.startsWith("/feed-detail/")
+        ? n.link.replace("/feed/", "/feed-detail/")
+        : n.link;
+      navigate(correctedLink);
+    }
   };
 
   // --- 메모이제이션 : 읽지 않은 알림 수 ---

@@ -21,7 +21,10 @@ function FeedDetail() {
 
     // 뒤로가기
     const handleGoBack = () => {
-        if (location.state?.fromRecommend) {
+        if (location.state?.fromCalendar && location.state?.targetUserId) {
+            // 캘린더에서 온 경우 해당 사용자의 캘린더로 돌아가기
+            navigate(`/calendar/${location.state.targetUserId}`);
+        } else if (location.state?.fromRecommend) {
             navigate("/recommend", {
                 state: {
                     fromDetail: true,
@@ -40,7 +43,12 @@ function FeedDetail() {
                 }
             });
         } else {
-            navigate("/feed");
+            // 기본적으로 브라우저 히스토리로 돌아가기
+            if (window.history.length > 1) {
+                navigate(-1);
+            } else {
+                navigate("/feed");
+            }
         }
     };
 

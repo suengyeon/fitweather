@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon, PhotoIcon, UserPlusIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon, UserPlusIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/solid";
 import { useNavigate } from "react-router-dom";
 
 // --- 유틸리티 함수 ---
@@ -20,8 +20,6 @@ const getNotificationTitle = (notification) => {
       return '내 기록에 댓글이 달렸어요';
     case 'reply_to_my_comment':
       return '내 댓글에 답글이 달렸어요';
-    case 'new_post_from_following':
-      return `${getUserName(notification.sender)}님이 새 기록을 올렸어요`;
     default:
       return notification.title || '새 알림';
   }
@@ -36,8 +34,6 @@ const getNotificationMessage = (notification) => {
       return `${getUserName(notification.sender)}: '${notification.message || '댓글 내용'}'`;
     case 'reply_to_my_comment':
       return `답글: '${notification.message || '답글 내용'}'`;
-    case 'new_post_from_following':
-      return '새로운 착장 기록을 확인해보세요!';
     default:
       return notification.message || '';
   }
@@ -51,8 +47,6 @@ const getNotificationIcon = (type) => {
     case 'comment_on_my_post':
     case 'reply_to_my_comment':
       return <ChatBubbleLeftIcon className="w-4 h-4 text-green-600" />;
-    case 'new_post_from_following':
-      return <PhotoIcon className="w-4 h-4 text-purple-600" />;
     default:
       return <BellIcon className="w-4 h-4 text-gray-700" />;
   }
@@ -311,7 +305,7 @@ function EmptyState() {
         <div className="h-full flex flex-col items-center justify-center text-gray-600">
             <BellIcon className="w-10 h-10 mb-2" />
             <p className="font-semibold">새로운 알림이 없어요</p>
-            <p className="text-sm">댓글, 구독, 새 기록 알림이 여기에 표시됩니다.</p>
+            <p className="text-sm">댓글, 구독 알림이 여기에 표시됩니다.</p>
         </div>
     );
 }
