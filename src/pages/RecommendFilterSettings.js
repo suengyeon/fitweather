@@ -33,7 +33,6 @@ function RecommendFilterSettings() {
         if (data.filters) {
           setFilters(data.filters);
         }
-        
       }
     };
     fetchProfile();
@@ -154,8 +153,6 @@ function RecommendFilterSettings() {
     }
   };
 
-
-
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col relative">
       {/* 사이드바 */}
@@ -239,8 +236,6 @@ function RecommendFilterSettings() {
               </div>
             </>
           )}
-
-
           <div className="flex justify-center gap-6 mt-6 mb-2">
             <button
               onClick={saveFilters}

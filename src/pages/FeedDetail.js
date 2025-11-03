@@ -1,25 +1,72 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
 import { HomeIcon, ArrowLeftIcon, HandThumbUpIcon, HandThumbDownIcon } from "@heroicons/react/24/outline";
-import { toggleSubscription, checkSubscription, createCommentNotification, createReplyNotification } from "../api/subscribe";
+import { useFeedDetailData } from "../hooks/useFeedDetailData";
+import { useFeedReactions } from "../hooks/useFeedReactions";
+import { useFeedSubscription } from "../hooks/useFeedSubscription";
+import { useComments } from "../hooks/useComments";
 import { useAuth } from "../contexts/AuthContext";
 import CommentSection from "../components/CommentSection";
-import { addReplyRecursively, deleteNodeKeepChildren, findCommentAuthor } from "../utils/commentUtils";
 import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
 import ReportModal from "../components/ReportModal";
 import { submitReport } from "../api/reportAPI";
-import { getReactionSummary, getUserReaction, toggleThumbsUp, toggleThumbsDown } from "../api/reactions";
 import { getStyleLabel } from "../utils/styleUtils";
 import { navBtnStyle, indicatorStyle, dotStyle } from "../components/ImageCarouselStyles";
+import { doc, getDoc } from "firebase/firestore"; 
+import { db } from "../firebase"; 
 
 function FeedDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useAuth();
+    
+    // UI 상태: 이미지 캐러셀 및 댓글 뷰
+    const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
+    const [isCommentViewVisible, setIsCommentViewVisible] = useState(false);
 
-    // 뒤로가기
+    // 신고 모달 상태
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [reportTarget, setReportTarget] = useState(null);
+    
+    // 현재 로그인 사용자 프로필 로직
+    const [currentUserProfile, setCurrentUserProfile] = useState(null);
+    useEffect(() => {
+        const fetchCurrentUserProfile = async () => {
+            if (!user) return;
+            try {
+                const userRef = doc(db, "users", user.uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) setCurrentUserProfile(userSnap.data());
+            } catch (error) {
+                console.error("현재 사용자 프로필 가져오기 실패:", error);
+            }
+        };
+        fetchCurrentUserProfile();
+    }, [user]);
+
+    // 1. 피드 상세 데이터 및 작성자 정보 로드
+    const { data, author, loading, formattedDate } = useFeedDetailData(id, user); // user를 넘겨 현재 사용자 로직이 병합되는 것을 방지
+
+    // 2. 좋아요/싫어요 로직
+    const { 
+        isThumbsUp, thumbsUpCount, isThumbsDown, thumbsDownCount, 
+        handleThumbsUp, handleThumbsDown 
+    } = useFeedReactions(id, user);
+
+    // 3. 구독 로직
+    const { isSubscribed, handleSubscribe } = useFeedSubscription(data?.uid, user);
+
+    // 4. 댓글 로직
+    const {
+        comments, newComment, setNewComment, isRefreshing, 
+        replyToCommentId, setReplyContent, replyContent, 
+        handleCommentSubmit, handleCommentDelete, handleReply, 
+        handleReplySubmit, handleCancelReply, handleRefreshComments
+    } = useComments(id, user, data, currentUserProfile);
+
+
+    // 뒤로가기 로직(Navigation Logic)
     const handleGoBack = () => {
         if (location.state?.fromCalendar && location.state?.targetUserId) {
             // 캘린더에서 온 경우 해당 사용자의 캘린더로 돌아가기
@@ -52,499 +99,10 @@ function FeedDetail() {
         }
     };
 
-    const [formattedDate, setFormattedDate] = useState("");
-    const { user } = useAuth();
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [imagePreviewIdx, setImagePreviewIdx] = useState(0);
-    const [author, setAuthor] = useState(null);
-
-    const [currentUserProfile, setCurrentUserProfile] = useState(null);
-
-    // 구독 & 평가(좋아요/싫어요) UI 상태
-    const [isSubscribed, setIsSubscribed] = useState(false);
-    const [isThumbsUp, setIsThumbsUp] = useState(false);
-    const [thumbsUpCount, setThumbsUpCount] = useState(0);
-    const [isThumbsDown, setIsThumbsDown] = useState(false);
-    const [thumbsDownCount, setThumbsDownCount] = useState(0);
-
-    // 구독 상태 확인
-    useEffect(() => {
-        const checkSubscriptionStatus = async () => {
-            if (!user?.uid || !data?.uid || user.uid === data.uid) return;
-            try {
-                const subscribed = await checkSubscription(user.uid, data.uid);
-                setIsSubscribed(subscribed);
-            } catch (error) {
-                console.error("구독 상태 확인 실패:", error);
-            }
-        };
-        if (data?.uid) checkSubscriptionStatus();
-    }, [user?.uid, data?.uid]);
-
-    // 반응 상태 로드
-    useEffect(() => {
-        const loadReactionData = async () => {
-            if (!user || !id) return;
-            console.log('FeedDetail - 반응 데이터 로드 시작:', { userId: user.uid, recordId: id });
-
-            try {
-                const [summary, userReaction] = await Promise.all([
-                    getReactionSummary(id),
-                    getUserReaction(id, user.uid)
-                ]);
-
-                console.log('FeedDetail - API 응답:', { summary, userReaction });
-
-                // NaN 방지 및 기본값 설정
-                const upCount = summary.thumbsUpCount || 0;
-                const downCount = summary.thumbsDownCount || 0;
-                const isUp = userReaction.isThumbsUp || false;
-                const isDown = userReaction.isThumbsDown || false;
-
-                console.log('FeedDetail - 설정할 값:', { upCount, downCount, isUp, isDown });
-
-                setThumbsUpCount(upCount);
-                setThumbsDownCount(downCount);
-                setIsThumbsUp(isUp);
-                setIsThumbsDown(isDown);
-
-                // localStorage에 상태 저장 (새로고침 후 유지)
-                const reactionData = {
-                    thumbsUpCount: upCount,
-                    thumbsDownCount: downCount,
-                    isThumbsUp: isUp,
-                    isThumbsDown: isDown,
-                    timestamp: Date.now()
-                };
-                localStorage.setItem(`reaction_${id}_${user.uid}`, JSON.stringify(reactionData));
-                console.log('FeedDetail - localStorage 저장:', reactionData);
-            } catch (error) {
-                console.error("FeedDetail - 반응 데이터 로드 실패:", error);
-                // localStorage에서 저장된 상태 복원
-                const savedData = localStorage.getItem(`reaction_${id}_${user.uid}`);
-                console.log('FeedDetail - localStorage에서 복원 시도:', savedData);
-                if (savedData) {
-                    try {
-                        const parsed = JSON.parse(savedData);
-                        console.log('FeedDetail - 파싱된 데이터:', parsed);
-                        // 1시간 이내 데이터만 사용
-                        if (Date.now() - parsed.timestamp < 3600000) {
-                            setThumbsUpCount(parsed.thumbsUpCount || 0);
-                            setThumbsDownCount(parsed.thumbsDownCount || 0);
-                            setIsThumbsUp(parsed.isThumbsUp || false);
-                            setIsThumbsDown(parsed.isThumbsDown || false);
-                            console.log('FeedDetail - localStorage에서 복원됨');
-                        }
-                    } catch (e) {
-                        console.error("저장된 반응 데이터 파싱 실패:", e);
-                    }
-                }
-                // 오류 시 기본값 설정
-                setThumbsUpCount(0);
-                setThumbsDownCount(0);
-                setIsThumbsUp(false);
-                setIsThumbsDown(false);
-            }
-        };
-        loadReactionData();
-    }, [user, id]);
-
-    // 댓글 뷰 상태
-    const [isCommentViewVisible, setIsCommentViewVisible] = useState(false);
-    const [newComment, setNewComment] = useState("");
-    const [replyToCommentId, setReplyToCommentId] = useState(null);
-    const [replyContent, setReplyContent] = useState("");
-    const categoryOrder = ["OUTER", "TOP", "BOTTOM", "SHOES", "ACC"];
-
-    // 댓글 데이터
-    const [comments, setComments] = useState([]);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-
-    // 신고 모달 상태
-    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-    const [reportTarget, setReportTarget] = useState(null);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            console.log("🔍 FeedDetail - 데이터 조회 시작:", id);
-
-            try {
-                // 1단계: outfits 컬렉션에서 데이터 조회
-                const outfitsRef = doc(db, "outfits", id);
-                const outfitsSnapshot = await getDoc(outfitsRef);
-
-                console.log("📊 outfits 컬렉션 조회 결과:", outfitsSnapshot.exists());
-
-                if (outfitsSnapshot.exists()) {
-                    const record = outfitsSnapshot.data();
-                    console.log("✅ outfits에서 데이터 조회 성공:", record);
-                    setData(record);
-
-                    if (record.date) {
-                        const [year, month, day] = record.date.split('-').map(Number);
-                        let dateString = `${year}년 ${month}월 ${day}일`;
-                        if (record.recordedTime) dateString += ` ${record.recordedTime}`;
-                        setFormattedDate(dateString);
-                    }
-
-                    // 작성자 정보
-                    const userRef = doc(db, "users", record.uid);
-                    const userSnap = await getDoc(userRef);
-                    if (userSnap.exists()) {
-                        setAuthor({ ...userSnap.data(), uid: record.uid });
-                    } else {
-                        setAuthor({ nickname: record.uid, uid: record.uid });
-                    }
-                    setLoading(false);
-                    return;
-                }
-
-                // 2단계: records 컬렉션에서 데이터 조회
-                console.log("🔄 records 컬렉션에서 조회 시도...");
-                const recordsRef = doc(db, "records", id);
-                const recordsSnapshot = await getDoc(recordsRef);
-
-                console.log("📊 records 컬렉션 조회 결과:", recordsSnapshot.exists());
-
-                if (recordsSnapshot.exists()) {
-                    const record = recordsSnapshot.data();
-                    console.log("✅ records에서 데이터 조회 성공:", record);
-                    setData(record);
-
-                    if (record.date) {
-                        const [year, month, day] = record.date.split('-').map(Number);
-                        let dateString = `${year}년 ${month}월 ${day}일`;
-                        if (record.recordedTime) dateString += ` ${record.recordedTime}`;
-                        setFormattedDate(dateString);
-                    }
-
-                    // 작성자 정보
-                    const userRef = doc(db, "users", record.uid);
-                    const userSnap = await getDoc(userRef);
-                    if (userSnap.exists()) {
-                        setAuthor({ ...userSnap.data(), uid: record.uid });
-                    } else {
-                        setAuthor({ nickname: record.uid, uid: record.uid });
-                    }
-                    setLoading(false);
-                    return;
-                }
-
-                // 3단계: 두 컬렉션 모두에서 찾을 수 없음
-                console.error("❌ 두 컬렉션 모두에서 데이터를 찾을 수 없습니다:", id);
-                setLoading(false);
-
-            } catch (error) {
-                console.error("❌ 데이터 조회 중 오류:", error);
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [id, user]);
-
-    // 현재 로그인 사용자 프로필
-    useEffect(() => {
-        const fetchCurrentUserProfile = async () => {
-            if (!user) return;
-            try {
-                const userRef = doc(db, "users", user.uid);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) setCurrentUserProfile(userSnap.data());
-            } catch (error) {
-                console.error("현재 사용자 프로필 가져오기 실패:", error);
-            }
-        };
-        fetchCurrentUserProfile();
-    }, [user]);
-
-    // 댓글 로드
-    useEffect(() => {
-        const fetchComments = async () => {
-            try {
-                const commentsRef = doc(db, "comments", id);
-                const commentsSnap = await getDoc(commentsRef);
-                if (commentsSnap.exists()) {
-                    const commentsData = commentsSnap.data();
-                    setComments(commentsData.comments || []);
-                } else {
-                    setComments([]);
-                }
-            } catch (error) {
-                console.error("댓글 데이터 가져오기 실패:", error);
-                setComments([]);
-            }
-        };
-        fetchComments();
-    }, [id]);
-
-    if (loading) return <div className="p-6">불러오는 중...</div>;
-    if (!data) return <div className="p-6 text-red-500">게시물을 찾을 수 없습니다.</div>;
-
-    const { weather, outfit, memo, imageUrls, feeling } = data;
-
-    // Base64 이미지 처리 함수
-    const getImageSrc = (imageUrl) => {
-        if (!imageUrl) return null;
-        // Base64 데이터인지 확인 (data:image로 시작)
-        if (imageUrl.startsWith('data:image/')) {
-            return imageUrl;
-        }
-        // 일반 URL인 경우
-        return imageUrl;
-    };
-
-    // 구독 토글
-    const handleSubscribe = async () => {
-        if (!user || !data?.uid) return;
-        const prev = isSubscribed;
-        setIsSubscribed(!isSubscribed);
-        try {
-            await toggleSubscription(user.uid, data.uid);
-        } catch (err) {
-            console.error("구독 API 오류:", err);
-            setIsSubscribed(prev);
-        }
-    };
-
-    // 피드 페이지의 평가(좋아요/싫어요) 버튼 UI
-    const handleThumbsUp = async (e) => {
-        e.stopPropagation();
-        if (!user) return;
-
-        console.log('FeedDetail - 좋아요 클릭:', {
-            currentState: { isThumbsUp, thumbsUpCount, isThumbsDown, thumbsDownCount },
-            userId: user.uid,
-            recordId: id
-        });
-
-        const prev = isThumbsUp;
-        setIsThumbsUp(!isThumbsUp);
-        setThumbsUpCount((p) => (isThumbsUp ? p - 1 : p + 1));
-
-        if (isThumbsDown) {
-            setIsThumbsDown(false);
-            setThumbsDownCount((p) => p - 1);
-        }
-
-        try {
-            console.log('FeedDetail - API 호출 시작: toggleThumbsUp');
-            await toggleThumbsUp(id, user.uid);
-            console.log('FeedDetail - API 호출 성공');
-
-            // localStorage 업데이트
-            const newUpCount = isThumbsUp ? thumbsUpCount - 1 : thumbsUpCount + 1;
-            const newDownCount = isThumbsDown ? thumbsDownCount - 1 : thumbsDownCount;
-            const reactionData = {
-                thumbsUpCount: newUpCount,
-                thumbsDownCount: newDownCount,
-                isThumbsUp: !isThumbsUp,
-                isThumbsDown: false,
-                timestamp: Date.now()
-            };
-            localStorage.setItem(`reaction_${id}_${user.uid}`, JSON.stringify(reactionData));
-            console.log('FeedDetail - localStorage 업데이트:', reactionData);
-
-            // 다른 페이지에 상태 변경 알림
-            window.dispatchEvent(new CustomEvent('reactionUpdated', {
-                detail: { recordId: id, type: 'thumbsUp', isActive: !isThumbsUp }
-            }));
-            console.log('FeedDetail - 다른 페이지에 이벤트 전송');
-        } catch (error) {
-            console.error('FeedDetail - 좋아요 처리 실패:', error);
-            // 실패 시 상태 복원
-            setIsThumbsUp(prev);
-            setThumbsUpCount((p) => (prev ? p + 1 : p - 1));
-            if (isThumbsDown) {
-                setIsThumbsDown(true);
-                setThumbsDownCount((p) => p + 1);
-            }
-        }
-    };
-
-    const handleThumbsDown = async (e) => {
-        e.stopPropagation();
-        if (!user) return;
-
-        const prev = isThumbsDown;
-        setIsThumbsDown(!isThumbsDown);
-        setThumbsDownCount((p) => (isThumbsDown ? p - 1 : p + 1));
-
-        if (isThumbsUp) {
-            setIsThumbsUp(false);
-            setThumbsUpCount((p) => p - 1);
-        }
-
-        try {
-            await toggleThumbsDown(id, user.uid);
-
-            // localStorage 업데이트
-            const newUpCount = isThumbsUp ? thumbsUpCount - 1 : thumbsUpCount;
-            const newDownCount = isThumbsDown ? thumbsDownCount - 1 : thumbsDownCount + 1;
-            const reactionData = {
-                thumbsUpCount: newUpCount,
-                thumbsDownCount: newDownCount,
-                isThumbsUp: false,
-                isThumbsDown: !isThumbsDown,
-                timestamp: Date.now()
-            };
-            localStorage.setItem(`reaction_${id}_${user.uid}`, JSON.stringify(reactionData));
-
-            // 다른 페이지에 상태 변경 알림
-            window.dispatchEvent(new CustomEvent('reactionUpdated', {
-                detail: { recordId: id, type: 'thumbsDown', isActive: !isThumbsDown }
-            }));
-        } catch (error) {
-            console.error('싫어요 처리 실패:', error);
-            // 실패 시 상태 복원
-            setIsThumbsDown(prev);
-            setThumbsDownCount((p) => (prev ? p + 1 : p - 1));
-            if (isThumbsUp) {
-                setIsThumbsUp(true);
-                setThumbsUpCount((p) => p + 1);
-            }
-        }
-    };
-
-    // 댓글 뷰 토글
+    // 댓글 뷰 토글(UI Logic)
     const handleCommentViewToggle = () => setIsCommentViewVisible(!isCommentViewVisible);
 
-    // 댓글 새로고침
-    const handleRefreshComments = async () => {
-        setIsRefreshing(true);
-        try {
-            const commentsRef = doc(db, "comments", id);
-            const commentsSnap = await getDoc(commentsRef);
-            if (commentsSnap.exists()) {
-                const commentsData = commentsSnap.data();
-                setComments(commentsData.comments || []);
-            } else {
-                setComments([]);
-            }
-        } catch (error) {
-            console.error("댓글 새로고침 실패:", error);
-        } finally {
-            setIsRefreshing(false);
-        }
-    };
-
-    // 댓글 작성
-    const handleCommentSubmit = async (e) => {
-        e.preventDefault();
-        if (!newComment.trim()) return;
-
-        const newCommentObj = {
-            id: (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`),
-            author: currentUserProfile?.nickname || user?.displayName || "익명",
-            authorUid: user?.uid,
-            timestamp: new Date().toLocaleString('ko-KR', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit'
-            }).replace(/\./g, '-').replace(/,/g, '').replace(/\s/g, ' '),
-            content: newComment.trim(),
-            replies: []
-        };
-
-        try {
-            const updatedComments = [...comments, newCommentObj];
-            setComments(updatedComments);
-            setNewComment("");
-
-            const commentsRef = doc(db, "comments", id);
-            await setDoc(commentsRef, { comments: updatedComments, lastUpdated: new Date() }, { merge: true });
-
-            if (data.uid !== user?.uid) {
-                await createCommentNotification(user?.uid, data.uid, id, newComment.trim());
-            }
-
-            const commentsSnap = await getDoc(commentsRef);
-            if (commentsSnap.exists()) {
-                const freshData = commentsSnap.data();
-                setComments(freshData.comments || []);
-            }
-        } catch (error) {
-            console.error("댓글 저장 실패:", error);
-            setComments(comments);
-        }
-    };
-
-    // 댓글 삭제
-    const handleCommentDelete = async (commentId) => {
-        if (!window.confirm("댓글을 삭제하시겠습니까?")) return;
-
-        try {
-            const { list: updatedList, changed } = deleteNodeKeepChildren(comments, commentId);
-            if (!changed) return;
-
-            setComments(updatedList);
-
-            const commentsRef = doc(db, "comments", id);
-            await setDoc(commentsRef, { comments: updatedList, lastUpdated: new Date() }, { merge: true });
-
-            const snap = await getDoc(commentsRef);
-            if (snap.exists()) setComments(snap.data()?.comments || []);
-        } catch (err) {
-            console.error("댓글 삭제 실패:", err);
-        }
-    };
-
-    // 답글
-    const handleReply = (commentId) => {
-        if (replyToCommentId === commentId) {
-            setReplyToCommentId(null);
-            setReplyContent("");
-        } else {
-            setReplyToCommentId(commentId);
-            setReplyContent("");
-        }
-    };
-
-    const handleCancelReply = () => {
-        setReplyToCommentId(null);
-        setReplyContent("");
-    };
-
-    const handleReplySubmit = async (e) => {
-        e.preventDefault();
-        if (!replyContent.trim() || !replyToCommentId) return;
-
-        const newReply = {
-            id: (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`),
-            author: currentUserProfile?.nickname || user?.displayName || "익명",
-            authorUid: user?.uid,
-            timestamp: new Date().toLocaleString('ko-KR', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit'
-            }).replace(/\./g, '-').replace(/,/g, '').replace(/\s/g, ' '),
-            content: replyContent.trim(),
-            replies: []
-        };
-
-        const optimistic = addReplyRecursively(comments, replyToCommentId, newReply);
-        setComments(optimistic);
-        setReplyToCommentId(null);
-        setReplyContent("");
-
-        try {
-            const commentsRef = doc(db, "comments", id);
-            await setDoc(commentsRef, { comments: optimistic, lastUpdated: new Date() }, { merge: true });
-
-            const originalCommentAuthor = findCommentAuthor(comments, replyToCommentId);
-            if (originalCommentAuthor && originalCommentAuthor !== user?.uid) {
-                await createReplyNotification(user?.uid, originalCommentAuthor, id, replyContent.trim());
-            }
-
-            const snap = await getDoc(commentsRef);
-            if (snap.exists()) {
-                const fresh = snap.data()?.comments || [];
-                setComments(fresh);
-            }
-        } catch (err) {
-            console.error("답글 저장 실패:", err);
-        }
-    };
-
-    // 게시물 신고 처리
+    // 게시물 신고 처리 
     const handleReport = async (targetId, targetUserId, reason) => {
         try {
             await submitReport(user.uid, targetUserId, targetId, 'post', reason);
@@ -558,7 +116,7 @@ function FeedDetail() {
         }
     };
 
-    // 댓글 신고 처리
+    // 댓글 신고 처리 
     const handleReportComment = async (targetId, targetUserId, reason) => {
         try {
             await submitReport(user.uid, targetUserId, targetId, 'comment', reason);
@@ -572,10 +130,27 @@ function FeedDetail() {
         }
     };
 
-    // 신고 모달 열기
+    // 신고 모달 열기(UI Logic)
     const openReportModal = (targetId, targetUserId, targetType = 'post') => {
         setReportTarget({ targetId, targetUserId, targetType });
         setIsReportModalOpen(true);
+    };
+
+
+    // 로딩 및 에러 처리
+    if (loading) return <div className="p-6">불러오는 중...</div>;
+    if (!data) return <div className="p-6 text-red-500">게시물을 찾을 수 없습니다.</div>;
+
+    const { outfit, memo, imageUrls, feeling } = data;
+    const categoryOrder = ["OUTER", "TOP", "BOTTOM", "SHOES", "ACC"]; // UI 상수
+
+    // Base64 이미지 처리 함수(Utility)
+    const getImageSrc = (imageUrl) => {
+        if (!imageUrl) return null;
+        if (imageUrl.startsWith('data:image/')) {
+            return imageUrl;
+        }
+        return imageUrl;
     };
 
     return (
@@ -679,7 +254,7 @@ function FeedDetail() {
                             onCommentSubmit={handleCommentSubmit}
                             onCommentDelete={handleCommentDelete}
                             onReply={handleReply}
-                            onClose={() => setIsCommentViewVisible(false)}
+                            onClose={handleCommentViewToggle} // Custom Hook 대신 UI 핸들러 사용
                             onRefresh={handleRefreshComments}
                             isRefreshing={isRefreshing}
                             replyToCommentId={replyToCommentId}

@@ -1,39 +1,19 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Calendar from "react-calendar";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { getDocs, collection, query, where, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import { useAuth } from "../contexts/AuthContext";
+import useNotiSidebar from "../hooks/useNotiSidebar"; 
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
-import useNotiSidebar from "../hooks/useNotiSidebar";
 import "react-calendar/dist/Calendar.css";
 import "../pages/Calendar.css";
 import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
-
-
-function formatDateLocal(date) {
-  return date.toLocaleDateString("sv-SE");
-}
-
-const years = Array.from({ length: 5 }, (_, i) => 2023 + i);
-const months = [
-  { label: "1월", value: 0 },
-  { label: "2월", value: 1 },
-  { label: "3월", value: 2 },
-  { label: "4월", value: 3 },
-  { label: "5월", value: 4 },
-  { label: "6월", value: 5 },
-  { label: "7월", value: 6 },
-  { label: "8월", value: 7 },
-  { label: "9월", value: 8 },
-  { label: "10월", value: 9 },
-  { label: "11월", value: 10 },
-  { label: "12월", value: 11 },
-];
+import { formatDateLocal } from "../utils/calendarUtils"; 
 
 function CalendarPage() {
   const navigate = useNavigate();
@@ -41,9 +21,9 @@ function CalendarPage() {
   const { uid } = useParams(); // URL에서 사용자 ID 가져오기
   const { user } = useAuth();
   const { profile } = useUserProfile();
+
+  // 1. Sidebar 및 Notification 상태/로직
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [targetUser, setTargetUser] = useState(null);
-  const [isPublic, setIsPublic] = useState(false);
   const {
     alarmOpen, setAlarmOpen,
     notifications, unreadCount,
@@ -58,6 +38,8 @@ function CalendarPage() {
   const [value, setValue] = useState(initialDate);
   const [calendarDate, setCalendarDate] = useState(initialDate);
   const [outfitMap, setOutfitMap] = useState({});
+  const [targetUser, setTargetUser] = useState(null);
+  const [isPublic, setIsPublic] = useState(false);
   const todayStr = formatDateLocal(new Date());
   // 비공개 경고 중복 방지
   const hasShownPrivateAlert = useRef(false);
@@ -276,7 +258,7 @@ function CalendarPage() {
   };
 
   // 📌 날짜 타일에 이모지 + 날짜 표시
-  const tileContent = ({ date, view }) => {
+  const tileContent = useCallback(({ date, view }) => {
     if (view !== "month") return null;
 
     const dateStr = formatDateLocal(date);
@@ -302,7 +284,7 @@ function CalendarPage() {
         {record && feelingEmoji && <div className="calendar-feeling">{feelingEmoji}</div>}
       </div>
     );
-  };
+  }, [outfitMap]); // outfitMap이 변경될 때만 재생성되도록 useCallback 사용
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -328,6 +310,7 @@ function CalendarPage() {
 
         {/* 가운데: 제목 (항상 중앙 고정) */}
         <h2 className="absolute left-1/2 -translate-x-1/2 font-bold text-lg">
+          {/* targetUser 정보는 훅에서 가져옴 */}
           {isOwnCalendar ? "My Calendar" : `${targetUser?.nickname || "사용자"}님의 Calendar`}
         </h2>
 
@@ -338,8 +321,8 @@ function CalendarPage() {
               <input
                 type="checkbox"
                 id="publicCalendar"
-                checked={isPublic}
-                onChange={handlePublicToggle}
+                checked={isPublic} // 훅에서 가져온 상태
+                onChange={handlePublicToggle} // 훅에서 가져온 핸들러
                 className="w-4 h-4"
               />
               <label htmlFor="publicCalendar" className="text-sm text-gray-700">
@@ -367,23 +350,22 @@ function CalendarPage() {
         </div>
       </div>
 
-
       {/* 캘린더 */}
       <div className="flex justify-center py-6 px-4">
         <div className="w-full max-w-[900px] mx-auto px-4">
           <Calendar
             className="w-full max-w-none m-4 p-6 rounded-lg border-2 border-gray-200 font-sans"
-            value={value}
-            onClickDay={handleDateClick}
-            tileContent={tileContent}
+            value={value} // 훅에서 가져온 상태
+            onClickDay={handleDateClick} // 훅에서 가져온 핸들러
+            tileContent={tileContent} // useCallback으로 감싸진 렌더링 함수
             formatDay={() => ""}
-            activeStartDate={calendarDate}
-            onActiveStartDateChange={handleActiveStartDateChange}
+            activeStartDate={calendarDate} // 훅에서 가져온 상태
+            onActiveStartDateChange={handleActiveStartDateChange} // 훅에서 가져온 핸들러
             tileClassName={({ date, view }) => {
               if (view !== "month") return "";
               const dateStr = formatDateLocal(date);
               const isOtherMonth = date.getMonth() !== calendarDate.getMonth();
-              const hasRecord = !!outfitMap[dateStr];
+              const hasRecord = !!outfitMap[dateStr]; // 훅에서 가져온 데이터 사용
 
               const baseClasses = "p-2 h-[100px] align-top relative text-sm";
               let addedClasses = "";
@@ -400,7 +382,7 @@ function CalendarPage() {
               if (hasRecord) {
                 return "font-bold " + baseClasses + addedClasses;
               }
-              if (dateStr === todayStr) {
+              if (dateStr === todayStr) { // 훅에서 가져온 오늘 날짜 문자열
                 return "bg-blue-100 text-black rounded-md hover:bg-blue-300 " + baseClasses + addedClasses;
               }
 
