@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase"; // 'firebase.js' 경로에 맞게 수정
-import { checkSubscription, toggleSubscription } from "../api/subscribe"; // 'api/subscribe.js' 경로에 맞게 수정
+import { db } from "../firebase"; 
+import { checkSubscription, toggleSubscription } from "../api/subscribe"; 
 
 /**
  * 팔로우(following) 및 팔로워(followers) 목록, 그리고 상호 구독 상태를 관리하는 커스텀 훅

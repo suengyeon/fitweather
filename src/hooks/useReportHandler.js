@@ -1,4 +1,3 @@
-// src/hooks/useReportHandler.js
 import { useState, useCallback } from "react";
 
 export const useReportHandler = (user, submitReportAPI) => {

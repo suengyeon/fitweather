@@ -7,8 +7,6 @@ export default function ApiSourceIndicator({ apiSource, showLabel = false }) {
 
   /**
    * API 소스에 따른 정보(라벨, 이모지, 스타일) 반환하는 헬퍼 함수
-   * @param {string} source - API 소스 코드
-   * @returns {Object|null} API 정보 객체
    */
   const getApiInfo = (source) => {
     switch (source) {
@@ -39,7 +37,7 @@ export default function ApiSourceIndicator({ apiSource, showLabel = false }) {
 
   // 컴포넌트 렌더링
   return (
-    // 스타일 적용 (배경색, 텍스트 색상)
+    // 스타일 적용(배경색, 텍스트 색상)
     <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${apiInfo.bgColor} ${apiInfo.color}`}>
       {/* 1. 이모지 아이콘 */}
       <span className="mr-1">{apiInfo.emoji}</span>

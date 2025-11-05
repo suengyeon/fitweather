@@ -455,46 +455,6 @@ function Home() {
           </div>
         </div>
       )}
-      {/* 좌측 하단 임시 피드 버튼(개발/테스트용) */}
-      <button
-        style={{
-          position: "fixed",
-          left: "24px",
-          bottom: "24px",
-          padding: "10px 18px",
-          borderRadius: "24px",
-          background: "#eee",
-          color: "#333",
-          border: "1px solid #ccc",
-          fontSize: "16px",
-          zIndex: 100,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
-        }}
-        onClick={() => navigate("/feed")}
-      >
-        피드로
-      </button>
-
-      {/* 우측 하단 임시 달력 버튼(개발/테스트용) */}
-      <button
-        style={{
-          position: "fixed",
-          right: "24px",
-          bottom: "24px",
-          padding: "10px 18px",
-          borderRadius: "24px",
-          background: "#4f46e5",
-          color: "white",
-          border: "none",
-          fontSize: "16px",
-          zIndex: 100,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-        }}
-        onClick={() => navigate("/calendar")}
-      >
-        📅 달력
-      </button>
-
     </div>
   );
 }
