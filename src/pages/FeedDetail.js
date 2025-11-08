@@ -249,8 +249,8 @@ function FeedDetail() {
                             setReplyContent={setReplyContent}
                             onReplySubmit={handleReplySubmit}
                             onCancelReply={handleCancelReply}
-                            // 훅의 openReportModal을 사용하여 댓글 신고 처리
-                            onReportComment={(commentId, authorUid) => openReportModal(commentId, authorUid, 'comment')} 
+                            // 훅의 openReportModal을 사용하여 댓글 신고 처리 (recordId 포함)
+                            onReportComment={(commentId, authorUid) => openReportModal(commentId, authorUid, 'comment', id)} 
                             user={user}
                             author={author} // 게시물 작성자 정보
                         />
@@ -379,7 +379,9 @@ function FeedDetail() {
                 isOpen={isReportModalOpen}
                 onClose={closeReportModal} // 훅에서 반환된 closeReportModal 사용
                 // 훅에서 반환된 핸들러 사용
-                onReport={reportTarget?.targetType === 'comment' ? handleReportComment : handleReport}
+                onReport={reportTarget?.targetType === 'comment' 
+                    ? (targetId, targetUserId, reason) => handleReportComment(targetId, targetUserId, reason, reportTarget?.recordId)
+                    : handleReport}
                 targetType={reportTarget?.targetType || 'post'}
                 targetId={reportTarget?.targetId}
                 targetUserId={reportTarget?.targetUserId}

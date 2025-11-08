@@ -9,22 +9,22 @@ export const useReportHandler = (user, submitReportAPI) => {
         setReportTarget(null);
     }, []);
 
-    const openReportModal = useCallback((targetId, targetUserId, targetType = 'post') => {
+    const openReportModal = useCallback((targetId, targetUserId, targetType = 'post', recordId = null) => {
         if (!user) {
             alert("로그인 후 신고할 수 있습니다.");
             return;
         }
-        setReportTarget({ targetId, targetUserId, targetType });
+        setReportTarget({ targetId, targetUserId, targetType, recordId });
         setIsReportModalOpen(true);
     }, [user]);
 
-    const processReport = useCallback(async (targetId, targetUserId, targetType, reason) => {
+    const processReport = useCallback(async (targetId, targetUserId, targetType, reason, recordId = null) => {
         if (!user || !user.uid) {
             alert("사용자 정보를 찾을 수 없습니다.");
             return;
         }
         try {
-            await submitReportAPI(user.uid, targetUserId, targetId, targetType, reason);
+            await submitReportAPI(user.uid, targetUserId, targetId, targetType, reason, recordId);
             alert(`${targetType === 'post' ? '게시물' : '댓글'} 신고가 접수되었습니다.`);
             closeReportModal();
         } catch (error) {
@@ -41,8 +41,8 @@ export const useReportHandler = (user, submitReportAPI) => {
         await processReport(targetId, targetUserId, 'post', reason);
     }, [processReport]);
 
-    const handleReportComment = useCallback(async (targetId, targetUserId, reason) => {
-        await processReport(targetId, targetUserId, 'comment', reason);
+    const handleReportComment = useCallback(async (targetId, targetUserId, reason, recordId) => {
+        await processReport(targetId, targetUserId, 'comment', reason, recordId);
     }, [processReport]);
 
     return {

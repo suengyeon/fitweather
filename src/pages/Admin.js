@@ -130,18 +130,36 @@ function Admin() {
 
         try {
             let recordData = null;
-            // records 컬렉션에서 데이터 조회 시도 (Base64 이미지 URL을 가져오기 위해)
+            let imageUrls = [];
+            
+            // records 컬렉션에서 데이터 조회 시도
             try {
                 const recordRef = doc(db, "records", recordId);
                 const recordSnap = await getDoc(recordRef);
                 if (recordSnap.exists()) {
                     recordData = recordSnap.data();
+                    imageUrls = recordData?.imageUrls || [];
                 }
             } catch (error) {
                 console.error("records 컬렉션에서 데이터 조회 실패:", error);
             }
+            
+            // outfits 컬렉션에서도 데이터 조회 시도 (records에 없을 경우)
+            if (!recordData) {
+                try {
+                    const outfitRef = doc(db, "outfits", recordId);
+                    const outfitSnap = await getDoc(outfitRef);
+                    if (outfitSnap.exists()) {
+                        recordData = outfitSnap.data();
+                        imageUrls = recordData?.imageUrls || [];
+                    }
+                } catch (error) {
+                    console.error("outfits 컬렉션에서 데이터 조회 실패:", error);
+                }
+            }
+            
             // deleteAnyRecord 호출 (outfits, records 컬렉션 모두 시도)
-            await deleteAnyRecord(recordId, recordData?.imageUrls || []);
+            await deleteAnyRecord(recordId, imageUrls);
             alert('기록이 삭제되었습니다.');
             
             // 신고 목록 새로고침
@@ -149,7 +167,7 @@ function Admin() {
             setReports(reportsData);
         } catch (error) {
             console.error('기록 삭제 실패:', error);
-            alert('기록 삭제에 실패했습니다.');
+            alert('기록 삭제에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
         }
     };
 
@@ -309,7 +327,7 @@ function Admin() {
                                                     {/* 댓글 삭제 버튼 */}
                                                     {report.targetType === 'comment' && !report.isDeleted && (
                                                         <button
-                                                            onClick={() => handleDeleteComment(report.targetId, report.targetUserId)}
+                                                            onClick={() => handleDeleteComment(report.targetId, report.recordId || report.targetId)}
                                                             className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
                                                         >
                                                             댓글 삭제
@@ -318,7 +336,7 @@ function Admin() {
                                                     {/* 기록 삭제 버튼 */}
                                                     {report.targetType === 'post' && !report.isDeleted && (
                                                         <button
-                                                            onClick={() => handleDeleteRecord(report.targetId)}
+                                                            onClick={() => handleDeleteRecord(report.recordId || report.targetId)}
                                                             className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                                                         >
                                                             기록 삭제

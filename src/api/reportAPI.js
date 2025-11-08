@@ -1,10 +1,11 @@
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase'; 
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { deleteNodeKeepChildren } from '../utils/commentUtils'; 
 
 /**
  * 사용자 신고 제출 후 Firestore에 저장(중복 신고 방지 로직 포함)
  */
-export async function submitReport(reporterId, targetUserId, targetId, targetType, reason) {
+export async function submitReport(reporterId, targetUserId, targetId, targetType, reason, recordId = null) {
   try {
     // 1. 중복 신고 체크 쿼리 : 동일한 신고자가 동일 대상을 신고했는지 확인
     const existingReportQuery = query(
@@ -32,6 +33,14 @@ export async function submitReport(reporterId, targetUserId, targetId, targetTyp
       targetContentStatus: 'active' // 신고 접수 시점에는 '활성' 상태로 가정
     };
 
+    // 댓글 신고인 경우 recordId(게시물 ID) 저장
+    if (targetType === 'comment' && recordId) {
+      reportData.recordId = recordId;
+    } else if (targetType === 'post') {
+      // 게시물 신고인 경우 targetId가 recordId
+      reportData.recordId = targetId;
+    }
+
     const docRef = await addDoc(collection(db, 'reports'), reportData);
     return docRef.id; // 새로 생성된 문서 ID 반환
   } catch (error) {
@@ -58,20 +67,50 @@ export async function getReports() {
     for (let report of reports) {
       if (report.targetType === 'comment') {
         try {
-          // 'comments' 컬렉션에서 댓글 문서 조회 시도
-          const commentsRef = doc(db, 'comments', report.targetId);
+          // recordId가 있으면 사용, 없으면 targetId 사용 (하위 호환성)
+          const recordId = report.recordId || report.targetId;
+          
+          // 'comments' 컬렉션에서 댓글이 속한 게시물의 comments 문서 조회
+          const commentsRef = doc(db, 'comments', recordId);
           const commentsSnap = await getDoc(commentsRef);
 
           if (commentsSnap.exists()) {
-            report.recordId = report.targetId; // 댓글 문서 ID가 게시물 ID를 겸하는 경우
+            const commentsData = commentsSnap.data();
+            const commentsArray = commentsData.comments || [];
+            
+            // 댓글 배열에서 해당 댓글 ID 찾기 (재귀적으로 검색)
+            const findCommentById = (comments, targetId) => {
+              for (const comment of comments) {
+                if (comment.id === targetId) {
+                  return true;
+                }
+                if (comment.replies && comment.replies.length > 0) {
+                  if (findCommentById(comment.replies, targetId)) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            };
+            
+            const commentExists = findCommentById(commentsArray, report.targetId);
+            
+            if (commentExists) {
+              report.recordId = recordId;
+              report.isDeleted = false;
+            } else {
+              // 댓글이 배열에 없음(삭제됨)
+              report.recordId = recordId;
+              report.isDeleted = true;
+            }
           } else {
-            // 댓글 문서 존재하지 않음(삭제됨)
-            report.recordId = report.targetId; 
-            report.isDeleted = true; // 삭제된 댓글 표시
+            // comments 문서가 존재하지 않음(삭제됨)
+            report.recordId = recordId;
+            report.isDeleted = true;
           }
         } catch (error) {
-          console.error('댓글 게시물 ID 찾기 실패:', error);
-          report.recordId = report.targetId;
+          console.error('댓글 삭제 상태 확인 실패:', error);
+          report.recordId = report.recordId || report.targetId;
           report.hasError = true; 
         }
       }
@@ -81,27 +120,31 @@ export async function getReports() {
     for (let report of reports) {
       if (report.targetType === 'post') {
         try {
+          // recordId가 있으면 사용, 없으면 targetId 사용 (하위 호환성)
+          const recordId = report.recordId || report.targetId;
           let recordSnap;
+          
           // 'records' 컬렉션에서 조회 시도
-          let recordRef = doc(db, 'records', report.targetId);
+          let recordRef = doc(db, 'records', recordId);
           recordSnap = await getDoc(recordRef);
 
           if (!recordSnap.exists()) {
             // 'records'에 없으면 'outfits' 컬렉션에서 조회 시도
-            recordRef = doc(db, 'outfits', report.targetId);
+            recordRef = doc(db, 'outfits', recordId);
             recordSnap = await getDoc(recordRef);
           }
 
           if (recordSnap.exists()) {
-            report.recordId = report.targetId;
+            report.recordId = recordId;
+            report.isDeleted = false;
           } else {
             // 두 컬렉션 모두 X(삭제된 게시물)
-            report.recordId = report.targetId;
+            report.recordId = recordId;
             report.isDeleted = true; // 삭제된 게시물 표시
           }
         } catch (error) {
           console.error('게시물 삭제 상태 확인 실패:', error);
-          report.recordId = report.targetId;
+          report.recordId = report.recordId || report.targetId;
           report.hasError = true; 
         }
       }
@@ -161,6 +204,7 @@ export async function unbanUser(userId) {
 
 /**
  * 특정 게시물에 포함된 특정 댓글 삭제(댓글이 게시물 문서 내 배열 형태로 저장되어 있다고 가정하고 구현)
+ * 재귀적으로 답글도 함께 삭제 처리
  */
 export async function deleteComment(commentId, recordId) {
   try {
@@ -170,16 +214,27 @@ export async function deleteComment(commentId, recordId) {
 
     if (commentsSnap.exists()) {
       const commentsData = commentsSnap.data();
-      // 댓글 배열에서 해당 commentId를 가진 댓글 필터링(삭제)
-      const updatedComments = commentsData.comments.filter(comment => comment.id !== commentId);
+      const commentsArray = commentsData.comments || [];
+      
+      // deleteNodeKeepChildren 함수를 사용하여 재귀적으로 댓글 삭제
+      const { list: updatedComments, changed } = deleteNodeKeepChildren(commentsArray, commentId);
+      
+      if (!changed) {
+        console.warn('댓글을 찾을 수 없습니다:', commentId);
+        return false;
+      }
 
       // 댓글 배열과 최종 업데이트 시각 업데이트
-      await updateDoc(commentsRef, {
+      await setDoc(commentsRef, {
         comments: updatedComments,
         lastUpdated: new Date()
-      });
+      }, { merge: true });
+      
+      return true;
+    } else {
+      console.warn('comments 문서가 존재하지 않습니다:', recordId);
+      return false;
     }
-    return true;
   } catch (error) {
     console.error('댓글 삭제 실패:', error);
     throw error;

@@ -51,22 +51,35 @@ export async function deleteAnyRecord(recordId, imageUrls = []) {
     // Base64 이미지 : Firestore 문서와 함께 자동 삭제
     console.log("📸 Base64 이미지는 Firestore 문서와 함께 자동 삭제됩니다.");
 
-    // Firestore에서 문서 삭제 시도(outfits 먼저 시도)
+    let deleted = false;
+    
+    // outfits 컬렉션에서 삭제 시도
     try {
-      // outfits 컬렉션 문서 참조 설정
       const outfitRef = doc(db, "outfits", recordId);
-      // outfits 문서 삭제 시도
       await deleteDoc(outfitRef);
       console.log("✅ Outfit record deleted successfully:", recordId);
+      deleted = true;
     } catch (outfitError) {
-      // outfits 삭제 실패 시 records 컬렉션에서 시도
-      console.log("outfits 컬렉션에서 삭제 실패, records 컬렉션에서 시도");
-      // records 컬렉션 문서 참조 설정
+      // outfits 컬렉션에 문서가 없거나 삭제 실패한 경우
+      console.log("outfits 컬렉션에서 삭제 실패 또는 문서 없음, records 컬렉션에서 시도");
+    }
+    
+    // records 컬렉션에서도 삭제 시도 (outfits에서 삭제했어도 records에도 있을 수 있음)
+    try {
       const recordRef = doc(db, "records", recordId);
-      // records 문서 삭제 실행
       await deleteDoc(recordRef);
       console.log("✅ Record deleted successfully:", recordId);
+      deleted = true;
+    } catch (recordError) {
+      // records 컬렉션에 문서가 없거나 삭제 실패한 경우
+      if (!deleted) {
+        // 둘 다 실패한 경우에만 에러 발생
+        console.error("🔥 Both outfits and records deletion failed");
+        throw new Error("기록을 삭제할 수 없습니다. outfits와 records 컬렉션 모두에서 문서를 찾을 수 없습니다.");
+      }
     }
+    
+    return true;
   } catch (error) {
     console.error("🔥 deleteAnyRecord error:", error);
     // 에러 발생 시 throw
