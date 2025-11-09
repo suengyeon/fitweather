@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase"; 
@@ -55,6 +55,7 @@ export function useFeedConfig(user) {
   const initialDateState = initializeDateState(isFromHome, location.state);
   const [dateState, setDateState] = useState(initialDateState);
   const [region, setRegion] = useState("");
+  const isInitialized = useRef(false); // 초기화 완료 여부 추적
 
   // 세션스토리지에서 지역 정보 가져오는 헬퍼 함수
   const getStoredRegion = useCallback(() => {
@@ -62,10 +63,15 @@ export function useFeedConfig(user) {
     return stored || "";
   }, []);
 
+  // user 변경 시 초기화 플래그 리셋
+  useEffect(() => {
+    isInitialized.current = false;
+  }, [user]);
+
   // 사용자 기본 지역 및 세션스토리지 복구/업데이트 로직(컴포넌트 마운트 시 및 user 변경 시)
   useEffect(() => {
     async function setupFeedConfiguration() {
-      if (!user) return;
+      if (!user || isInitialized.current) return; // 이미 초기화되었으면 실행하지 않음
 
       const storedRegion = getStoredRegion();
       const fromDetail = location.state?.fromDetail;
@@ -73,7 +79,7 @@ export function useFeedConfig(user) {
       const passedDate = location.state?.year && location.state?.month && location.state?.day;
 
       let newRegion = storedRegion;
-      let newDateState = dateState; 
+      let newDateState = initialDateState; 
 
       // 1. FeedDetail에서 돌아온 경우(전달받은 지역/날짜 정보 우선 사용)
       if (fromDetail) {
@@ -101,25 +107,27 @@ export function useFeedConfig(user) {
         }
       }
       
-      // 지역 상태 업데이트 및 세션스토리지 저장
-      if (newRegion && newRegion !== region) {
+      // 지역 상태 업데이트
+      if (newRegion) {
         setRegion(newRegion);
         sessionStorage.setItem('feedRegion', newRegion);
       }
       
-      // 날짜 상태 업데이트 및 세션스토리지 저장
-      if (newDateState !== dateState) {
+      // 날짜 상태 업데이트
+      if (passedDate) {
         setDateState(newDateState);
         const dateStr = `${newDateState.year}-${String(newDateState.month).padStart(2, '0')}-${String(newDateState.day).padStart(2, '0')}`;
         sessionStorage.setItem('feedDate', dateStr);
       }
+      
+      isInitialized.current = true; // 초기화 완료 표시
     }
     
     // user가 존재할 때만 설정 로직 실행
     if (user) {
         setupFeedConfiguration();
     }
-  }, [user, location.state, getStoredRegion, region, dateState]); 
+  }, [user, location.state, getStoredRegion]); // 초기화는 한 번만 실행 
 
   // 날짜 상태 변경 시 세션스토리지에 저장(dateState가 바뀔 때마다 실행)
   useEffect(() => {
