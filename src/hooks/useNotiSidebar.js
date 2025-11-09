@@ -16,7 +16,8 @@ export default function useNotiSidebar() {
   const navigate = useNavigate();
   const { user } = useAuth(); 
   const [alarmOpen, setAlarmOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]); 
+  const [notifications, setNotifications] = useState([]);
+  const [reportPopup, setReportPopup] = useState({ isOpen: false, notification: null }); 
 
   // --- Effect : 초기 알림 로드 ---
   useEffect(() => {
@@ -79,6 +80,12 @@ export default function useNotiSidebar() {
   const handleAlarmItemClick = async (n) => {
     await markOneRead(n.id); // 클릭 시 해당 알림 먼저 읽음 처리
 
+    // 신고 알림 처리 : 팝업 표시
+    if (n.type === "user_reported") {
+      setReportPopup({ isOpen: true, notification: n });
+      return; // 팝업만 표시하고 페이지 이동하지 않음
+    }
+
     // 댓글/답글 알림 처리 : 게시물이 본인 기록인지 확인하여 수정 페이지로 이동할지 결정
     if ((n.type === "comment_on_my_post" || n.type === "reply_to_my_comment") && n.link) {
       // 알림 링크에서 recordId 추출
@@ -111,6 +118,11 @@ export default function useNotiSidebar() {
     }
   };
 
+  // 신고 알림 팝업 닫기 핸들러
+  const closeReportPopup = () => {
+    setReportPopup({ isOpen: false, notification: null });
+  };
+
   // --- 메모이제이션 : 읽지 않은 알림 수 ---
   const unreadCount = useMemo(
     () => notifications.filter(n => !n.read).length,
@@ -128,5 +140,12 @@ export default function useNotiSidebar() {
     handleDeleteSelected,
     markOneRead,
     handleAlarmItemClick,
+    
+    // 신고 알림 팝업
+    reportNotificationPopup: {
+      isOpen: reportPopup.isOpen,
+      notification: reportPopup.notification,
+      onClose: closeReportPopup
+    }
   };
 }

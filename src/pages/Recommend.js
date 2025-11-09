@@ -34,6 +34,7 @@ function Recommend() {
     notifications, unreadCount,
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
+    reportNotificationPopup
   } = useNotiSidebar();
 
   // 체크박스 필터 상태
@@ -304,6 +305,7 @@ function Recommend() {
         onDeleteSelected={handleDeleteSelected}
         onMarkOneRead={markOneRead}
         onItemClick={handleAlarmItemClick}
+        reportNotificationPopup={reportNotificationPopup}
       />
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">

@@ -25,6 +25,7 @@ function MyPageUserInfo() {
     notifications, unreadCount,
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
+    reportNotificationPopup
   } = useNotiSidebar();
 
   const navigate = useNavigate();
@@ -63,6 +64,7 @@ function MyPageUserInfo() {
         onDeleteSelected={handleDeleteSelected}
         onMarkOneRead={markOneRead}
         onItemClick={handleAlarmItemClick}
+        reportNotificationPopup={reportNotificationPopup}
       />
 
       {/* 상단 네비게이션 */}

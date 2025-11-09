@@ -61,7 +61,7 @@ export async function createNotification(notificationData) {
     console.log(`✅ 알림 생성 완료: ${docRef.id}`, {
       type: notificationData.type,
       recipient: notificationData.recipient,
-      sender: notificationData.sender.name
+      sender: notificationData.sender.nickname || notificationData.sender.name || '알 수 없음'
     });
 
     return docRef.id;
@@ -323,6 +323,32 @@ export async function createReplyNotification(replierId, replierNickname, commen
     return await createNotification(notificationData);
   } catch (error) {
     console.error('❌ 답글 알림 생성 실패:', error);
+    throw error;
+  }
+}
+
+/**
+ * 신고 알림 생성 (사용자가 2번 신고받았을 때)
+ */
+export async function createReportNotification(targetUserId) {
+  try {
+    // 시스템 알림이므로 sender는 시스템으로 설정
+    const notificationData = {
+      recipient: targetUserId,
+      sender: {
+        id: 'system',
+        nickname: '시스템',
+        avatarUrl: null,
+        profilePictureUrl: null
+      },
+      type: NOTIFICATION_TYPES.USER_REPORTED,
+      link: '/',
+      message: '신고가 2회 누적되어 알림을 드립니다. 3회 누적 시 강제 탈퇴 조치 예정입니다.'
+    };
+
+    return await createNotification(notificationData);
+  } catch (error) {
+    console.error('❌ 신고 알림 생성 실패:', error);
     throw error;
   }
 }

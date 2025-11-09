@@ -1,6 +1,7 @@
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { deleteNodeKeepChildren } from '../utils/commentUtils'; 
+import { deleteNodeKeepChildren } from '../utils/commentUtils';
+import { createReportNotification } from '../services/notificationService'; 
 
 /**
  * 사용자 신고 제출 후 Firestore에 저장(중복 신고 방지 로직 포함)
@@ -42,6 +43,38 @@ export async function submitReport(reporterId, targetUserId, targetId, targetTyp
     }
 
     const docRef = await addDoc(collection(db, 'reports'), reportData);
+    
+    // 3. 신고 횟수 확인 및 알림 발송 (2회 신고 시 알림)
+    try {
+      // 해당 사용자(targetUserId)에 대한 모든 신고 조회
+      const userReportsQuery = query(
+        collection(db, 'reports'),
+        where('targetUserId', '==', targetUserId)
+      );
+      const userReportsSnapshot = await getDocs(userReportsQuery);
+      const reportCount = userReportsSnapshot.size;
+
+      // 신고 횟수가 정확히 2회인 경우 알림 발송
+      if (reportCount === 2) {
+        // 이미 알림이 발송되었는지 확인 (중복 알림 방지)
+        const notificationQuery = query(
+          collection(db, 'notifications'),
+          where('recipient', '==', targetUserId),
+          where('type', '==', 'user_reported')
+        );
+        const existingNotifications = await getDocs(notificationQuery);
+        
+        // 아직 알림이 발송되지 않은 경우에만 발송
+        if (existingNotifications.empty) {
+          await createReportNotification(targetUserId);
+          console.log(`✅ 신고 2회 누적 알림 발송: ${targetUserId}`);
+        }
+      }
+    } catch (notificationError) {
+      // 알림 발송 실패해도 신고는 성공한 것으로 처리
+      console.error('신고 알림 발송 실패 (신고는 정상 처리됨):', notificationError);
+    }
+
     return docRef.id; // 새로 생성된 문서 ID 반환
   } catch (error) {
     console.error('신고 제출 실패:', error);

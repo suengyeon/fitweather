@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon, UserPlusIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon, BellIcon, CheckIcon, TrashIcon, ClockIcon, UserPlusIcon, ChatBubbleLeftIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
 import { useNavigate } from "react-router-dom";
 
 // --- 유틸리티 함수 ---
@@ -20,6 +20,8 @@ const getNotificationTitle = (notification) => {
       return '내 기록에 댓글이 달렸어요';
     case 'reply_to_my_comment':
       return '내 댓글에 답글이 달렸어요';
+    case 'user_reported':
+      return '신고 알림';
     default:
       return notification.title || '새 알림';
   }
@@ -33,6 +35,8 @@ const getNotificationMessage = (notification) => {
     case 'comment_on_my_post':
     case 'reply_to_my_comment':
       return `답변: '${notification.message || '댓글 내용'}'`;
+    case 'user_reported':
+      return notification.message || '신고가 2회 누적되어 알림을 드립니다. 3회 누적 시 강제 탈퇴 조치 예정입니다.';
     default:
       return notification.message || '';
   }
@@ -46,6 +50,8 @@ const getNotificationIcon = (type) => {
     case 'comment_on_my_post':
     case 'reply_to_my_comment':
       return <ChatBubbleLeftIcon className="w-4 h-4 text-green-600" />;
+    case 'user_reported':
+      return <BellIcon className="w-4 h-4 text-red-600" />;
     default:
       return <BellIcon className="w-4 h-4 text-gray-700" />;
   }
@@ -92,7 +98,8 @@ export default function NotiSidebar({
     onItemClick,        
     onMarkAllRead,      
     onDeleteSelected,   
-    onMarkOneRead       
+    onMarkOneRead,
+    reportNotificationPopup = null  // 신고 알림 팝업 상태 및 콜백
 }) {
     const navigate = useNavigate();
     
@@ -109,18 +116,24 @@ export default function NotiSidebar({
     /**
      * 알림 항목 클릭 핸들러(읽음 처리, 페이지 이동, 사이드바 닫기)
      */
-    const handleItemClick = (n) => {
+    const handleItemClick = async (n) => {
         // 1. 삭제 모드에서는 클릭 이벤트 무시
         if (isDeleteMode) return;
         
-        // 2. 읽음 처리
-        onMarkOneRead?.(n.id);
+        // 2. 페이지 이동 (커스텀 핸들러가 있으면 읽음 처리도 함께 수행)
+        if (onItemClick) {
+            await onItemClick(n); // handleAlarmItemClick에서 읽음 처리 포함
+        } else {
+            // 커스텀 핸들러가 없으면 직접 읽음 처리 후 링크 이동
+            if (onMarkOneRead) {
+                await onMarkOneRead(n.id);
+            }
+            if (n.link) {
+                navigate(n.link); 
+            }
+        }
         
-        // 3. 페이지 이동 (커스텀 핸들러 > link 필드 > 무시)
-        if (onItemClick) onItemClick(n); 
-        else if (n.link) navigate(n.link); 
-        
-        // 4. 사이드바 닫기
+        // 3. 사이드바 닫기
         onClose?.(); 
     };
 
@@ -289,6 +302,16 @@ export default function NotiSidebar({
                     )}
                 </div>
             </aside >
+            
+            {/* 신고 알림 팝업 - NotiSidebar 밖에서 렌더링 */}
+            {reportNotificationPopup && reportNotificationPopup.isOpen && (
+                <div className="fixed inset-0 z-[200] pointer-events-none">
+                    <ReportNotificationModal
+                        notification={reportNotificationPopup.notification}
+                        onClose={reportNotificationPopup.onClose}
+                    />
+                </div>
+            )}
         </div >
     );
 }
@@ -302,6 +325,77 @@ function EmptyState() {
             <BellIcon className="w-10 h-10 mb-2" />
             <p className="font-semibold">새로운 알림이 없어요</p>
             <p className="text-sm">댓글, 구독 알림이 여기에 표시됩니다.</p>
+        </div>
+    );
+}
+
+/**
+ * 신고 알림 팝업 모달 컴포넌트
+ */
+function ReportNotificationModal({ notification, onClose }) {
+    if (!notification) return null;
+
+    const handleClose = (e) => {
+        e?.stopPropagation();
+        e?.preventDefault();
+        if (onClose) {
+            onClose();
+        }
+    };
+
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) {
+            handleClose(e);
+        }
+    };
+
+    return (
+        <div 
+            className="fixed inset-0 flex items-center justify-center pointer-events-auto"
+            onClick={handleBackdropClick}
+            style={{ zIndex: 10000 }}
+        >
+            {/* 배경 오버레이 */}
+            <div className="fixed inset-0 bg-black bg-opacity-50 pointer-events-auto" />
+            
+            {/* 모달 본체 */}
+            <div 
+                className="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+                style={{ zIndex: 10001 }}
+            >
+                {/* 헤더 */}
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-800">신고 알림</h3>
+                    </div>
+                </div>
+
+                {/* 구분선 */}
+                <div className="border-t border-gray-200 my-4" />
+
+                {/* 메시지 내용 */}
+                <div className="mb-6">
+                    <p className="text-gray-700 leading-relaxed">
+                        신고가 2회 누적되어 알림을 드립니다. 3회 누적 시 강제 탈퇴 조치 예정입니다.
+                    </p>
+                </div>
+
+                {/* 닫기 버튼 */}
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-colors font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                    >
+                        확인
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

@@ -29,6 +29,7 @@ function RecommendView() {
     notifications, unreadCount,
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
+    reportNotificationPopup
   } = useNotiSidebar();
 
   // 사용자 설정 필터 및 지역 상태
@@ -211,6 +212,7 @@ function RecommendView() {
         onDeleteSelected={handleDeleteSelected}
         onMarkOneRead={markOneRead}
         onItemClick={handleAlarmItemClick}
+        reportNotificationPopup={reportNotificationPopup}
       />
 
       {/* 상단 네비게이션 */}

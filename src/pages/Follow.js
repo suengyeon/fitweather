@@ -22,6 +22,7 @@ export default function Follow() {
     notifications, unreadCount,
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
+    reportNotificationPopup
   } = useNotiSidebar();
 
   const { user } = useAuth();
@@ -53,6 +54,7 @@ export default function Follow() {
         onDeleteSelected={handleDeleteSelected}
         onMarkOneRead={markOneRead}
         onItemClick={handleAlarmItemClick}
+        reportNotificationPopup={reportNotificationPopup}
       />
 
       {/* 상단 네비게이션 및 헤더 */}

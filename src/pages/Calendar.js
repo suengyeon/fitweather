@@ -33,6 +33,7 @@ function CalendarPage() {
     notifications, unreadCount,
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
+    reportNotificationPopup
   } = useNotiSidebar();
 
   // Record 페이지에서 전달받은 선택된 날짜 또는 오늘 날짜로 초기화
@@ -262,6 +263,7 @@ function CalendarPage() {
         onDeleteSelected={handleDeleteSelected}
         onMarkOneRead={markOneRead}
         onItemClick={handleAlarmItemClick}
+        reportNotificationPopup={reportNotificationPopup}
       />
 
       {/* 상단 네비게이션 */}

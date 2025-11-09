@@ -210,6 +210,7 @@ function Record() {
     notifications, unreadCount,
     markAllRead, handleDeleteSelected,
     markOneRead, handleAlarmItemClick,
+    reportNotificationPopup
   } = useNotiSidebar();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -240,6 +241,7 @@ function Record() {
         onDeleteSelected={handleDeleteSelected}
         onMarkOneRead={markOneRead}
         onItemClick={handleAlarmItemClick}
+        reportNotificationPopup={reportNotificationPopup}
       />
 
       {/* 상단 네비게이션 */}

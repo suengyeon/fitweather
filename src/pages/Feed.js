@@ -36,6 +36,7 @@ function Feed() {
     notifications, unreadCount,
     markAllRead, handleDeleteSelected, 
     markOneRead, handleAlarmItemClick,
+    reportNotificationPopup
   } = useNotiSidebar();
 
   // 날씨 정보 가져오기
@@ -80,6 +81,7 @@ function Feed() {
         onDeleteSelected={handleDeleteSelected}
         onMarkOneRead={markOneRead}
         onItemClick={handleAlarmItemClick}
+        reportNotificationPopup={reportNotificationPopup}
       />
 
       {/* 상단 네비게이션 */}
