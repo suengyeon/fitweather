@@ -4,9 +4,11 @@ export const outfitOptionTexts = {
         blazer: "블레이저", 
         coat: "코트", 
         cardigan: "가디건", 
-        hoodzipup: "후드집업", 
-        windbreak: "바람막이", 
-        padding: "패딩"
+        hoodzipup: "후드집업",
+        windbreak: "바람막이",
+        fleece: "후리스",
+        padding: "패딩",
+        vest: "조끼"
     },
     top: { 
         tshirt: "티셔츠", 

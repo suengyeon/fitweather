@@ -8,6 +8,8 @@ export const outfitOptions = {
         "blazer", 
         "windbreak", 
         "padding", 
+        "fleece",
+        "vest",
         "custom"
     ],
     top: [
