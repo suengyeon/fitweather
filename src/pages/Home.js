@@ -276,16 +276,12 @@ function Home() {
                       <div className="text-sm font-medium text-gray-800 mb-1">아우터</div>
                       <div className="flex flex-wrap gap-1">
                         {/* 아우터 아이템 목록 렌더링 */}
-                        {currentRecommendation.outfit?.outer?.length > 0 ? (
+                        {currentRecommendation.outfit?.outer?.length > 0 && (
                           currentRecommendation.outfit.outer.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
                               {item}
                             </div>
                           ))
-                        ) : (
-                          <div className="inline-block text-xs text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
-                            가디건
-                          </div>
                         )}
                       </div>
                     </div>
@@ -295,16 +291,12 @@ function Home() {
                       <div className="text-sm font-medium text-gray-800 mb-1">하의</div>
                       <div className="flex flex-wrap gap-1">
                         {/* 하의 아이템 목록 렌더링 */}
-                        {currentRecommendation.outfit.bottom?.length > 0 ? (
+                        {currentRecommendation.outfit?.bottom?.length > 0 && (
                           currentRecommendation.outfit.bottom.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
                               {item}
                             </div>
                           ))
-                        ) : (
-                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
-                            바지
-                          </div>
                         )}
                       </div>
                     </div>
@@ -314,16 +306,12 @@ function Home() {
                       <div className="text-sm font-medium text-gray-800 mb-1">상의</div>
                       <div className="flex flex-wrap gap-1">
                         {/* 상의 아이템 목록 렌더링 */}
-                        {currentRecommendation.outfit?.top?.length > 0 ? (
+                        {currentRecommendation.outfit?.top?.length > 0 && (
                           currentRecommendation.outfit.top.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
                               {item}
                             </div>
                           ))
-                        ) : (
-                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
-                            긴팔티
-                          </div>
                         )}
                       </div>
                     </div>
@@ -333,16 +321,12 @@ function Home() {
                       <div className="text-sm font-medium text-gray-800 mb-1">신발</div>
                       <div className="flex flex-wrap gap-1">
                         {/* 신발 아이템 목록 렌더링 */}
-                        {currentRecommendation.outfit?.shoes?.length > 0 ? (
+                        {currentRecommendation.outfit?.shoes?.length > 0 && (
                           currentRecommendation.outfit.shoes.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
                               {item}
                             </div>
                           ))
-                        ) : (
-                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
-                            스니커즈
-                          </div>
                         )}
                       </div>
                     </div>
@@ -352,16 +336,12 @@ function Home() {
                       <div className="text-sm font-medium text-gray-800 mb-1">악세서리</div>
                       <div className="flex flex-wrap gap-1">
                         {/* 악세서리 아이템 목록 렌더링 */}
-                        {currentRecommendation.outfit?.acc?.length > 0 ? (
+                        {currentRecommendation.outfit?.acc?.length > 0 && (
                           currentRecommendation.outfit.acc.map((item, index) => (
                             <div key={index} className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
                               {item}
                             </div>
                           ))
-                        ) : (
-                          <div className="inline-block text-xs text-gray-600 bg-blue-100 px-2 py-1 rounded">
-                            우산
-                          </div>
                         )}
                       </div>
                     </div>
