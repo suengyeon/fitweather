@@ -605,7 +605,7 @@ function Record() {
                       <option value="">선택하세요</option>
                       {Object.keys(outfitOptionTexts.outer).map(value => (
                         <option key={value} value={value}>
-                          {value === 'custom' ? '직접입력' : outfitOptionTexts.outer[value]}
+                          {outfitOptionTexts.outer[value]}
                         </option>
                       ))}
                     </select>
@@ -668,7 +668,7 @@ function Record() {
                       <option value="">선택하세요</option>
                       {Object.keys(outfitOptionTexts.top).map(value => (
                         <option key={value} value={value}>
-                          {value === 'custom' ? '직접입력' : outfitOptionTexts.top[value]}
+                          {outfitOptionTexts.top[value]}
                         </option>
                       ))}
                     </select>
@@ -730,7 +730,7 @@ function Record() {
                       <option value="">선택하세요</option>
                       {Object.keys(outfitOptionTexts.bottom).map(value => (
                         <option key={value} value={value}>
-                          {value === 'custom' ? '직접입력' : outfitOptionTexts.bottom[value]}
+                          {outfitOptionTexts.bottom[value]}
                         </option>
                       ))}
                     </select>
@@ -792,7 +792,7 @@ function Record() {
                       <option value="">선택하세요</option>
                       {Object.keys(outfitOptionTexts.shoes).map(value => (
                         <option key={value} value={value}>
-                          {value === 'custom' ? '직접입력' : outfitOptionTexts.shoes[value]}
+                          {outfitOptionTexts.shoes[value]}
                         </option>
                       ))}
                     </select>
@@ -854,7 +854,7 @@ function Record() {
                       <option value="">선택하세요</option>
                       {Object.keys(outfitOptionTexts.acc).map(value => (
                         <option key={value} value={value}>
-                          {value === 'custom' ? '직접입력' : outfitOptionTexts.acc[value]}
+                          {outfitOptionTexts.acc[value]}
                         </option>
                       ))}
                     </select>

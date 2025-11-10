@@ -6,7 +6,8 @@ export const outfitOptionTexts = {
         cardigan: "가디건", 
         hoodzipup: "후드집업", 
         windbreak: "바람막이", 
-        padding: "패딩"
+        padding: "패딩",
+        custom: "직접입력"
     },
     top: { 
         tshirt: "티셔츠", 
@@ -15,7 +16,8 @@ export const outfitOptionTexts = {
         sweater: "스웨터",
         sweatshirt: "맨투맨",
         hoodie: "후드티",
-        sleeveless: "민소매"
+        sleeveless: "민소매",
+        custom: "직접입력"
     },
     bottom: { 
         jeans: "데님팬츠", 
@@ -25,7 +27,8 @@ export const outfitOptionTexts = {
         skirt: "스커트", 
         dresses: "원피스",
         leggings: "레깅스",
-        training: "트레이닝 팬츠"
+        training: "트레이닝 팬츠",
+        custom: "직접입력"
     },
     shoes: { 
         sneakers: "스니커즈", 
@@ -35,13 +38,15 @@ export const outfitOptionTexts = {
         rainboots: "레인부츠",
         sandals: "샌들", 
         heels: "힐", 
-        loafers: "로퍼/플랫슈즈"
+        loafers: "로퍼/플랫슈즈",
+        custom: "직접입력"
     },
     acc: { 
         umbrella: "우산",
         sunglasses: "선글라스",
         muffler: "머플러",
         gloves: "장갑",
-        cap: "모자"
+        cap: "모자",
+        custom: "직접입력"
     }
 };

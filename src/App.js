@@ -6,6 +6,7 @@ import { saveOutfitRecord } from "./api/saveOutfitRecord";
 import { auth } from "./firebase";
 import Login from "./pages/Login";
 import ProfileSetup from "./pages/ProfileSetup";
+import ProfileEdit from "./pages/ProfileEdit";
 import Home from "./pages/Home";
 import MyPageUserInfo from "./pages/MyPageUserInfo";
 import Withdraw from "./pages/Withdraw";
@@ -133,6 +134,7 @@ function AppContent() {
   return (
     <Routes>
           <Route path="/mypage_userinfo" element={<MyPageUserInfo />} />
+          <Route path="/profile-edit" element={<ProfileEdit />} />
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/login" element={<Login />} />
           <Route path="/record" element={<Record />} />
