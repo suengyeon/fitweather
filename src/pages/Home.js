@@ -347,8 +347,24 @@ function Home() {
                     </div>
                   </div>
 
-                  {/* 착장 상세 보기 링크 */}
-                  <div className="flex justify-end mt-4">
+                  {/* 착장 상세 보기 링크 및 체감 이모지 */}
+                  <div className="flex justify-between items-center mt-4">
+                    {/* 체감 이모지 (왼쪽) */}
+                    {currentRecommendation.feeling && (
+                      <div className="text-2xl">
+                        {(() => {
+                          const feelingEmojiMap = {
+                            steam: "🥟", 
+                            hot: "🥵",   
+                            nice: "👍🏻",  
+                            cold: "💨",  
+                            ice: "🥶",   
+                          };
+                          return feelingEmojiMap[currentRecommendation.feeling] || currentRecommendation.feeling;
+                        })()}
+                      </div>
+                    )}
+                    {/* 착장 보기 버튼 (오른쪽) */}
                     <button
                       onClick={() => navigate(`/feed-detail/${currentRecommendation.id}`)}
                       className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
