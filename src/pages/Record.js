@@ -115,8 +115,16 @@ function Record() {
         // Firestore에서 저장된 과거 날씨 데이터 확인
         const savedData = await getPastWeatherData(dateStr, selectedRegion);
         if (savedData) {
-          if (dateStr === "2025-09-12") {
-            // 특정 날짜의 테스트 데이터 삭제 로직
+          // 기본값인지 확인 (온도 20, 습도 60, 강수량 0, 계절 초가을)
+          const isDefaultValue = 
+            savedData.avgTemp === "20" && 
+            savedData.avgRain === "0" && 
+            savedData.avgHumidity === "60" &&
+            savedData.season === "초가을";
+          
+          if (dateStr === "2025-09-12" || isDefaultValue) {
+            // 특정 날짜의 테스트 데이터 또는 기본값 삭제 로직
+            console.log("⚠️ 기본값 데이터 감지, 삭제 후 API 재시도:", dateStr);
             await deletePastWeatherData(dateStr, selectedRegion);
           } else {
             // 저장된 데이터 사용

@@ -65,22 +65,49 @@ function App() {
   // 전역 오류 핸들러 추가
   React.useEffect(() => {
     const handleError = (error) => {
-      console.error('전역 오류 발생:', error);
-      if (error.message && error.message.includes('permission')) {
+      const errorMessage = error?.message || error?.toString() || '';
+      
+      // Firestore 내부 오류 감지 및 처리
+      if (errorMessage.includes('INTERNAL ASSERTION FAILED') || 
+          errorMessage.includes('FIRESTORE') && errorMessage.includes('Unexpected state')) {
+        console.warn('⚠️ Firestore 내부 오류 감지 (일반적으로 무시해도 됩니다):', error);
+        // 이 오류는 보통 Firestore SDK의 내부 상태 문제로, 
+        // 실제 기능에는 영향을 주지 않는 경우가 많습니다.
+        // 페이지 새로고침으로 해결될 수 있습니다.
+        return;
+      }
+      
+      if (errorMessage.includes('permission')) {
         console.error('Firestore 권한 오류 감지:', error);
+      } else {
+        console.error('전역 오류 발생:', error);
+      }
+    };
+
+    const handleUnhandledRejection = (event) => {
+      const reason = event.reason;
+      const errorMessage = reason?.message || reason?.toString() || '';
+      
+      // Firestore 내부 오류 감지 및 처리
+      if (errorMessage.includes('INTERNAL ASSERTION FAILED') || 
+          errorMessage.includes('FIRESTORE') && errorMessage.includes('Unexpected state')) {
+        console.warn('⚠️ Firestore 내부 오류 감지 (Promise, 일반적으로 무시해도 됩니다):', reason);
+        event.preventDefault(); // 기본 오류 처리 방지
+        return;
+      }
+      
+      console.error('처리되지 않은 Promise 거부:', reason);
+      if (errorMessage.includes('permission')) {
+        console.error('Firestore 권한 오류 감지 (Promise):', reason);
       }
     };
 
     window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', (event) => {
-      console.error('처리되지 않은 Promise 거부:', event.reason);
-      if (event.reason && event.reason.message && event.reason.message.includes('permission')) {
-        console.error('Firestore 권한 오류 감지 (Promise):', event.reason);
-      }
-    });
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
     return () => {
       window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, []);
 

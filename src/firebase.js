@@ -1,7 +1,7 @@
 // src/firebase.js
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, enableIndexedDbPersistence } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 
@@ -16,14 +16,46 @@ const firebaseConfig = {
   measurementId: "G-YW36DSG53V"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase (중복 초기화 방지)
+let app;
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
 
 // Auth
 export const auth = getAuth(app);
 
-// Firestore
-export const db = getFirestore(app);
+// Firestore (안전한 초기화)
+let db;
+try {
+  db = getFirestore(app);
+  
+  // 오프라인 지속성 활성화 (선택사항, 에러 발생 시 무시)
+  if (typeof window !== 'undefined') {
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('Firestore 오프라인 지속성: 여러 탭이 열려있습니다.');
+      } else if (err.code === 'unimplemented') {
+        console.warn('Firestore 오프라인 지속성: 브라우저가 지원하지 않습니다.');
+      } else {
+        console.warn('Firestore 오프라인 지속성 설정 실패:', err);
+      }
+    });
+  }
+} catch (error) {
+  console.error('Firestore 초기화 오류:', error);
+  // 재시도 로직
+  try {
+    db = getFirestore(app);
+  } catch (retryError) {
+    console.error('Firestore 재초기화 실패:', retryError);
+    throw retryError;
+  }
+}
+
+export { db };
 
 // Storage
 export const storage = getStorage(app, "gs://fitweather-638a3.firebasestorage.app");

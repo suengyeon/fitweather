@@ -107,9 +107,57 @@ export function getDetailedSeasonByLunar(date = new Date()) {
 
 /**
  * 절기 기반 세부 계절 구분(기존 함수 호환성 유지)
+ * 현재 날씨에서 사용 - 날짜만 사용하여 계절 결정
  */
 export function getSeason(tavg, date = new Date()) {
   return getDetailedSeasonByLunar(date);
+}
+
+/**
+ * 과거 날씨용 계절 판단 함수
+ * 평균 온도와 24절기(음력 기준)를 함께 고려하여 계절 결정
+ */
+export function getSeasonForPastWeather(avgTemp, date = new Date()) {
+  // 먼저 24절기 기준으로 기본 계절 결정
+  const lunarSeason = getDetailedSeasonByLunar(date);
+  
+  // 평균 온도를 숫자로 변환
+  const temperature = parseFloat(avgTemp) || 0;
+  
+  // 온도 기반으로 계절 조정 (24절기 기준을 유지하되, 온도가 극단적일 때만 조정)
+  // 예: 겨울인데 온도가 25도 이상이면 늦봄/초여름으로 조정
+  // 예: 여름인데 온도가 5도 이하면 초겨울/겨울로 조정
+  
+  // 봄 계절 (초봄, 봄, 늦봄)
+  if (lunarSeason.includes("봄")) {
+    if (temperature >= 25) return "늦봄"; // 매우 따뜻하면 늦봄
+    if (temperature < 5) return "초봄"; // 추우면 초봄
+    return lunarSeason; // 기본값 유지
+  }
+  
+  // 여름 계절 (초여름, 여름, 늦여름)
+  if (lunarSeason.includes("여름")) {
+    if (temperature < 15) return "초여름"; // 시원하면 초여름
+    if (temperature >= 30) return "여름"; // 매우 더우면 여름
+    return lunarSeason; // 기본값 유지
+  }
+  
+  // 가을 계절 (초가을, 가을, 늦가을)
+  if (lunarSeason.includes("가을")) {
+    if (temperature >= 25) return "초가을"; // 따뜻하면 초가을
+    if (temperature < 5) return "늦가을"; // 추우면 늦가을
+    return lunarSeason; // 기본값 유지
+  }
+  
+  // 겨울 계절 (초겨울, 겨울, 늦겨울)
+  if (lunarSeason.includes("겨울")) {
+    if (temperature >= 15) return "초겨울"; // 따뜻하면 초겨울
+    if (temperature < -5) return "겨울"; // 매우 추우면 겨울
+    return lunarSeason; // 기본값 유지
+  }
+  
+  // 기본값: 24절기 기준 계절 반환
+  return lunarSeason;
 }
 
 /**
