@@ -84,29 +84,53 @@ export function useFeedData(region, order, style, dateState) {
   // FeedDetail 반응 변경 이벤트 처리(Thumbs Reaction 업데이트)
   useEffect(() => {
     const handleReactionUpdate = (event) => {
-      const { recordId, type, isActive } = event.detail;
+      const { recordId, type, thumbsUpCount, thumbsDownCount } = event.detail;
 
-      setOutfits(prevOutfits =>
-        prevOutfits.map(outfit => {
-          if (outfit.id === recordId) {
-            const updatedOutfit = { ...outfit };
-            
-            // 좋아요/싫어요 카운트 업데이트
-            if (type === 'thumbsUp') {
-              // isActive가 true면 +1, false면 -1
-              updatedOutfit.thumbsUpCount = (updatedOutfit.thumbsUpCount || 0) + (isActive ? 1 : -1);
-            } else if (type === 'thumbsDown') {
-              updatedOutfit.thumbsDownCount = (updatedOutfit.thumbsDownCount || 0) + (isActive ? 1 : -1);
+      // 이벤트에 카운트가 포함되어 있으면 직접 사용, 없으면 기존 방식으로 계산
+      if (thumbsUpCount !== undefined || thumbsDownCount !== undefined) {
+        setOutfits(prevOutfits =>
+          prevOutfits.map(outfit => {
+            if (outfit.id === recordId) {
+              const updatedOutfit = { ...outfit };
+              
+              // 이벤트에서 전달된 카운트로 직접 업데이트
+              if (thumbsUpCount !== undefined) {
+                updatedOutfit.thumbsUpCount = Math.max(0, thumbsUpCount);
+              }
+              if (thumbsDownCount !== undefined) {
+                updatedOutfit.thumbsDownCount = Math.max(0, thumbsDownCount);
+              }
+              
+              return updatedOutfit;
             }
-            
-            // 카운트 음수 방지(0 미만으로 내려가지 않도록)
-            updatedOutfit.thumbsUpCount = Math.max(0, updatedOutfit.thumbsUpCount);
-            updatedOutfit.thumbsDownCount = Math.max(0, updatedOutfit.thumbsDownCount);
-            return updatedOutfit;
-          }
-          return outfit;
-        })
-      );
+            return outfit;
+          })
+        );
+      } else {
+        // 기존 방식 (하위 호환성)
+        const { isActive } = event.detail;
+        setOutfits(prevOutfits =>
+          prevOutfits.map(outfit => {
+            if (outfit.id === recordId) {
+              const updatedOutfit = { ...outfit };
+              
+              // 좋아요/싫어요 카운트 업데이트
+              if (type === 'thumbsUp') {
+                // isActive가 true면 +1, false면 -1
+                updatedOutfit.thumbsUpCount = (updatedOutfit.thumbsUpCount || 0) + (isActive ? 1 : -1);
+              } else if (type === 'thumbsDown') {
+                updatedOutfit.thumbsDownCount = (updatedOutfit.thumbsDownCount || 0) + (isActive ? 1 : -1);
+              }
+              
+              // 카운트 음수 방지(0 미만으로 내려가지 않도록)
+              updatedOutfit.thumbsUpCount = Math.max(0, updatedOutfit.thumbsUpCount);
+              updatedOutfit.thumbsDownCount = Math.max(0, updatedOutfit.thumbsDownCount);
+              return updatedOutfit;
+            }
+            return outfit;
+          })
+        );
+      }
     };
 
     // 전역 이벤트 리스너 등록 및 해제(FeedDetail과의 통신용)

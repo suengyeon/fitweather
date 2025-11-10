@@ -17,21 +17,21 @@ export function sortByPopularity(records, options = {}) {
     const aDislikes = useThumbsCount ? (a.thumbsDownCount || 0) : (a.dislikes?.length || 0);
     const bDislikes = useThumbsCount ? (b.thumbsDownCount || 0) : (b.dislikes?.length || 0);
     
-    // 1차 : 좋아요 개수 내림차순(b - a)
+    // 1차 : 좋아요 개수 내림차순(b - a, 높은순)
     if (aLikes !== bLikes) {
       return bLikes - aLikes;
     }
     
-    // 2차 : 싫어요 개수 오름차순(a - b)
+    // 2차 : 싫어요 개수 오름차순(a - b, 적은게 우선)
     if (aDislikes !== bDislikes) {
       return aDislikes - bDislikes;
     }
     
-    // 3차 : 기록 시간 오름차순(a - b, 오래된 순)
+    // 3차 : 기록 시간 내림차순(b - a, 최신이 우선)
     // Firestore Timestamp 및 일반 Date/문자열 처리
     const aTime = new Date(a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt);
     const bTime = new Date(b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt);
-    return aTime.getTime() - bTime.getTime();
+    return bTime.getTime() - aTime.getTime();
   });
 }
 

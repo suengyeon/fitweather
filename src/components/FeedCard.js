@@ -146,11 +146,19 @@ function FeedCard({
       }
 
       // 상태 변경 이벤트 전송(좋아요 카운트 업데이트용)
+      // prevUp과 result를 사용하여 최종 카운트 계산
+      const finalThumbsUpCount = result === "up" 
+        ? (prevUp ? thumbsUpCount : thumbsUpCount + 1)  // 이전에 없었으면 +1
+        : (prevUp ? Math.max(0, thumbsUpCount - 1) : thumbsUpCount);  // 이전에 있었으면 -1
+      const finalThumbsDownCount = prevDown ? Math.max(0, thumbsDownCount - 1) : thumbsDownCount;
+      
       window.dispatchEvent(new CustomEvent('reactionUpdated', {
         detail: {
           recordId: record.id,
           type: 'thumbsUp',
-          isActive: result === "up"
+          isActive: result === "up",
+          thumbsUpCount: finalThumbsUpCount,
+          thumbsDownCount: finalThumbsDownCount
         }
       }));
     } catch (err) {
@@ -196,11 +204,19 @@ function FeedCard({
       }
 
       // 상태 변경 이벤트 전송
+      // prevDown과 result를 사용하여 최종 카운트 계산
+      const finalThumbsDownCount = result === "down"
+        ? (prevDown ? thumbsDownCount : thumbsDownCount + 1)  // 이전에 없었으면 +1
+        : (prevDown ? Math.max(0, thumbsDownCount - 1) : thumbsDownCount);  // 이전에 있었으면 -1
+      const finalThumbsUpCount = prevUp ? Math.max(0, thumbsUpCount - 1) : thumbsUpCount;
+      
       window.dispatchEvent(new CustomEvent('reactionUpdated', {
         detail: {
           recordId: record.id,
           type: 'thumbsDown',
-          isActive: result === "down"
+          isActive: result === "down",
+          thumbsUpCount: finalThumbsUpCount,
+          thumbsDownCount: finalThumbsDownCount
         }
       }));
     } catch (err) {
