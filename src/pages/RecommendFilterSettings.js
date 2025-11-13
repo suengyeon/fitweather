@@ -1,7 +1,7 @@
 import { useAuth } from "../contexts/AuthContext";
 import { db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import MenuSidebar from "../components/MenuSidebar";
@@ -56,43 +56,51 @@ function RecommendFilterSettings() {
   }, [weather]);
 
   // ±값 설정 컴포넌트
-  const RangeInput = ({ currentValue, onChange, label, unit, min = 0, max = 50, filterKey }) => {
-    // UI에서 사용자가 설정하는 현재 값으로부터의 마이너스/플러스 범위
-    const [minusRange, setMinusRange] = useState(5);
-    const [plusRange, setPlusRange] = useState(5);
+  const RangeInput = ({ currentValue, onChange, label, unit, min = 0, max = 100, filterKey, filterValue }) => {
+    const minusInputRef = useRef(null);
+    const plusInputRef = useRef(null);
 
-    // 기존 필터(filters) 값이 변경될 때, ±범위 UI 상태 업데이트
-    useEffect(() => {
-      if (currentValue !== null && currentValue !== undefined && filters[filterKey]) {
-        // 기존 필터의 min/max 값과 현재 날씨 값의 차이를 계산
-        const currentMinusRange = Math.abs(currentValue - filters[filterKey].min);
-        const currentPlusRange = Math.abs(filters[filterKey].max - currentValue);
+    // 부모의 'filters' 상태와 'currentValue'로부터 minus/plusRange를 직접 계산
+    let minusRange = 0;
+    let plusRange = 0;
 
-        // 차이값이 0보다 크면 그 값을 사용하고, 아니면 기본값 5 사용
-        setMinusRange(currentMinusRange > 0 ? currentMinusRange : 5);
-        setPlusRange(currentPlusRange > 0 ? currentPlusRange : 5);
-      }
-    }, [currentValue, filterKey, filters]);
+    if (currentValue !== null && currentValue !== undefined && filterValue) {
+      // filterValue는 부모 컴포넌트의 'filters[filterKey]' 값
+      minusRange = Math.max(0, Math.round(currentValue - filterValue.min));
+      plusRange = Math.max(0, Math.round(filterValue.max - currentValue));
+    }
 
     // 마이너스 범위 변경 핸들러
-    const handleMinusChange = (newMinusRange) => {
-      setMinusRange(newMinusRange);
+    const handleMinusChange = (newMinusRange, event) => {
       if (currentValue !== null && currentValue !== undefined) {
-        // 실제 필터링 범위 계산 및 상위 컴포넌트로 전달
+        // 'plusRange'는 이 함수 스코프 위에서 *계산된 값*을 사용
         const minValue = Math.max(0, currentValue - newMinusRange);
-        const maxValue = Math.min(100, currentValue + plusRange);
+        const maxValue = Math.min(100, currentValue + plusRange); // 'plusRange' 사용
         onChange({ min: minValue, max: maxValue });
+      }
+      // 스피너 클릭 시 focus 설정
+      if (event && event.target) {
+        setTimeout(() => {
+          event.target.focus();
+          event.target.select();
+        }, 0);
       }
     };
 
     // 플러스 범위 변경 핸들러
-    const handlePlusChange = (newPlusRange) => {
-      setPlusRange(newPlusRange);
+    const handlePlusChange = (newPlusRange, event) => {
       if (currentValue !== null && currentValue !== undefined) {
-        // 실제 필터링 범위 계산 및 상위 컴포넌트로 전달
-        const minValue = Math.max(0, currentValue - minusRange);
+        // 'minusRange'는 이 함수 스코프 위에서 *계산된 값*을 사용
+        const minValue = Math.max(0, currentValue - minusRange); // 'minusRange' 사용
         const maxValue = Math.min(100, currentValue + newPlusRange);
         onChange({ min: minValue, max: maxValue });
+      }
+      // 스피너 클릭 시 focus 설정
+      if (event && event.target) {
+        setTimeout(() => {
+          event.target.focus();
+          event.target.select();
+        }, 0);
       }
     };
 
@@ -109,39 +117,87 @@ function RecommendFilterSettings() {
           </div>
 
           <div className="space-y-4">
-            {/* - 범위 설정 입력 필드 */}
-            <div className="flex justify-center items-center gap-3">
-              <label className="text-sm text-gray-600">-</label>
+            {/* - 범위 설정 입력 필드 - 독립적인 레이아웃 */}
+            <div className="flex justify-center items-center gap-3" style={{ minHeight: '2.5rem' }}>
+              <label className="text-sm text-gray-600 w-4 text-center flex-shrink-0">-</label>
               <input
+                ref={minusInputRef}
                 type="number"
                 min={0}
                 max={max}
+                step="1"
                 value={minusRange}
-                onChange={(e) => handleMinusChange(parseInt(e.target.value) || 0)}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center"
+                onChange={(e) => handleMinusChange(parseInt(e.target.value) || 0, e)}
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => e.target.select()}
+                onMouseDown={(e) => {
+                  // 스피너 클릭 시에도 focus 설정
+                  const target = e.target;
+                  if (target === e.currentTarget || target.tagName === 'INPUT') {
+                    // 기본 동작 후 focus 설정
+                    setTimeout(() => {
+                      if (minusInputRef.current) {
+                        minusInputRef.current.focus();
+                        minusInputRef.current.select();
+                      }
+                    }, 0);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.target.blur();
+                  }
+                }}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center flex-shrink-0 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
                 placeholder="0"
+                autoComplete="off"
               />
-              <span className="text-sm font-medium text-gray-700">{unit}</span>
+              <span className="text-sm font-medium text-gray-700 w-8 text-left flex-shrink-0">{unit}</span>
             </div>
 
-            {/* + 범위 설정 입력 필드 */}
-            <div className="flex justify-center items-center gap-3">
-              <label className="text-sm text-gray-600">+</label>
+            {/* + 범위 설정 입력 필드 - 독립적인 레이아웃 */}
+            <div className="flex justify-center items-center gap-3" style={{ minHeight: '2.5rem' }}>
+              <label className="text-sm text-gray-600 w-4 text-center flex-shrink-0">+</label>
               <input
+                ref={plusInputRef}
                 type="number"
                 min={0}
                 max={max}
+                step="1"
                 value={plusRange}
-                onChange={(e) => handlePlusChange(parseInt(e.target.value) || 0)}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center"
+                onChange={(e) => handlePlusChange(parseInt(e.target.value) || 0, e)}
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => e.target.select()}
+                onMouseDown={(e) => {
+                  // 스피너 클릭 시에도 focus 설정
+                  const target = e.target;
+                  if (target === e.currentTarget || target.tagName === 'INPUT') {
+                    // 기본 동작 후 focus 설정
+                    setTimeout(() => {
+                      if (plusInputRef.current) {
+                        plusInputRef.current.focus();
+                        plusInputRef.current.select();
+                      }
+                    }, 0);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.target.blur();
+                  }
+                }}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center flex-shrink-0 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
                 placeholder="0"
+                autoComplete="off"
               />
-              <span className="text-sm font-medium text-gray-700">{unit}</span>
+              <span className="text-sm font-medium text-gray-700 w-8 text-left flex-shrink-0">{unit}</span>
             </div>
           </div>
 
-          {/* 최종 필터링 범위 표시 */}
-          <div className="mt-4 text-xs text-gray-500 bg-blue-50 p-3 rounded text-center">
+          {/* 최종 필터링 범위 표시 - 독립적인 레이아웃 */}
+          <div className="mt-4 text-xs text-gray-500 bg-blue-50 p-3 rounded text-center min-h-[3rem] flex items-center justify-center" style={{ minHeight: '3rem', fontVariantNumeric: 'tabular-nums' }}>
             {currentValue !== null && currentValue !== undefined ?
               `필터링 범위 : ${Math.max(0, currentValue - minusRange)}${unit} ~ ${Math.min(100, currentValue + plusRange)}${unit}` :
               '날씨 정보를 불러오는 중...'
@@ -215,7 +271,7 @@ function RecommendFilterSettings() {
                 {/* 온도 필터 설정 */}
                 <div className="w-full md:w-[30%]">
                   <RangeInput
-                    currentValue={todayWeather?.temp ? parseInt(todayWeather.temp) : null}
+                    currentValue={todayWeather?.temp !== null && todayWeather?.temp !== undefined ? parseInt(todayWeather.temp) : null}
                     onChange={(newRange) => setFilters(prev => ({
                       ...prev,
                       tempRange: newRange
@@ -223,14 +279,15 @@ function RecommendFilterSettings() {
                     label="온도"
                     unit="°C"
                     min={0}
-                    max={20}
+                    max={100}
                     filterKey="tempRange"
+                    filterValue={filters.tempRange}
                   />
                 </div>
                 {/* 강수량 필터 설정 */}
                 <div className="w-full md:w-[30%]">
                   <RangeInput
-                    currentValue={todayWeather?.rain ? parseInt(todayWeather.rain) : null}
+                    currentValue={todayWeather?.rain !== null && todayWeather?.rain !== undefined ? parseInt(todayWeather.rain) : null}
                     onChange={(newRange) => setFilters(prev => ({
                       ...prev,
                       rainRange: newRange
@@ -238,14 +295,15 @@ function RecommendFilterSettings() {
                     label="강수량"
                     unit="mm"
                     min={0}
-                    max={30}
+                    max={100}
                     filterKey="rainRange"
+                    filterValue={filters.rainRange}
                   />
                 </div>
                 {/* 습도 필터 설정 */}
                 <div className="w-full md:w-[30%]">
                   <RangeInput
-                    currentValue={todayWeather?.humidity ? parseInt(todayWeather.humidity) : null}
+                    currentValue={todayWeather?.humidity !== null && todayWeather?.humidity !== undefined ? parseInt(todayWeather.humidity) : null}
                     onChange={(newRange) => setFilters(prev => ({
                       ...prev,
                       humidityRange: newRange
@@ -253,8 +311,9 @@ function RecommendFilterSettings() {
                     label="습도"
                     unit="%"
                     min={0}
-                    max={30}
+                    max={100}
                     filterKey="humidityRange"
+                    filterValue={filters.humidityRange}
                   />
                 </div>
               </div>

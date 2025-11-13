@@ -88,10 +88,14 @@ export const fetchOpenWeatherMapPastWeather = async (date, region) => {
 
     // 온도, 습도 평균 계산 및 강수량 최대값 추출
     const temps = dayData.map(item => item.main.temp);
+    const tempMins = dayData.map(item => item.main.temp_min);
+    const tempMaxs = dayData.map(item => item.main.temp_max);
     const rains = dayData.map(item => (item.rain?.['3h'] || 0) / 3); // 3시간 강수량을 시간당으로 변환
     const humidities = dayData.map(item => item.main.humidity);
     
     const avgTemp = (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1);
+    const minTemp = tempMins.length > 0 ? Math.min(...tempMins).toFixed(1) : avgTemp;
+    const maxTemp = tempMaxs.length > 0 ? Math.max(...tempMaxs).toFixed(1) : avgTemp;
     const avgRain = rains.length > 0 ? Math.max(...rains).toFixed(1) : "0"; // 강수량은 최대값 사용
     const avgHumidity = (humidities.reduce((a, b) => a + b, 0) / humidities.length).toFixed(1);
 
@@ -111,6 +115,8 @@ export const fetchOpenWeatherMapPastWeather = async (date, region) => {
 
     const weatherData = {
       avgTemp,
+      minTemp,
+      maxTemp,
       avgRain,
       avgHumidity,
       sky,
@@ -170,6 +176,8 @@ export const fetchWeatherAPIPastWeather = async (date, region) => {
 
     // 일 평균 데이터 사용 (강수량은 최대값)
     const avgTemp = dayData.avgtemp_c?.toFixed(1) || dayData.maxtemp_c?.toFixed(1) || "0";
+    const minTemp = dayData.mintemp_c?.toFixed(1) || avgTemp;
+    const maxTemp = dayData.maxtemp_c?.toFixed(1) || avgTemp;
     // 강수량은 totalprecip_mm (일 총 강수량) 사용 - 이미 최대값 개념
     const avgRain = dayData.totalprecip_mm?.toFixed(1) || "0";
     const avgHumidity = hourData.length > 0 
@@ -183,6 +191,8 @@ export const fetchWeatherAPIPastWeather = async (date, region) => {
 
     const weatherData = {
       avgTemp,
+      minTemp,
+      maxTemp,
       avgRain,
       avgHumidity,
       sky,
@@ -235,6 +245,8 @@ export const fetchVisualCrossingPastWeather = async (date, region) => {
 
     // 일 평균 데이터 사용
     const avgTemp = dayData.temp?.toFixed(1) || "0";
+    const minTemp = dayData.tempmin?.toFixed(1) || dayData.temp?.toFixed(1) || avgTemp;
+    const maxTemp = dayData.tempmax?.toFixed(1) || dayData.temp?.toFixed(1) || avgTemp;
     const avgRain = dayData.precip?.toFixed(1) || "0";
     const avgHumidity = dayData.humidity?.toFixed(1) || "0";
 
@@ -245,6 +257,8 @@ export const fetchVisualCrossingPastWeather = async (date, region) => {
 
     const weatherData = {
       avgTemp,
+      minTemp,
+      maxTemp,
       avgRain,
       avgHumidity,
       sky,

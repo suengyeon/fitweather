@@ -81,6 +81,9 @@ function FeedDetail() {
         if (location.state?.fromCalendar && location.state?.targetUserId) {
             // 캘린더에서 온 경우 해당 사용자의 캘린더로 돌아가기
             navigate(`/calendar/${location.state.targetUserId}`);
+        } else if (location.state?.fromRecommendView) {
+            // recommend-view에서 온 경우 recommend-view로 복귀
+            navigate("/recommend-view");
         } else if (location.state?.fromRecommend) {
             // 추천 피드에서 온 경우 필터 상태를 유지하며 추천 피드로 복귀
             navigate("/recommend", {
@@ -191,7 +194,23 @@ function FeedDetail() {
                                 <div className="flex items-center w-60">
                                     <span className="w-28 text-base font-semibold text-left">온도</span>
                                     <div className="ml-auto w-32 h-9 px-2 py-1 border rounded text-sm text-center flex items-center justify-center bg-white">
-                                        <span className="text-gray-800">{data?.weather?.temp ?? data?.temp ?? '-'}°C</span>
+                                        <span className="text-gray-800">
+                                            {(() => {
+                                                const recordDate = data?.date;
+                                                const isPastRecord = recordDate && (() => {
+                                                    const today = new Date();
+                                                    today.setHours(0, 0, 0, 0);
+                                                    const recordDateObj = new Date(recordDate);
+                                                    recordDateObj.setHours(0, 0, 0, 0);
+                                                    return recordDateObj < today;
+                                                })();
+                                                
+                                                if (isPastRecord && data?.weather?.minTemp && data?.weather?.maxTemp) {
+                                                    return `${data.weather.minTemp}~${data.weather.maxTemp}°C`;
+                                                }
+                                                return `${data?.weather?.temp ?? data?.temp ?? '-'}°C`;
+                                            })()}
+                                        </span>
                                     </div>
                                 </div>
                                 

@@ -220,6 +220,8 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
                 date: dateStr,
                 weather: {
                     temp: weather.temp ?? null,
+                    minTemp: weather.minTemp ?? null,
+                    maxTemp: weather.maxTemp ?? null,
                     rain: weather.rain ?? null,
                     humidity: weather.humidity ?? null,
                     icon: weather.icon ?? null,

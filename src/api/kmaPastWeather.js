@@ -129,15 +129,49 @@ export const fetchKmaPastWeather = async (date, region) => {
     if (data.response?.body?.items?.item) {
       const item = data.response.body.items.item;
       
+      // API 응답 구조 확인 (디버깅용)
+      console.log("🔍 기상청 API 응답 항목:", Object.keys(item));
+      console.log("🔍 기상청 API 온도 관련 필드:", {
+        avgTa: item.avgTa,
+        minTa: item.minTa,
+        maxTa: item.maxTa,
+        ta: item.ta
+      });
+      
+      // 최저/최고 기온 확인
+      // 기상청 API 필드명: minTa (최저기온), maxTa (최고기온), avgTa (평균기온)
+      const avgTemp = item.avgTa || item.ta;
+      let minTemp = item.minTa;
+      let maxTemp = item.maxTa;
+      
+      // minTa, maxTa가 있으면 사용, 없으면 null
+      if (minTemp && minTemp !== '0') {
+        minTemp = parseFloat(minTemp).toFixed(1);
+      } else {
+        minTemp = null;
+      }
+      
+      if (maxTemp && maxTemp !== '0') {
+        maxTemp = parseFloat(maxTemp).toFixed(1);
+      } else {
+        maxTemp = null;
+      }
+      
+      if (!minTemp || !maxTemp) {
+        console.log("⚠️ 기상청 API에서 최저/최고 기온 필드 없음:", { minTa: item.minTa, maxTa: item.maxTa });
+      }
+      
       // 필요한 관측 데이터를 구조화하고, 유틸리티 함수로 sky, pty, iconCode, season 추정
       const weatherData = {
-        avgTemp: item.avgTa || item.ta, // 평균기온 또는 기온
+        avgTemp: avgTemp, // 평균기온 또는 기온
+        minTemp: minTemp, // 최저기온
+        maxTemp: maxTemp, // 최고기온
         avgRain: item.sumRn || '0',     // 일강수량
         avgHumidity: item.avgRhm || item.rhm, // 평균상대습도 또는 상대습도
-        sky: getSkyFromWeather(item.avgTa, item.sumRn), // 하늘 상태 추정
+        sky: getSkyFromWeather(avgTemp, item.sumRn), // 하늘 상태 추정
         pty: getPtyFromRain(item.sumRn), // 강수 형태 추정
-        iconCode: getIconFromData(item.avgTa, item.sumRn), // 아이콘 코드 결정
-        season: getSeasonForPastWeather(item.avgTa || item.ta, new Date(date)) // 평균 온도와 24절기(음력 기준) 기반으로 계절 결정
+        iconCode: getIconFromData(avgTemp, item.sumRn), // 아이콘 코드 결정
+        season: getSeasonForPastWeather(avgTemp, new Date(date)) // 평균 온도와 24절기(음력 기준) 기반으로 계절 결정
       };
       
       console.log("✅ 기상청 과거 날씨 데이터 추출 완료:", weatherData);

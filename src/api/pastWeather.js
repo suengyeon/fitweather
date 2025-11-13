@@ -22,6 +22,8 @@ export const savePastWeatherData = async (date, region, weatherData) => {
       date: date,
       region: region,
       avgTemp: weatherData.avgTemp,
+      minTemp: weatherData.minTemp || null,
+      maxTemp: weatherData.maxTemp || null,
       avgRain: weatherData.avgRain,
       avgHumidity: weatherData.avgHumidity,
       sky: weatherData.sky,
@@ -106,37 +108,37 @@ export const fetchAndSavePastWeather = async (date, region) => {
       }
     }
     
-    // 2. 기상청 과거 관측 데이터 API(fetchKmaPastWeather)에서 데이터 가져오기 시도
-    console.log("🌧️ [1/6] 기상청 과거 관측 API에서 데이터 가져오기:", date, region);
-    let pastWeatherData = await fetchKmaPastWeather(date, region);
+    // 2. WeatherAPI 시도 (최고/최저 온도를 정확히 제공하므로 우선 사용)
+    console.log("🌤️ [1/6] WeatherAPI 과거 날씨 API 시도:", date, region);
+    let pastWeatherData = await fetchWeatherAPIPastWeather(date, region);
+    if (pastWeatherData) {
+      console.log("✅ [1/6] WeatherAPI 과거 날씨 API 성공:", pastWeatherData);
+      await savePastWeatherData(date, region, pastWeatherData);
+      return pastWeatherData;
+    }
+    console.log("❌ [1/6] WeatherAPI 실패");
+    
+    // 3. 기상청 과거 관측 데이터 API(fetchKmaPastWeather)에서 데이터 가져오기 시도
+    console.log("🌧️ [2/6] 기상청 과거 관측 API에서 데이터 가져오기:", date, region);
+    pastWeatherData = await fetchKmaPastWeather(date, region);
     
     if (pastWeatherData) {
-      console.log("✅ [1/6] 기상청 과거 관측 API 성공:", pastWeatherData);
+      console.log("✅ [2/6] 기상청 과거 관측 API 성공:", pastWeatherData);
       // 가져온 데이터 저장 및 반환
       await savePastWeatherData(date, region, pastWeatherData);
       return pastWeatherData;
     }
-    console.log("❌ [1/6] 기상청 과거 관측 API 실패");
+    console.log("❌ [2/6] 기상청 과거 관측 API 실패");
     
-    // 3. OpenWeatherMap API 시도 (과거 날짜는 건너뜀)
-    console.log("🌤️ [2/6] OpenWeatherMap 과거 날씨 API 시도:", date, region);
+    // 4. OpenWeatherMap API 시도 (과거 날짜는 건너뜀)
+    console.log("🌤️ [3/6] OpenWeatherMap 과거 날씨 API 시도:", date, region);
     pastWeatherData = await fetchOpenWeatherMapPastWeather(date, region);
     if (pastWeatherData) {
-      console.log("✅ [2/6] OpenWeatherMap 과거 날씨 API 성공:", pastWeatherData);
+      console.log("✅ [3/6] OpenWeatherMap 과거 날씨 API 성공:", pastWeatherData);
       await savePastWeatherData(date, region, pastWeatherData);
       return pastWeatherData;
     }
-    console.log("❌ [2/6] OpenWeatherMap API 실패 또는 과거 날짜로 건너뜀");
-    
-    // 4. WeatherAPI 시도
-    console.log("🌤️ [3/6] WeatherAPI 과거 날씨 API 시도:", date, region);
-    pastWeatherData = await fetchWeatherAPIPastWeather(date, region);
-    if (pastWeatherData) {
-      console.log("✅ [3/6] WeatherAPI 과거 날씨 API 성공:", pastWeatherData);
-      await savePastWeatherData(date, region, pastWeatherData);
-      return pastWeatherData;
-    }
-    console.log("❌ [3/6] WeatherAPI 실패");
+    console.log("❌ [3/6] OpenWeatherMap API 실패 또는 과거 날짜로 건너뜀");
     
     // 5. Visual Crossing API 시도
     console.log("🌤️ [4/6] Visual Crossing 과거 날씨 API 시도:", date, region);
@@ -167,11 +169,11 @@ export const fetchAndSavePastWeather = async (date, region) => {
       // 날짜별 기본 날씨 데이터 설정(예시 데이터)
       let defaultWeatherData;
       if (date === "2025-09-12") {
-        defaultWeatherData = { avgTemp: "19", avgRain: "45", avgHumidity: "88", sky: "4", pty: "1", iconCode: "rain", season: "초가을" };
+        defaultWeatherData = { avgTemp: "19", minTemp: "15", maxTemp: "23", avgRain: "45", avgHumidity: "88", sky: "4", pty: "1", iconCode: "rain", season: "초가을" };
       } else if (date === "2025-09-11") {
-        defaultWeatherData = { avgTemp: "22", avgRain: "0", avgHumidity: "65", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
+        defaultWeatherData = { avgTemp: "22", minTemp: "18", maxTemp: "26", avgRain: "0", avgHumidity: "65", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
       } else {
-        defaultWeatherData = { avgTemp: "20", avgRain: "0", avgHumidity: "60", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
+        defaultWeatherData = { avgTemp: "20", minTemp: "16", maxTemp: "24", avgRain: "0", avgHumidity: "60", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
       }
       
       // 기본값은 저장하지 않고 바로 반환 (캐싱 방지)
@@ -190,7 +192,7 @@ export const fetchAndSavePastWeather = async (date, region) => {
     if (dayData.length === 0) {
       console.log("해당 날짜의 데이터가 없음:", targetDate);
       // 데이터가 없을 때 기본값 사용 및 저장
-      const defaultWeatherData = { avgTemp: "20", avgRain: "0", avgHumidity: "60", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
+      const defaultWeatherData = { avgTemp: "20", minTemp: "16", maxTemp: "24", avgRain: "0", avgHumidity: "60", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
       await savePastWeatherData(date, region, defaultWeatherData);
       return defaultWeatherData;
     }
@@ -202,6 +204,8 @@ export const fetchAndSavePastWeather = async (date, region) => {
     
     // 일 평균 기온/습도 계산 및 최대 강수량 추출
     const avgTemp = tempData.length > 0 ? (tempData.reduce((a, b) => a + b, 0) / tempData.length).toFixed(1) : "0";
+    const minTemp = tempData.length > 0 ? Math.min(...tempData).toFixed(1) : avgTemp;
+    const maxTemp = tempData.length > 0 ? Math.max(...tempData).toFixed(1) : avgTemp;
     const validRainData = rainData.filter(val => !isNaN(val) && val >= 0);
     // 강수량은 예보에서 '가장 큰 값'을 일 강수량으로 간주
     const avgRain = validRainData.length > 0 ? Math.max(...validRainData).toFixed(1) : "0";
@@ -226,7 +230,7 @@ export const fetchAndSavePastWeather = async (date, region) => {
     const season = getSeasonForPastWeather(avgTemp, new Date(date)); // 평균 온도와 24절기(음력 기준) 기반으로 계절 결정
     
     const weatherData = {
-      avgTemp: avgTemp, avgRain: avgRain, avgHumidity: avgHumidity, sky: sky, pty: pty, iconCode: iconCode, season: season
+      avgTemp: avgTemp, minTemp: minTemp, maxTemp: maxTemp, avgRain: avgRain, avgHumidity: avgHumidity, sky: sky, pty: pty, iconCode: iconCode, season: season
     };
     
     // 7. Firestore에 최종 데이터 저장 및 반환
@@ -239,6 +243,8 @@ export const fetchAndSavePastWeather = async (date, region) => {
     console.log("⚠️ 모든 API 실패, 기본값 사용");
     const defaultWeatherData = { 
       avgTemp: "20", 
+      minTemp: "16",
+      maxTemp: "24",
       avgRain: "0", 
       avgHumidity: "60", 
       sky: "1", 

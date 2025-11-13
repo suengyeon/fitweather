@@ -249,12 +249,15 @@ function FeedCard({
       navigate("/record", { state: { existingRecord: record } });
     } else {
       // 다른 사람 기록 : 상세 피드 페이지로 이동(필터링 정보 함께 전달)
-      const isFromRecommend = window.location.pathname.includes("/recommend");
+      const currentPath = window.location.pathname;
+      const isFromRecommendView = currentPath.includes("/recommend-view");
+      const isFromRecommend = currentPath.includes("/recommend");
       navigate(`/feed-detail/${record.id}`, {
         state: {
           fromCard: true,
           fromFeed: !isFromRecommend,
-          fromRecommend: isFromRecommend,
+          fromRecommend: isFromRecommend && !isFromRecommendView,
+          fromRecommendView: isFromRecommendView,
           region: record.region,
           date: selectedDate,
           year: selectedYear,

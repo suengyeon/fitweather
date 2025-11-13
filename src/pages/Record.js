@@ -10,8 +10,7 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import useNotiSidebar from "../hooks/useNotiSidebar";
-import { getPastWeatherData, fetchAndSavePastWeather, deletePastWeatherData, savePastWeatherData } from "../api/pastWeather";
-import { fetchKmaPastWeather } from "../api/kmaPastWeather";
+import { getPastWeatherData, fetchAndSavePastWeather, deletePastWeatherData } from "../api/pastWeather";
 import CommentSection from "../components/CommentSection";
 import { getWeatherEmoji, feelingToEmoji } from "../utils/weatherUtils";
 import { regionMap } from "../constants/regionData";
@@ -129,37 +128,44 @@ function Record() {
           } else {
             // 저장된 데이터 사용
             setPastWeather({
-              temp: savedData.avgTemp, rain: savedData.avgRain, humidity: savedData.avgHumidity,
-              icon: savedData.iconCode, season: savedData.season, sky: savedData.sky, pty: savedData.pty
+              temp: savedData.avgTemp, 
+              minTemp: savedData.minTemp || null,
+              maxTemp: savedData.maxTemp || null,
+              rain: savedData.avgRain, 
+              humidity: savedData.avgHumidity,
+              icon: savedData.iconCode, 
+              season: savedData.season, 
+              sky: savedData.sky, 
+              pty: savedData.pty
             });
             setPastWeatherLoading(false);
             return;
           }
         }
 
-        // KMA API에서 과거 날씨 가져오기 및 저장
-        let pastData = await fetchKmaPastWeather(dateStr, selectedRegion);
-        if (pastData) {
-          await savePastWeatherData(dateStr, selectedRegion, pastData);
-        } else {
-          // KMA 실패 시 대체 API 사용 
-          const fallbackData = await fetchAndSavePastWeather(dateStr, selectedRegion);
-          if (fallbackData) pastData = fallbackData;
-        }
+        // fetchAndSavePastWeather 사용 (WeatherAPI 우선, 여러 API 순차 시도)
+        const pastData = await fetchAndSavePastWeather(dateStr, selectedRegion);
 
         // 최종 날씨 설정 또는 기본값 설정
         if (pastData) {
           setPastWeather({
-            temp: pastData.avgTemp, rain: pastData.avgRain, humidity: pastData.avgHumidity,
-            icon: pastData.iconCode, season: pastData.season, sky: pastData.sky, pty: pastData.pty
+            temp: pastData.avgTemp, 
+            minTemp: pastData.minTemp || null,
+            maxTemp: pastData.maxTemp || null,
+            rain: pastData.avgRain, 
+            humidity: pastData.avgHumidity,
+            icon: pastData.iconCode, 
+            season: pastData.season, 
+            sky: pastData.sky, 
+            pty: pastData.pty
           });
         } else {
           // 최종 실패 시 기본 날씨 값 설정
-          setPastWeather({ temp: "20", rain: "0", humidity: "60", icon: "rain", season: "초가을", sky: "1", pty: "1" });
+          setPastWeather({ temp: "20", minTemp: "16", maxTemp: "24", rain: "0", humidity: "60", icon: "rain", season: "초가을", sky: "1", pty: "1" });
         }
       } catch (error) {
         console.error("과거 날씨 데이터 로드 실패:", error);
-        setPastWeather({ temp: "20", rain: "0", humidity: "60", icon: "sunny", season: "초가을", sky: "1", pty: "0" });
+        setPastWeather({ temp: "20", minTemp: "16", maxTemp: "24", rain: "0", humidity: "60", icon: "sunny", season: "초가을", sky: "1", pty: "0" });
       } finally {
         setPastWeatherLoading(false);
       }
@@ -348,7 +354,9 @@ function Record() {
                       <div className="flex items-center w-60">
                         <span className="w-28 text-base font-semibold text-left">온도</span>
                         <div className="ml-auto w-32 h-9 px-3 py-1 bg-white rounded text-sm font-medium flex items-center justify-center">
-                          {weather?.temp || 0}°C
+                          {!isToday(dateStr) && weather?.minTemp && weather?.maxTemp 
+                            ? `${weather.minTemp}~${weather.maxTemp}°C`
+                            : `${weather?.temp || 0}°C`}
                         </div>
                       </div>
                     </div>
