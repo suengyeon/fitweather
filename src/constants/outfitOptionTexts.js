@@ -44,6 +44,7 @@ export const outfitOptionTexts = {
         sunglasses: "선글라스",
         muffler: "머플러",
         gloves: "장갑",
-        cap: "모자"
+        cap: "모자",
+        legwarmer: "레그워머"
     }
 };

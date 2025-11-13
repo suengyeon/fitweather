@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Calendar from "react-calendar";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
+import { HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { getDocs, collection, query, where, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import useUserProfile from "../hooks/useUserProfile";
 import { useAuth } from "../contexts/AuthContext";
 import useNotiSidebar from "../hooks/useNotiSidebar";
-import MenuSidebar from "../components/MenuSidebar";
 import NotiSidebar from "../components/NotiSidebar";
 import "react-calendar/dist/Calendar.css";
 import "../pages/Calendar.css";
@@ -241,7 +240,7 @@ function CalendarPage() {
         </div>
 
         {/* 하단 : 체감 이모지 */}
-        <div className="w-full text-center mt-0.5" style={{ height: '1.2em' }}> 
+        <div className="w-full text-center mt-0.5" style={{ height: '1.2em' }}>
           <span className="text-xl">
             {record && feelingEmoji ? feelingEmoji : '\u00a0'}
           </span>
@@ -254,7 +253,6 @@ function CalendarPage() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* 메뉴 및 알림 사이드바 */}
-      <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <NotiSidebar
         isOpen={alarmOpen}
         onClose={() => setAlarmOpen(false)}
@@ -270,10 +268,10 @@ function CalendarPage() {
       <div className="relative flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         {/* 왼쪽 */}
         <button
+          onClick={() => navigate(-1)}
           className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
         >
-          <Bars3Icon className="w-5 h-5" />
+          <ArrowLeftIcon className="w-5 h-5" />
         </button>
 
         {/* 가운데 */}

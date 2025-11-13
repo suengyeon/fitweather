@@ -50,6 +50,7 @@ export const outfitOptions = {
         "muffler",
         "gloves",
         "cap", 
+        "legwarmer",
         "custom"
     ],
 };

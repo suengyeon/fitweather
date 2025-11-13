@@ -434,7 +434,7 @@ function Home() {
               {/* 추천보기 버튼(추천 목록 페이지로 이동) */}
               <button
                 className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded font-semibold"
-                onClick={() => navigate("/recommend-view")}
+                onClick={() => navigate("/recommend")}
               >
                 추천보기
               </button>
