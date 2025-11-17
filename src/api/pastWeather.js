@@ -2,7 +2,12 @@ import { db } from "../firebase";
 import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { fetchKmaForecast } from "./kmaWeather";
 import { fetchKmaPastWeather } from "./kmaPastWeather";
-import { getSeason } from "../utils/forecastUtils";
+import { getSeasonForPastWeather } from "../utils/forecastUtils";
+import { 
+  fetchOpenWeatherMapPastWeather, 
+  fetchWeatherAPIPastWeather, 
+  fetchVisualCrossingPastWeather 
+} from "./pastWeatherAPIs";
 
 /**
  * 과거 날씨 데이터를 Firestore에 저장하는 함수
@@ -17,6 +22,8 @@ export const savePastWeatherData = async (date, region, weatherData) => {
       date: date,
       region: region,
       avgTemp: weatherData.avgTemp,
+      minTemp: weatherData.minTemp || null,
+      maxTemp: weatherData.maxTemp || null,
       avgRain: weatherData.avgRain,
       avgHumidity: weatherData.avgHumidity,
       sky: weatherData.sky,
@@ -81,46 +88,96 @@ export const getPastWeatherData = async (date, region) => {
  */
 export const fetchAndSavePastWeather = async (date, region) => {
   try {
-    // 1. 이미 Firestore에 저장된 데이터가 있는지 확인하고 있으면 반환
+    // 1. 이미 Firestore에 저장된 데이터가 있는지 확인
     const existingData = await getPastWeatherData(date, region);
     if (existingData) {
-      console.log("이미 저장된 과거 날씨 데이터 사용:", existingData);
-      return existingData;
+      // 기본값인지 확인 (온도 20, 습도 60, 강수량 0, 계절 초가을)
+      const isDefaultValue = 
+        existingData.avgTemp === "20" && 
+        existingData.avgRain === "0" && 
+        existingData.avgHumidity === "60" &&
+        existingData.season === "초가을";
+      
+      if (isDefaultValue) {
+        console.log("⚠️ 저장된 데이터가 기본값입니다. API를 다시 시도합니다.");
+        // 기본값 삭제하고 API 재시도
+        await deletePastWeatherData(date, region);
+      } else {
+        console.log("✅ 이미 저장된 과거 날씨 데이터 사용:", existingData);
+        return existingData;
+      }
     }
     
-    // 2. 기상청 과거 관측 데이터 API(fetchKmaPastWeather)에서 데이터 가져오기 시도
-    console.log("🌧️ 기상청 과거 관측 API에서 데이터 가져오기:", date, region);
-    const pastWeatherData = await fetchKmaPastWeather(date, region);
+    // 2. WeatherAPI 시도 (최고/최저 온도를 정확히 제공하므로 우선 사용)
+    console.log("🌤️ [1/6] WeatherAPI 과거 날씨 API 시도:", date, region);
+    let pastWeatherData = await fetchWeatherAPIPastWeather(date, region);
+    if (pastWeatherData) {
+      console.log("✅ [1/6] WeatherAPI 과거 날씨 API 성공:", pastWeatherData);
+      await savePastWeatherData(date, region, pastWeatherData);
+      return pastWeatherData;
+    }
+    console.log("❌ [1/6] WeatherAPI 실패");
+    
+    // 3. 기상청 과거 관측 데이터 API(fetchKmaPastWeather)에서 데이터 가져오기 시도
+    console.log("🌧️ [2/6] 기상청 과거 관측 API에서 데이터 가져오기:", date, region);
+    pastWeatherData = await fetchKmaPastWeather(date, region);
     
     if (pastWeatherData) {
-      console.log("✅ 기상청 과거 관측 API에서 데이터 가져옴:", pastWeatherData);
+      console.log("✅ [2/6] 기상청 과거 관측 API 성공:", pastWeatherData);
       // 가져온 데이터 저장 및 반환
       await savePastWeatherData(date, region, pastWeatherData);
       return pastWeatherData;
     }
+    console.log("❌ [2/6] 기상청 과거 관측 API 실패");
     
-    // 3. 과거 관측 API 실패 시, 기상청 단기 예보 API(fetchKmaForecast)에서 데이터 가져오기 시도
-    console.log("⚠️ 과거 관측 API 실패, 예보 API 시도:", date, region);
-    const forecastItems = await fetchKmaForecast(region, date);
+    // 4. OpenWeatherMap API 시도 (과거 날짜는 건너뜀)
+    console.log("🌤️ [3/6] OpenWeatherMap 과거 날씨 API 시도:", date, region);
+    pastWeatherData = await fetchOpenWeatherMapPastWeather(date, region);
+    if (pastWeatherData) {
+      console.log("✅ [3/6] OpenWeatherMap 과거 날씨 API 성공:", pastWeatherData);
+      await savePastWeatherData(date, region, pastWeatherData);
+      return pastWeatherData;
+    }
+    console.log("❌ [3/6] OpenWeatherMap API 실패 또는 과거 날짜로 건너뜀");
+    
+    // 5. Visual Crossing API 시도
+    console.log("🌤️ [4/6] Visual Crossing 과거 날씨 API 시도:", date, region);
+    pastWeatherData = await fetchVisualCrossingPastWeather(date, region);
+    if (pastWeatherData) {
+      console.log("✅ [4/6] Visual Crossing 과거 날씨 API 성공:", pastWeatherData);
+      await savePastWeatherData(date, region, pastWeatherData);
+      return pastWeatherData;
+    }
+    console.log("❌ [4/6] Visual Crossing API 실패");
+    
+    // 6. 과거 관측 API 실패 시, 기상청 단기 예보 API(fetchKmaForecast)에서 데이터 가져오기 시도
+    console.log("⚠️ [5/6] 모든 외부 API 실패, 기상청 예보 API 시도:", date, region);
+    let forecastItems;
+    try {
+      forecastItems = await fetchKmaForecast(region, date);
+    } catch (error) {
+      console.warn("⚠️ [5/6] 기상청 예보 API 호출 중 오류:", error.message);
+      forecastItems = null;
+    }
     
     console.log("기상청 예보 API 응답:", forecastItems?.length, "개 항목");
     
-    // 4. 예보 API에서도 데이터를 가져올 수 없을 때 하드코딩된 기본값 사용
+    // 7. 예보 API에서도 데이터를 가져올 수 없을 때 하드코딩된 기본값 사용
     if (!forecastItems || forecastItems.length === 0) {
-      console.log("기상청 API에서 데이터를 가져올 수 없음, 기본값 사용");
+      console.log("❌ [6/6] 기상청 예보 API에서 데이터를 가져올 수 없음, 기본값 사용");
       
       // 날짜별 기본 날씨 데이터 설정(예시 데이터)
       let defaultWeatherData;
       if (date === "2025-09-12") {
-        defaultWeatherData = { avgTemp: "19", avgRain: "45", avgHumidity: "88", sky: "4", pty: "1", iconCode: "rain", season: "초가을" };
+        defaultWeatherData = { avgTemp: "19", minTemp: "15", maxTemp: "23", avgRain: "45", avgHumidity: "88", sky: "4", pty: "1", iconCode: "rain", season: "초가을" };
       } else if (date === "2025-09-11") {
-        defaultWeatherData = { avgTemp: "22", avgRain: "0", avgHumidity: "65", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
+        defaultWeatherData = { avgTemp: "22", minTemp: "18", maxTemp: "26", avgRain: "0", avgHumidity: "65", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
       } else {
-        defaultWeatherData = { avgTemp: "20", avgRain: "0", avgHumidity: "60", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
+        defaultWeatherData = { avgTemp: "20", minTemp: "16", maxTemp: "24", avgRain: "0", avgHumidity: "60", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
       }
       
-      // 기본값 저장 및 반환
-      await savePastWeatherData(date, region, defaultWeatherData);
+      // 기본값은 저장하지 않고 바로 반환 (캐싱 방지)
+      console.log("⚠️ 모든 API 실패, 기본값 반환 (저장하지 않음):", defaultWeatherData);
       return defaultWeatherData;
     }
     
@@ -135,7 +192,7 @@ export const fetchAndSavePastWeather = async (date, region) => {
     if (dayData.length === 0) {
       console.log("해당 날짜의 데이터가 없음:", targetDate);
       // 데이터가 없을 때 기본값 사용 및 저장
-      const defaultWeatherData = { avgTemp: "20", avgRain: "0", avgHumidity: "60", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
+      const defaultWeatherData = { avgTemp: "20", minTemp: "16", maxTemp: "24", avgRain: "0", avgHumidity: "60", sky: "1", pty: "0", iconCode: "sunny", season: "초가을" };
       await savePastWeatherData(date, region, defaultWeatherData);
       return defaultWeatherData;
     }
@@ -147,10 +204,12 @@ export const fetchAndSavePastWeather = async (date, region) => {
     
     // 일 평균 기온/습도 계산 및 최대 강수량 추출
     const avgTemp = tempData.length > 0 ? (tempData.reduce((a, b) => a + b, 0) / tempData.length).toFixed(1) : "0";
+    const minTemp = tempData.length > 0 ? Math.min(...tempData).toFixed(1) : avgTemp;
+    const maxTemp = tempData.length > 0 ? Math.max(...tempData).toFixed(1) : avgTemp;
     const validRainData = rainData.filter(val => !isNaN(val) && val >= 0);
     // 강수량은 예보에서 '가장 큰 값'을 일 강수량으로 간주
     const avgRain = validRainData.length > 0 ? Math.max(...validRainData).toFixed(1) : "0";
-    console.log("🌧️ 유효한 강수량 데이터:", validRainData, "최종 강수량:", avgRain);
+    console.log("🌧️ 유효한 강수량 데이터:", validRainData, "최종 강수량(최대값):", avgRain);
     const avgHumidity = humidityData.length > 0 ? (humidityData.reduce((a, b) => a + b, 0) / humidityData.length).toFixed(1) : "0";
     
     // SKY, PTY 데이터 추출
@@ -168,10 +227,10 @@ export const fetchAndSavePastWeather = async (date, region) => {
     
     // 6. 최종 날씨 객체 생성
     const iconCode = getWeatherIconFromCodes(sky, pty); // SKY & PTY 코드 기반으로 아이콘 결정
-    const season = getSeason(avgTemp, new Date(date)); // 온도와 날짜 기반으로 계절 결정
+    const season = getSeasonForPastWeather(avgTemp, new Date(date)); // 평균 온도와 24절기(음력 기준) 기반으로 계절 결정
     
     const weatherData = {
-      avgTemp: avgTemp, avgRain: avgRain, avgHumidity: avgHumidity, sky: sky, pty: pty, iconCode: iconCode, season: season
+      avgTemp: avgTemp, minTemp: minTemp, maxTemp: maxTemp, avgRain: avgRain, avgHumidity: avgHumidity, sky: sky, pty: pty, iconCode: iconCode, season: season
     };
     
     // 7. Firestore에 최종 데이터 저장 및 반환
@@ -179,8 +238,23 @@ export const fetchAndSavePastWeather = async (date, region) => {
     
     return weatherData;
   } catch (error) {
-    console.error("과거 날씨 데이터 가져오기 및 저장 실패:", error);
-    return null;
+    console.error("❌ [6/6] 과거 날씨 데이터 가져오기 및 저장 실패:", error);
+    // 에러 발생 시에도 기본값 반환하여 fallback 보장
+    console.log("⚠️ 모든 API 실패, 기본값 사용");
+    const defaultWeatherData = { 
+      avgTemp: "20", 
+      minTemp: "16",
+      maxTemp: "24",
+      avgRain: "0", 
+      avgHumidity: "60", 
+      sky: "1", 
+      pty: "0", 
+      iconCode: "sunny", 
+      season: "초가을" 
+    };
+    // 기본값은 저장하지 않고 바로 반환 (캐싱 방지)
+    console.log("⚠️ 모든 API 실패, 기본값 반환 (저장하지 않음):", defaultWeatherData);
+    return defaultWeatherData;
   }
 };
 

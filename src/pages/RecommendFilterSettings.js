@@ -1,7 +1,7 @@
 import { useAuth } from "../contexts/AuthContext";
 import { db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
 import MenuSidebar from "../components/MenuSidebar";
@@ -56,44 +56,60 @@ function RecommendFilterSettings() {
   }, [weather]);
 
   // ±값 설정 컴포넌트
-  const RangeInput = ({ currentValue, onChange, label, unit, min = 0, max = 50, filterKey }) => {
-    // UI에서 사용자가 설정하는 현재 값으로부터의 마이너스/플러스 범위
-    const [minusRange, setMinusRange] = useState(5);
-    const [plusRange, setPlusRange] = useState(5);
+  const RangeInput = ({ currentValue, onChange, label, unit, min = 0, max = 100, filterKey, filterValue }) => {
+    // 1. 로컬 상태 정의 (입력 중인 값)
+    const [localMinusRange, setLocalMinusRange] = useState(0);
+    const [localPlusRange, setLocalPlusRange] = useState(0);
 
-    // 기존 필터(filters) 값이 변경될 때, ±범위 UI 상태 업데이트
+    const minusInputRef = useRef(null);
+    const plusInputRef = useRef(null);
+
+    // 2. 부모의 filterValue나 currentValue가 바뀔 때 로컬 상태를 동기화
     useEffect(() => {
-      if (currentValue !== null && currentValue !== undefined && filters[filterKey]) {
-        // 기존 필터의 min/max 값과 현재 날씨 값의 차이를 계산
-        const currentMinusRange = Math.abs(currentValue - filters[filterKey].min);
-        const currentPlusRange = Math.abs(filters[filterKey].max - currentValue);
+        if (currentValue !== null && currentValue !== undefined && filterValue) {
+            // 부모의 필터 값 (min, max)과 오늘 날씨 값 (currentValue)을 기반으로 범위 계산
+            const newMinusRange = Math.max(0, Math.round(currentValue - filterValue.min));
+            const newPlusRange = Math.max(0, Math.round(filterValue.max - currentValue));
+            
+            // 로컬 상태 업데이트
+            setLocalMinusRange(newMinusRange);
+            setLocalPlusRange(newPlusRange);
+        }
+    }, [currentValue, filterValue]);
 
-        // 차이값이 0보다 크면 그 값을 사용하고, 아니면 기본값 5 사용
-        setMinusRange(currentMinusRange > 0 ? currentMinusRange : 5);
-        setPlusRange(currentPlusRange > 0 ? currentPlusRange : 5);
-      }
-    }, [currentValue, filterKey, filters]);
-
-    // 마이너스 범위 변경 핸들러
-    const handleMinusChange = (newMinusRange) => {
-      setMinusRange(newMinusRange);
-      if (currentValue !== null && currentValue !== undefined) {
-        // 실제 필터링 범위 계산 및 상위 컴포넌트로 전달
-        const minValue = Math.max(0, currentValue - newMinusRange);
-        const maxValue = Math.min(100, currentValue + plusRange);
-        onChange({ min: minValue, max: maxValue });
-      }
+    // 3. 최종 범위 계산 및 부모에 알리는 함수 (입력 완료 시에만 호출)
+    const updateParentFilters = (newMinusRange, newPlusRange) => {
+        if (currentValue !== null && currentValue !== undefined) {
+            // min/max props를 활용하여 0 ~ 100 사이의 값으로 클램프
+            const minValue = Math.max(min, currentValue - newMinusRange);
+            const maxValue = Math.min(max, currentValue + newPlusRange);
+            
+            // 부모의 onChange 호출
+            onChange({ min: minValue, max: maxValue });
+        }
     };
 
-    // 플러스 범위 변경 핸들러
-    const handlePlusChange = (newPlusRange) => {
-      setPlusRange(newPlusRange);
-      if (currentValue !== null && currentValue !== undefined) {
-        // 실제 필터링 범위 계산 및 상위 컴포넌트로 전달
-        const minValue = Math.max(0, currentValue - minusRange);
-        const maxValue = Math.min(100, currentValue + newPlusRange);
-        onChange({ min: minValue, max: maxValue });
-      }
+    // 마이너스 범위 입력 핸들러 (타이핑 중 로컬 상태만 업데이트)
+    const handleLocalMinusChange = (e) => {
+        const newMinusRange = parseInt(e.target.value) || 0;
+        setLocalMinusRange(newMinusRange);
+        // 부모 상태는 업데이트하지 않음
+    };
+
+    // 플러스 범위 입력 핸들러 (타이핑 중 로컬 상태만 업데이트)
+    const handleLocalPlusChange = (e) => {
+        const newPlusRange = parseInt(e.target.value) || 0;
+        setLocalPlusRange(newPlusRange);
+        // 부모 상태는 업데이트하지 않음
+    };
+
+    // 입력 필드에서 포커스가 벗어날 때 (blur) 최종적으로 부모 상태 업데이트
+    const handleMinusBlur = () => {
+        updateParentFilters(localMinusRange, localPlusRange);
+    };
+
+    const handlePlusBlur = () => {
+        updateParentFilters(localMinusRange, localPlusRange);
     };
 
     return (
@@ -110,40 +126,67 @@ function RecommendFilterSettings() {
 
           <div className="space-y-4">
             {/* - 범위 설정 입력 필드 */}
-            <div className="flex justify-center items-center gap-3">
-              <label className="text-sm text-gray-600">-</label>
+            <div className="flex justify-center items-center gap-3" style={{ minHeight: '2.5rem' }}>
+              <label className="text-sm text-gray-600 w-4 text-center flex-shrink-0">-</label>
               <input
+                ref={minusInputRef}
                 type="number"
                 min={0}
                 max={max}
-                value={minusRange}
-                onChange={(e) => handleMinusChange(parseInt(e.target.value) || 0)}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center"
+                step="1"
+                value={localMinusRange} // **로컬 상태 사용**
+                onChange={handleLocalMinusChange} // **로컬 핸들러 사용**
+                onBlur={handleMinusBlur} // **포커스 잃을 때 최종 업데이트**
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.target.blur();
+                    handleMinusBlur();
+                  }
+                }}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center flex-shrink-0 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
                 placeholder="0"
+                autoComplete="off"
               />
-              <span className="text-sm font-medium text-gray-700">{unit}</span>
+              <span className="text-sm font-medium text-gray-700 w-8 text-left flex-shrink-0">{unit}</span>
             </div>
 
             {/* + 범위 설정 입력 필드 */}
-            <div className="flex justify-center items-center gap-3">
-              <label className="text-sm text-gray-600">+</label>
+            <div className="flex justify-center items-center gap-3" style={{ minHeight: '2.5rem' }}>
+              <label className="text-sm text-gray-600 w-4 text-center flex-shrink-0">+</label>
               <input
+                ref={plusInputRef}
                 type="number"
                 min={0}
                 max={max}
-                value={plusRange}
-                onChange={(e) => handlePlusChange(parseInt(e.target.value) || 0)}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center"
+                step="1"
+                value={localPlusRange} // **로컬 상태 사용**
+                onChange={handleLocalPlusChange} // **로컬 핸들러 사용**
+                onBlur={handlePlusBlur} // **포커스 잃을 때 최종 업데이트**
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.target.blur();
+                    handlePlusBlur();
+                  }
+                }}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm text-center flex-shrink-0 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
                 placeholder="0"
+                autoComplete="off"
               />
-              <span className="text-sm font-medium text-gray-700">{unit}</span>
+              <span className="text-sm font-medium text-gray-700 w-8 text-left flex-shrink-0">{unit}</span>
             </div>
           </div>
 
-          {/* 최종 필터링 범위 표시 */}
-          <div className="mt-4 text-xs text-gray-500 bg-blue-50 p-3 rounded text-center">
+          {/* 최종 필터링 범위 표시 - 로컬 상태 기반 계산 */}
+          <div className="mt-4 text-xs text-gray-500 bg-blue-50 p-3 rounded text-center min-h-[3rem] flex items-center justify-center" style={{ minHeight: '3rem', fontVariantNumeric: 'tabular-nums' }}>
             {currentValue !== null && currentValue !== undefined ?
-              `필터링 범위 : ${Math.max(0, currentValue - minusRange)}${unit} ~ ${Math.min(100, currentValue + plusRange)}${unit}` :
+              // 필터링 범위 표시 시에도 로컬 상태를 사용합니다.
+              `필터링 범위 : ${Math.max(min, currentValue - localMinusRange)}${unit} ~ ${Math.min(max, currentValue + localPlusRange)}${unit}` :
               '날씨 정보를 불러오는 중...'
             }
           </div>
@@ -177,7 +220,7 @@ function RecommendFilterSettings() {
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         {/* 메뉴 버튼 */}
         <button
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           <Bars3Icon className="w-5 h-5" />
@@ -186,7 +229,7 @@ function RecommendFilterSettings() {
         {/* 홈 버튼 */}
         <button
           onClick={() => navigate("/")}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
         >
           <HomeIcon className="w-5 h-5" />
         </button>
@@ -215,7 +258,7 @@ function RecommendFilterSettings() {
                 {/* 온도 필터 설정 */}
                 <div className="w-full md:w-[30%]">
                   <RangeInput
-                    currentValue={todayWeather?.temp ? parseInt(todayWeather.temp) : null}
+                    currentValue={todayWeather?.temp !== null && todayWeather?.temp !== undefined ? parseInt(todayWeather.temp) : null}
                     onChange={(newRange) => setFilters(prev => ({
                       ...prev,
                       tempRange: newRange
@@ -223,14 +266,15 @@ function RecommendFilterSettings() {
                     label="온도"
                     unit="°C"
                     min={0}
-                    max={20}
+                    max={100}
                     filterKey="tempRange"
+                    filterValue={filters.tempRange}
                   />
                 </div>
                 {/* 강수량 필터 설정 */}
                 <div className="w-full md:w-[30%]">
                   <RangeInput
-                    currentValue={todayWeather?.rain ? parseInt(todayWeather.rain) : null}
+                    currentValue={todayWeather?.rain !== null && todayWeather?.rain !== undefined ? parseInt(todayWeather.rain) : null}
                     onChange={(newRange) => setFilters(prev => ({
                       ...prev,
                       rainRange: newRange
@@ -238,14 +282,15 @@ function RecommendFilterSettings() {
                     label="강수량"
                     unit="mm"
                     min={0}
-                    max={30}
+                    max={100}
                     filterKey="rainRange"
+                    filterValue={filters.rainRange}
                   />
                 </div>
                 {/* 습도 필터 설정 */}
                 <div className="w-full md:w-[30%]">
                   <RangeInput
-                    currentValue={todayWeather?.humidity ? parseInt(todayWeather.humidity) : null}
+                    currentValue={todayWeather?.humidity !== null && todayWeather?.humidity !== undefined ? parseInt(todayWeather.humidity) : null}
                     onChange={(newRange) => setFilters(prev => ({
                       ...prev,
                       humidityRange: newRange
@@ -253,8 +298,9 @@ function RecommendFilterSettings() {
                     label="습도"
                     unit="%"
                     min={0}
-                    max={30}
+                    max={100}
                     filterKey="humidityRange"
+                    filterValue={filters.humidityRange}
                   />
                 </div>
               </div>
@@ -278,8 +324,8 @@ function RecommendFilterSettings() {
           </div>
         </div>
       </div>
-    </div >
-  );
+    </div>
+  )
 }
 
 export default RecommendFilterSettings;

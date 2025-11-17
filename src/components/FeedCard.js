@@ -146,11 +146,19 @@ function FeedCard({
       }
 
       // 상태 변경 이벤트 전송(좋아요 카운트 업데이트용)
+      // prevUp과 result를 사용하여 최종 카운트 계산
+      const finalThumbsUpCount = result === "up" 
+        ? (prevUp ? thumbsUpCount : thumbsUpCount + 1)  // 이전에 없었으면 +1
+        : (prevUp ? Math.max(0, thumbsUpCount - 1) : thumbsUpCount);  // 이전에 있었으면 -1
+      const finalThumbsDownCount = prevDown ? Math.max(0, thumbsDownCount - 1) : thumbsDownCount;
+      
       window.dispatchEvent(new CustomEvent('reactionUpdated', {
         detail: {
           recordId: record.id,
           type: 'thumbsUp',
-          isActive: result === "up"
+          isActive: result === "up",
+          thumbsUpCount: finalThumbsUpCount,
+          thumbsDownCount: finalThumbsDownCount
         }
       }));
     } catch (err) {
@@ -196,11 +204,19 @@ function FeedCard({
       }
 
       // 상태 변경 이벤트 전송
+      // prevDown과 result를 사용하여 최종 카운트 계산
+      const finalThumbsDownCount = result === "down"
+        ? (prevDown ? thumbsDownCount : thumbsDownCount + 1)  // 이전에 없었으면 +1
+        : (prevDown ? Math.max(0, thumbsDownCount - 1) : thumbsDownCount);  // 이전에 있었으면 -1
+      const finalThumbsUpCount = prevUp ? Math.max(0, thumbsUpCount - 1) : thumbsUpCount;
+      
       window.dispatchEvent(new CustomEvent('reactionUpdated', {
         detail: {
           recordId: record.id,
           type: 'thumbsDown',
-          isActive: result === "down"
+          isActive: result === "down",
+          thumbsUpCount: finalThumbsUpCount,
+          thumbsDownCount: finalThumbsDownCount
         }
       }));
     } catch (err) {
@@ -233,12 +249,15 @@ function FeedCard({
       navigate("/record", { state: { existingRecord: record } });
     } else {
       // 다른 사람 기록 : 상세 피드 페이지로 이동(필터링 정보 함께 전달)
-      const isFromRecommend = window.location.pathname.includes("/recommend");
+      const currentPath = window.location.pathname;
+      const isFromRecommendView = currentPath.includes("/recommend-view");
+      const isFromRecommend = currentPath.includes("/recommend");
       navigate(`/feed-detail/${record.id}`, {
         state: {
           fromCard: true,
           fromFeed: !isFromRecommend,
-          fromRecommend: isFromRecommend,
+          fromRecommend: isFromRecommend && !isFromRecommendView,
+          fromRecommendView: isFromRecommendView,
           region: record.region,
           date: selectedDate,
           year: selectedYear,

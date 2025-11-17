@@ -1,68 +1,80 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Bars3Icon, HomeIcon } from "@heroicons/react/24/solid";
-import { BellIcon } from "@heroicons/react/24/outline";
 import MenuSidebar from "../components/MenuSidebar";
-import NotiSidebar from "../components/NotiSidebar";
-import useNotiSidebar from "../hooks/useNotiSidebar";
 import FeedCard from "../components/FeedCard";
 import { getAllRecords } from "../api/getAllRecords";
 import { toggleLike } from "../api/toggleLike";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
 import { sortRecords } from "../utils/sortingUtils";
+import { useAuth } from "../contexts/AuthContext";
+import { db } from "../firebase";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { getReactionSummary } from "../api/reactions";
 
 /**
- * RecommendView 컴포넌트 - 사용자가 설정한 기본 날씨 필터에 따라 코디를 추천하여 보여줌
+ * RecommendView 컴포넌트 - 추천 코디를 보여주는 페이지 (수치 필터 적용)
  */
 function RecommendView() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [outfits, setOutfits] = useState([]); 
+  const [allOutfits, setAllOutfits] = useState([]);
   const [filteredOutfits, setFilteredOutfits] = useState([]);
+  const [filters, setFilters] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // 알림 사이드바 훅
-  const { alarmOpen, setAlarmOpen,
-    notifications, unreadCount,
-    markAllRead, handleDeleteSelected,
-    markOneRead, handleAlarmItemClick,
-    reportNotificationPopup
-  } = useNotiSidebar();
-
-  // 사용자 설정 필터 및 지역 상태
-  const [userFilters, setUserFilters] = useState(null); 
-  const [userRegion, setUserRegion] = useState("");
-  
-  // 추가 체크박스 필터 상태
+  // 체크박스 필터 상태
   const [excludeMyRecords, setExcludeMyRecords] = useState(false);
   const [onlyMyRecords, setOnlyMyRecords] = useState(false);
+  const [likedOnly, setLikedOnly] = useState(false);
   const [onlySubscribedUsers, setOnlySubscribedUsers] = useState(false);
   
   // 구독한 사용자 ID 목록
   const [subscribedUsers, setSubscribedUsers] = useState([]);
+  // 내가 좋아요한 기록 ID 목록
+  const [likedRecordIds, setLikedRecordIds] = useState([]);
 
-  // 사용자 필터(온도/강수량/습도) 및 지역 가져오기
+  // 사용자 필터 설정 불러오기
   useEffect(() => {
-    if (!user) return;
-    const fetchUserFilters = async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    const fetchFilters = async () => {
       try {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const data = userSnap.data();
-          if (data.filters && data.region) {
-            setUserFilters(data.filters);
-            setUserRegion(data.region);
+          if (data.filters) {
+            setFilters(data.filters);
+          } else {
+            // 필터가 없으면 기본값 설정 (모든 범위 허용)
+            setFilters({
+              tempRange: { min: 0, max: 100 },
+              rainRange: { min: 0, max: 100 },
+              humidityRange: { min: 0, max: 100 }
+            });
           }
+        } else {
+          // 사용자 문서가 없으면 기본값 설정
+          setFilters({
+            tempRange: { min: 0, max: 100 },
+            rainRange: { min: 0, max: 100 },
+            humidityRange: { min: 0, max: 100 }
+          });
         }
       } catch (error) {
-        console.error("Error fetching user filters:", error);
+        console.error("Error fetching filters:", error);
+        // 에러 발생 시 기본값 설정
+        setFilters({
+          tempRange: { min: 0, max: 100 },
+          rainRange: { min: 0, max: 100 },
+          humidityRange: { min: 0, max: 100 }
+        });
       }
     };
-    fetchUserFilters();
+    fetchFilters();
   }, [user]);
 
   // 구독한 사용자 목록 가져오기
@@ -70,130 +82,161 @@ function RecommendView() {
     if (!user) return;
     const fetchSubscribedUsers = async () => {
       try {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          // Firestore users 컬렉션에 subscribedUsers 필드가 있다고 가정
-          if (data.subscribedUsers) { 
-            setSubscribedUsers(data.subscribedUsers);
-          }
-        }
+        const followsQuery = query(
+          collection(db, "follows"),
+          where("followerId", "==", user.uid)
+        );
+        
+        const followsSnapshot = await getDocs(followsQuery);
+        const followingIds = followsSnapshot.docs.map(doc => doc.data().followingId);
+        
+        setSubscribedUsers(followingIds);
       } catch (error) {
-        console.error("Error fetching subscribed users:", error);
+        console.error("❌ 구독 사용자 목록 조회 실패:", error);
+        setSubscribedUsers([]); 
       }
     };
     fetchSubscribedUsers();
   }, [user]);
 
-  // FeedDetail에서의 반응 변경 이벤트 감지 및 반영
+  // 내가 좋아요한 기록 ID 목록 가져오기
   useEffect(() => {
-    const handleReactionUpdate = (event) => {
-      const { recordId, type, isActive } = event.detail;
-      setOutfits(prevOutfits => 
-        prevOutfits.map(outfit => {
-          if (outfit.id === recordId) {
-            const updatedOutfit = { ...outfit };
-            // 좋아요/싫어요 카운트 업데이트 로직
-            if (type === 'thumbsUp') {
-              if (isActive) {
-                updatedOutfit.thumbsUpCount = (updatedOutfit.thumbsUpCount || 0) + 1;
-              } else {
-                updatedOutfit.thumbsUpCount = Math.max(0, (updatedOutfit.thumbsUpCount || 0) - 1);
-              }
-            } else if (type === 'thumbsDown') {
-              if (isActive) {
-                updatedOutfit.thumbsDownCount = (updatedOutfit.thumbsDownCount || 0) + 1;
-              } else {
-                updatedOutfit.thumbsDownCount = Math.max(0, (updatedOutfit.thumbsDownCount || 0) - 1);
-              }
-            }
-            return updatedOutfit;
-          }
-          return outfit;
-        })
-      );
+    if (!user) return;
+    const fetchLikedRecords = async () => {
+      try {
+        const reactionsQuery = query(
+          collection(db, "reactions"),
+          where("uid", "==", user.uid),
+          where("type", "==", "up")
+        );
+        
+        const reactionsSnapshot = await getDocs(reactionsQuery);
+        const likedIds = reactionsSnapshot.docs.map(doc => doc.data().recordId);
+        
+        setLikedRecordIds(likedIds);
+      } catch (error) {
+        console.error("❌ 좋아요 기록 목록 조회 실패:", error);
+        setLikedRecordIds([]); 
+      }
     };
+    fetchLikedRecords();
+  }, [user]);
 
-    window.addEventListener('reactionUpdated', handleReactionUpdate);
-    return () => window.removeEventListener('reactionUpdated', handleReactionUpdate);
-  }, []);
-
-  // 모든 기록 가져오기(최신 30개)
+  // 모든 기록 가져오기 및 좋아요 수 로드
   useEffect(() => {
     const fetchAllRecords = async () => {
       try {
-        const records = await getAllRecords(30);
-        setOutfits(records);
+        const records = await getAllRecords();
+        
+        // 각 기록의 좋아요/싫어요 수를 가져와서 추가
+        const recordsWithReactions = await Promise.all(
+          records.map(async (record) => {
+            try {
+              const reactionSummary = await getReactionSummary(record.id);
+              return {
+                ...record,
+                thumbsUpCount: reactionSummary.thumbsUpCount || 0,
+                thumbsDownCount: reactionSummary.thumbsDownCount || 0,
+              };
+            } catch (error) {
+              console.error(`Error fetching reaction for record ${record.id}:`, error);
+              return {
+                ...record,
+                thumbsUpCount: record.thumbsUpCount || 0,
+                thumbsDownCount: record.thumbsDownCount || 0,
+              };
+            }
+          })
+        );
+        
+        setAllOutfits(recordsWithReactions);
       } catch (error) {
         console.error("Error fetching records:", error);
       }
     };
-
     fetchAllRecords();
   }, []);
 
-  // 필터 적용(필터, 지역, 전체 기록, 체크박스 상태 변경 시 재실행)
+  // 필터 적용
   useEffect(() => {
-    // 필수 데이터가 없으면 필터링 스킵
-    if (!userFilters || !userRegion || outfits.length === 0) {
+    if (!filters || allOutfits.length === 0) {
       setFilteredOutfits([]);
+      setIsLoading(false);
       return;
     }
 
-    const filtered = outfits.filter(record => {
-      // 나의 기록만 / 제외 체크박스 필터
-      if (onlyMyRecords && record.uid !== user?.uid) return false;
-      if (excludeMyRecords && record.uid === user?.uid) return false;
+    const filtered = allOutfits.filter((record) => {
+      // 나의 기록 제외/만 필터
+      if (excludeMyRecords && user?.uid && record.uid === user.uid) return false;
+      if (onlyMyRecords && (!user?.uid || record.uid !== user.uid)) return false;
+
+      // 내가 좋아요 한 코디 필터
+      if (likedOnly && (!user?.uid || !likedRecordIds.includes(record.id))) return false;
 
       // 구독한 사람만 필터
-      if (onlySubscribedUsers && !subscribedUsers.includes(record.uid)) return false;
+      if (onlySubscribedUsers && (!user?.uid || !subscribedUsers.includes(record.uid))) return false;
 
-      // 지역 필터 (사용자 지역과 일치해야 함)
-      if (record.region !== userRegion) return false;
+      // 온도 필터링
+      const recordTemp = record.weather?.temp ?? record.temp;
+      if (recordTemp !== null && recordTemp !== undefined) {
+        const temp = parseFloat(recordTemp);
+        if (isNaN(temp) || temp < filters.tempRange.min || temp > filters.tempRange.max) {
+          return false;
+        }
+      }
 
-      // 온도 필터 (weather 필드 또는 record.temp 사용)
-      const temp = record.temp || record.weather?.temp;
-      const tempMatch = temp !== null && temp !== undefined &&
-        temp >= userFilters.tempRange.min && temp <= userFilters.tempRange.max;
+      // 강수량 필터링
+      const recordRain = record.weather?.rain ?? record.rain;
+      if (recordRain !== null && recordRain !== undefined) {
+        const rain = parseFloat(recordRain);
+        if (isNaN(rain) || rain < filters.rainRange.min || rain > filters.rainRange.max) {
+          return false;
+        }
+      }
 
-      // 강수량 필터
-      const rain = record.rain || record.weather?.rain;
-      const rainMatch = rain !== null && rain !== undefined &&
-        rain >= userFilters.rainRange.min && rain <= userFilters.rainRange.max;
+      // 습도 필터링
+      const recordHumidity = record.weather?.humidity ?? record.humidity;
+      if (recordHumidity !== null && recordHumidity !== undefined) {
+        const humidity = parseFloat(recordHumidity);
+        if (isNaN(humidity) || humidity < filters.humidityRange.min || humidity > filters.humidityRange.max) {
+          return false;
+        }
+      }
 
-      // 습도 필터
-      const humidity = record.humidity || record.weather?.humidity;
-      const humidityMatch = humidity !== null && humidity !== undefined &&
-        humidity >= userFilters.humidityRange.min && humidity <= userFilters.humidityRange.max;
-
-      // 모든 날씨 조건을 만족해야 함 (AND 조건)
-      return tempMatch && rainMatch && humidityMatch;
+      return true;
     });
 
-    // 인기 순으로 정렬
+    // 인기순으로 정렬
     const sortedFiltered = sortRecords(filtered, "popular");
     setFilteredOutfits(sortedFiltered);
-  }, [outfits, userFilters, userRegion, excludeMyRecords, onlyMyRecords, onlySubscribedUsers, subscribedUsers, user]);
+    setIsLoading(false);
+  }, [allOutfits, filters, excludeMyRecords, onlyMyRecords, likedOnly, likedRecordIds, onlySubscribedUsers, subscribedUsers, user]);
 
   // 좋아요 토글 핸들러
-  const handleToggleLike = async (recordId, liked) => {
+  const handleToggleLike = async (recordId) => {
     if (!user) return;
-
     try {
-      await toggleLike(recordId, user.uid, liked);
-      // 필터링된 목록만 업데이트 (즉각적인 반영)
-      setFilteredOutfits(prev =>
-        prev.map(record =>
-          record.id === recordId
-            ? {
-              ...record,
-              likes: liked
-                ? record.likes.filter(id => id !== user.uid)
-                : [...record.likes, user.uid],
-            }
-            : record
-        )
+      await toggleLike(recordId, user.uid);
+      
+      // 좋아요 수 다시 가져오기
+      const reactionSummary = await getReactionSummary(recordId);
+      
+      // 기록 목록 업데이트
+      setAllOutfits((prev) =>
+        prev.map((outfit) => {
+          if (outfit.id === recordId) {
+            const isLiked = outfit.likes?.includes(user.uid) || false;
+            return {
+              ...outfit,
+              likes: isLiked
+                ? outfit.likes.filter((uid) => uid !== user.uid)
+                : [...(outfit.likes || []), user.uid],
+              thumbsUpCount: reactionSummary.thumbsUpCount || 0,
+              thumbsDownCount: reactionSummary.thumbsDownCount || 0,
+            };
+          }
+          return outfit;
+        })
       );
     } catch (error) {
       console.error("Error toggling like:", error);
@@ -201,19 +244,9 @@ function RecommendView() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col relative">
-      {/* 사이드바 */}
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* 메뉴 사이드바 */}
       <MenuSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <NotiSidebar
-        isOpen={alarmOpen}
-        onClose={() => setAlarmOpen(false)}
-        notifications={notifications}
-        onMarkAllRead={markAllRead}
-        onDeleteSelected={handleDeleteSelected}
-        onMarkOneRead={markOneRead}
-        onItemClick={handleAlarmItemClick}
-        reportNotificationPopup={reportNotificationPopup}
-      />
 
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
@@ -224,148 +257,160 @@ function RecommendView() {
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">추천 코디</h2>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate("/")}
-            className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
-          >
-            <HomeIcon className="w-5 h-5" />
-          </button>
-          <button
-            className="relative flex items-center justify-center 
-                                            bg-white w-7 h-7 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
-            onClick={() => setAlarmOpen(true)}
-            aria-label="알림 열기"
-          >
-            <BellIcon className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            )}
-          </button>
-        </div>
+        <button
+          onClick={() => navigate("/")}
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
+        >
+          <HomeIcon className="w-5 h-5" />
+        </button>
       </div>
 
-      {/* 상단 버튼(상세 필터) */}
-      <div className="flex justify-end items-center px-4 py-3 bg-white shadow-sm">
+      {/* 뒤로가기 버튼 */}
+      <div className="flex justify-between items-center px-4 py-3 bg-white shadow-sm">
+        <button
+              onClick={() => navigate("/recommend-filter-settings")}
+              className="bg-blue-400 hover:bg-blue-500 px-4 py-1.5 rounded text-white text-sm"
+            >
+              필터 설정
+            </button>
         <button
           onClick={() => navigate("/recommend")}
-          className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md text-sm font-medium"
+          className="bg-gray-400 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm flex items-center gap-2"
         >
-          상세 필터
+         상세 필터 → 
         </button>
       </div>
 
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 py-6">
-        {!userFilters ? (
-          // 필터 설정이 없을 경우
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-2">추천필터 설정이 필요합니다</p>
-            <p className="text-sm text-gray-400">추천필터 설정에서 온도, 강수량, 습도 범위를 설정해주세요</p>
-            <button
-              onClick={() => navigate("/recommend-filter-settings")}
-              className="mt-4 bg-blue-400 hover:bg-blue-500 text-white px-6 py-2 rounded-md font-medium"
-            >
-              필터 설정하기
-            </button>
+        <div className="bg-white rounded-lg shadow p-6">
+
+          {/* 체크박스 필터 (왼쪽 상단) */}
+          <div className="mb-4 flex gap-6">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="excludeMyRecords"
+                checked={excludeMyRecords}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setExcludeMyRecords(checked);
+                  // "나의 기록만"과 상호 배타적
+                  if (checked) {
+                    setOnlyMyRecords(false);
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="excludeMyRecords" className="ml-2 text-sm text-gray-700">
+                나의 기록 제외
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="onlyMyRecords"
+                checked={onlyMyRecords}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setOnlyMyRecords(checked);
+                  // "나의 기록 제외", "내가 좋아요 한 코디", "구독한 사람만"과 상호 배타적
+                  if (checked) {
+                    setExcludeMyRecords(false);
+                    setLikedOnly(false);
+                    setOnlySubscribedUsers(false);
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="onlyMyRecords" className="ml-2 text-sm text-gray-700">
+                나의 기록만
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="likedOnly"
+                checked={likedOnly}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setLikedOnly(checked);
+                  // "나의 기록만"과 상호 배타적
+                  if (checked) {
+                    setOnlyMyRecords(false);
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="likedOnly" className="ml-2 text-sm text-gray-700">
+                내가 좋아요 한 코디
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="onlySubscribedUsers"
+                checked={onlySubscribedUsers}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setOnlySubscribedUsers(checked);
+                  // "나의 기록만"과 상호 배타적
+                  if (checked) {
+                    setOnlyMyRecords(false);
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="onlySubscribedUsers" className="ml-2 text-sm text-gray-700">
+                내가 구독한 사람만
+              </label>
+            </div>
           </div>
-        ) : (
-          <>
-            {/* 기본필터 설정 버튼 - 항상 표시 */}
-            <div className="flex justify-center mb-6">
-              <button
-                onClick={() => navigate("/recommend-filter-settings")}
-                className="bg-blue-400 hover:bg-blue-500 text-white px-6 py-2 rounded-md font-medium"
-              >
-                기본필터 설정
-              </button>
-            </div>
 
-            {/* 체크박스 필터 */}
-            <div className="mb-4 space-y-2">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="excludeMyRecords"
-                  checked={excludeMyRecords}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setExcludeMyRecords(checked);
-                    if (checked) {
-                      setOnlyMyRecords(false);
-                      setOnlySubscribedUsers(false);
-                    }
-                  }}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="excludeMyRecords" className="ml-2 text-sm text-gray-700">
-                  나의 기록 제외
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="onlyMyRecords"
-                  checked={onlyMyRecords}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setOnlyMyRecords(checked);
-                    if (checked) {
-                      setExcludeMyRecords(false);
-                      setOnlySubscribedUsers(false);
-                    }
-                  }}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="onlyMyRecords" className="ml-2 text-sm text-gray-700">
-                  나의 기록만
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="onlySubscribedUsers"
-                  checked={onlySubscribedUsers}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setOnlySubscribedUsers(checked);
-                    if (checked) {
-                      setExcludeMyRecords(false);
-                      setOnlyMyRecords(false);
-                    }
-                  }}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="onlySubscribedUsers" className="ml-2 text-sm text-gray-700">
-                  내가 구독한 사람만
-                </label>
-              </div>
-            </div>
-
-            {filteredOutfits.length === 0 ? (
-              // 필터링 결과가 없을 때
-              <div className="text-center py-12">
-                <p className="text-gray-500 mb-2">조건에 맞는 코디가 없습니다</p>
-                <p className="text-sm text-gray-400">필터를 조정해보세요</p>
-              </div>
-            ) : (
-              // 코디 목록
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredOutfits.map((record) => (
-                  <FeedCard
-                    key={record.id}
-                    record={record}
-                    currentUserUid={user?.uid}
-                    onToggleLike={handleToggleLike}
-                  />
-                ))}
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold mb-2">
+              총 {filteredOutfits.length}개의 코디
+            </h3>
+            <p className="text-sm text-gray-600 mb-2">
+              인기순으로 정렬된 추천 코디입니다.
+            </p>
+            {filters && (
+              <div className="text-xs text-gray-500 mt-2">
+                필터 범위: 온도 {filters.tempRange.min}~{filters.tempRange.max}°C, 
+                강수량 {filters.rainRange.min}~{filters.rainRange.max}mm, 
+                습도 {filters.humidityRange.min}~{filters.humidityRange.max}%
               </div>
             )}
-          </>
-        )}
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-2">로딩 중...</p>
+            </div>
+          ) : filteredOutfits.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-2">필터 조건에 맞는 코디가 없습니다</p>
+              <p className="text-sm text-gray-400">
+                필터 설정을 조정해보세요
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {filteredOutfits.map((outfit) => (
+                <FeedCard
+                  key={outfit.id}
+                  record={outfit}
+                  currentUserUid={user?.uid}
+                  onToggleLike={handleToggleLike}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 export default RecommendView;
+

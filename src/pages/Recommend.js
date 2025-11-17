@@ -347,14 +347,14 @@ function Recommend() {
           onClick={() => navigate("/recommend-view")}
           className="bg-gray-400 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm flex items-center gap-2"
         >
-          ← 뒤로가기
+          ← 기본필터
         </button>
       </div>
 
       {/* 콘텐츠 */}
       <div className="flex-1 px-4 mt-10 flex flex-col md:flex-row gap-6 mb-10">
         {/* 왼쪽 : 필터 패널 */}
-        <div className="w-full md:w-1/4 bg-white p-6 rounded-lg shadow">
+        <div className="w-full md:w-1/4 bg-white p-6 rounded-lg shadow md:sticky md:top-4 md:self-start">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold">필터</h3>
             <button
@@ -394,9 +394,11 @@ function Recommend() {
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setOnlyMyRecords(checked);
-                  // "나의 기록 제외"와 상호 배타적
+                  // "나의 기록 제외", "내가 좋아요 한 코디", "구독한 사람만"과 상호 배타적
                   if (checked) {
                     setExcludeMyRecords(false);
+                    setLikedOnly(false);
+                    setOnlySubscribedUsers(false);
                   }
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
@@ -411,7 +413,12 @@ function Recommend() {
                 id="likedOnly"
                 checked={likedOnly}
                 onChange={(e) => {
-                  setLikedOnly(e.target.checked);
+                  const checked = e.target.checked;
+                  setLikedOnly(checked);
+                  // "나의 기록만"과 상호 배타적
+                  if (checked) {
+                    setOnlyMyRecords(false);
+                  }
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />
@@ -425,7 +432,12 @@ function Recommend() {
                 id="onlySubscribedUsers"
                 checked={onlySubscribedUsers}
                 onChange={(e) => {
-                  setOnlySubscribedUsers(e.target.checked);
+                  const checked = e.target.checked;
+                  setOnlySubscribedUsers(checked);
+                  // "나의 기록만"과 상호 배타적
+                  if (checked) {
+                    setOnlyMyRecords(false);
+                  }
                 }}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />
@@ -505,7 +517,7 @@ function Recommend() {
         </div>
 
         {/* 오른쪽 : 코디 목록 */}
-        <div className="w-full md:w-3/4 bg-white rounded-lg shadow p-6">
+        <div className="w-full md:w-3/4 bg-white rounded-lg shadow p-6 min-h-[400px]">
           <div className="mb-4">
             <h3 className="text-lg font-semibold mb-2">
               총 {filteredOutfits.length}개의 코디
