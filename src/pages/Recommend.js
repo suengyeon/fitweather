@@ -28,7 +28,10 @@ function Recommend() {
   const [filteredOutfits, setFilteredOutfits] = useState([]); // 필터링된 기록
   const [hasActiveFilters, setHasActiveFilters] = useState(false); // 활성 필터 존재 여부
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
+  // 성별 상태
+  const [gender, setGender] = useState('female'); // 초기값 설정(남/여 중 선택)
+
   // 알림 사이드바 훅
   const { alarmOpen, setAlarmOpen,
     notifications, unreadCount,
@@ -42,11 +45,11 @@ function Recommend() {
   const [onlyMyRecords, setOnlyMyRecords] = useState(false);
   const [likedOnly, setLikedOnly] = useState(false);
   const [onlySubscribedUsers, setOnlySubscribedUsers] = useState(false);
-  
+
   // 구독한 사용자 ID 목록
   const [subscribedUsers, setSubscribedUsers] = useState([]);
   // 내가 좋아요한 기록 ID 목록
-  const [likedRecordIds, setLikedRecordIds] = useState([]); 
+  const [likedRecordIds, setLikedRecordIds] = useState([]);
 
   // 드롭다운/입력 필터 상태
   const [filters, setFilters] = useState(() => {
@@ -95,19 +98,19 @@ function Recommend() {
       try {
         const { collection, query, where, getDocs } = await import("firebase/firestore");
         const { db } = await import("../firebase");
-        
+
         const followsQuery = query(
           collection(db, "follows"),
           where("followerId", "==", user.uid)
         );
-        
+
         const followsSnapshot = await getDocs(followsQuery);
         const followingIds = followsSnapshot.docs.map(doc => doc.data().followingId);
-        
+
         setSubscribedUsers(followingIds);
       } catch (error) {
         console.error("❌ 구독 사용자 목록 조회 실패:", error);
-        setSubscribedUsers([]); 
+        setSubscribedUsers([]);
       }
     };
     fetchSubscribedUsers();
@@ -120,20 +123,20 @@ function Recommend() {
       try {
         const { collection, query, where, getDocs } = await import("firebase/firestore");
         const { db } = await import("../firebase");
-        
+
         const reactionsQuery = query(
           collection(db, "reactions"),
           where("uid", "==", user.uid),
           where("type", "==", "up")
         );
-        
+
         const reactionsSnapshot = await getDocs(reactionsQuery);
         const likedIds = reactionsSnapshot.docs.map(doc => doc.data().recordId);
-        
+
         setLikedRecordIds(likedIds);
       } catch (error) {
         console.error("❌ 좋아요 기록 목록 조회 실패:", error);
-        setLikedRecordIds([]); 
+        setLikedRecordIds([]);
       }
     };
     fetchLikedRecords();
@@ -254,7 +257,7 @@ function Recommend() {
     excludeMyRecords,
     onlyMyRecords,
     likedOnly,
-    likedRecordIds, 
+    likedRecordIds,
     onlySubscribedUsers,
     subscribedUsers,
     user,
@@ -443,6 +446,34 @@ function Recommend() {
               />
               <label htmlFor="onlySubscribedUsers" className="ml-2 text-sm text-gray-700">
                 내가 구독한 사람만
+              </label>
+            </div>
+            {/* 성별 선택  */}
+            <div className="flex space-x-3 mb-2">
+              {/* 남성 라디오 버튼 */}
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="male"
+                  checked={gender === 'male'}
+                  onChange={() => setGender('male')}
+                  className="form-radio text-indigo-600 h-4 w-4"
+                />
+                <span className="text-gray-700 text-sm">남</span>
+              </label>
+
+              {/* 여성 라디오 버튼 */}
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="female"
+                  checked={gender === 'female'}
+                  onChange={() => setGender('female')}
+                  className="form-radio text-pink-500 h-4 w-4"
+                />
+                <span className="text-gray-700 text-sm">여</span>
               </label>
             </div>
           </div>

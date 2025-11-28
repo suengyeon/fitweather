@@ -30,6 +30,9 @@ function Feed() {
   const [style, setStyle] = useState(""); 
   const [sidebarOpen, setSidebarOpen] = useState(false); 
   
+  // 성별 상태
+  const [gender, setGender] = useState('female'); // 초기값 설정(남/여 중 선택)
+  
   // 알림 로직 훅
   const {
     alarmOpen, setAlarmOpen,
@@ -139,6 +142,39 @@ function Feed() {
           </div>
 
           <div className="flex flex-col items-center gap-8 mt-6">
+            
+            {/* 성별 선택  */}
+            <div className="flex items-center justify-between gap-2 pr-4 w-60">
+                <label className="font-semibold">성별</label>
+                <div className="flex space-x-6"> 
+                    {/* 남성 라디오 버튼 */}
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                        <input 
+                            type="radio" 
+                            name="gender" 
+                            value="male"
+                            checked={gender === 'male'}
+                            onChange={() => setGender('male')}
+                            className="form-radio text-indigo-600 h-4 w-4" 
+                        />
+                        <span className="text-gray-700 text-sm">남</span>
+                    </label>
+                    
+                    {/* 여성 라디오 버튼 */}
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                        <input 
+                            type="radio" 
+                            name="gender" 
+                            value="female"
+                            checked={gender === 'female'}
+                            onChange={() => setGender('female')}
+                            className="form-radio text-pink-500 h-4 w-4" 
+                        />
+                        <span className="text-gray-700 text-sm">여</span>
+                    </label>
+                </div>
+            </div>
+            
             {/* 지역 선택 드롭다운 */}
             <div className="flex items-center justify-between gap-4 w-60">
               <label htmlFor="region" className="font-semibold">지역</label>
@@ -221,7 +257,7 @@ function Feed() {
                   onChange={(e) => handleDateChange('month', parseInt(e.target.value))}
                   className="px-2 py-1 rounded bg-white text-sm text-center w-[60px]"
                 >
-                  {months.map((month) => (
+                  {months.map((month) => ( // ✨ 중괄호 `{}`를 추가하여 JSX 문법 오류 수정
                     // month 배열이 숫자 [1, 2, ...]로 가정하고 렌더링
                     <option key={month} value={month}>{month}</option>
                   ))}

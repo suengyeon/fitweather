@@ -10,9 +10,10 @@ import { regionMap } from "../constants/regionData";
  * ProfileSetup 컴포넌트 - 소셜 로그인 후 신규 사용자가 닉네임과 지역 등 추가 정보를 설정하는 페이지
  */
 function ProfileSetup() {
-  const location = useLocation(); 
+  const location = useLocation();
   const navigate = useNavigate();
-  const { setSocialUser } = useAuth(); 
+  const { setSocialUser } = useAuth();
+  const [gender, setGender] = useState('male');
 
   // 전달받은 사용자 정보
   const uid = location.state?.uid;
@@ -22,7 +23,7 @@ function ProfileSetup() {
 
   // 입력 필드 상태
   const [nickname, setNickname] = useState(displayName);
-  const [userEmail, setUserEmail] = useState(email); 
+  const [userEmail, setUserEmail] = useState(email);
   const [region, setRegion] = useState("");
   const [error, setError] = useState("");
 
@@ -138,13 +139,13 @@ function ProfileSetup() {
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* 상단 네비게이션 */}
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
-        <button className="bg-blue-300 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-400">
+        <button className="bg-blue-200 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-300">
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">회원 정보 입력</h2>
         <button
           onClick={() => navigate("/")}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
         >
           <HomeIcon className="w-5 h-5" />
         </button>
@@ -217,6 +218,38 @@ function ProfileSetup() {
             </select>
           </div>
 
+          {/* 성별 선택 (새로 추가) */}
+          <div className="mb-6">
+            <label className="block font-semibold mb-2">성별</label>
+            <div className="flex space-x-6">
+              {/* 남성 체크박스 */}
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="male"
+                  checked={gender === 'male'}
+                  onChange={() => setGender('male')}
+                  className="form-radio text-indigo-600 h-4 w-4"
+                />
+                <span className="text-gray-700">남</span>
+              </label>
+
+              {/* 여성 체크박스 */}
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="female"
+                  checked={gender === 'female'}
+                  onChange={() => setGender('female')}
+                  className="form-radio text-pink-600 h-4 w-4"
+                />
+                <span className="text-gray-700">여</span>
+              </label>
+            </div>
+          </div>
+
           {/* 에러 메시지 */}
           {error && (
             <p className="text-red-500 text-sm mb-4">{error}</p>
@@ -228,7 +261,7 @@ function ProfileSetup() {
               onClick={handleSave}
               className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded w-auto"
             >
-              저장
+              가입하기
             </button>
           </div>
         </div>
