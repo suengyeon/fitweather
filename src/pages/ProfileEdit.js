@@ -116,14 +116,14 @@ function ProfileEdit() {
       <div className="flex justify-between items-center px-4 py-3 bg-blue-100 shadow">
         <button 
           onClick={() => navigate("/mypage_userinfo")}
-          className="bg-blue-300 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-300"
         >
           <Bars3Icon className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-lg">회원 정보 수정</h2>
         <button
           onClick={() => navigate("/")}
-          className="bg-blue-300 px-3 py-1 rounded-md hover:bg-blue-400"
+          className="bg-blue-200 px-3 py-1 rounded-md hover:bg-blue-300"
         >
           <HomeIcon className="w-5 h-5" />
         </button>

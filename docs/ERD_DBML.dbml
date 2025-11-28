@@ -1,0 +1,125 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+// Fitweather Database Schema - Firebase Firestore
+// 
+// 가로 배치 방법 (dbdiagram.io에서):
+// 1. 파일을 dbdiagram.io에 업로드/붙여넣기
+// 2. 페이지 상단의 "Auto Layout" 버튼 클릭
+// 3. 드롭다운에서 "Horizontal" 선택
+// 또는 다이어그램 영역에서 우클릭 → "Auto Arrange" 선택
+// 또는 각 테이블을 드래그하여 직접 배치
+//
+// records 컬렉션: 현재 메인 컬렉션 (Record 페이지에서 저장)
+// outfits 컬렉션은 기존 데이터가 없어 제거됨
+
+TableGroup core {
+  users
+  records
+}
+
+TableGroup social {
+  comments
+  reactions
+  follows
+}
+
+TableGroup system {
+  notifications
+  reports
+}
+
+Table users {
+  uid varchar [primary key, note: 'Firebase Auth UID']
+  email varchar [note: '이메일 주소']
+  nickname varchar [unique, note: '닉네임 (2-20자, 고유값)']
+  region varchar [note: '주 활동 지역 (예: "Seoul")']
+  provider varchar [note: '로그인 제공자 ("google" | "kakao")']
+  is_public boolean [default: false, note: '캘린더 공개 여부 (실제 필드명: isPublic)']
+  status varchar [default: 'active', note: '계정 상태 ("active" | "banned" | "inactive")']
+  filters json [note: '추천 필터 설정 (온도, 강수량, 습도 범위)']
+  role varchar [note: '사용자 역할 ("admin" | "user")']
+  is_admin boolean [note: '관리자 여부 (실제 필드명: isAdmin)']
+  admin_set_at timestamp [note: '관리자 권한 설정 시각 (실제 필드명: adminSetAt)']
+  banned_at timestamp [note: '차단 시각 (실제 필드명: bannedAt)']
+  created_at timestamp [note: '생성 시간 (실제 필드명: createdAt)']
+  updated_at timestamp [note: '수정 시간 (실제 필드명: updatedAt)']
+}
+
+Table records {
+  id varchar [primary key, note: '자동 생성 ID']
+  uid varchar [not null, note: '작성자 UID']
+  nickname varchar [note: '작성자 닉네임 (캐싱)']
+  date varchar [note: '기록 날짜 (ISO 문자열)']
+  region varchar [note: '지역 코드']
+  region_name varchar [note: '지역명 (실제 필드명: regionName)']
+  weather json [note: '날씨 객체 {temp, minTemp, maxTemp, rain, humidity, icon, season}']
+  outfit json [note: '착장 정보 객체 {outer, top, bottom, shoes, acc}']
+  feeling varchar [note: '체감 온도 이모지']
+  style varchar [note: '스타일 (한글 문자열, 예: "캐주얼")']
+  style_code varchar [note: '스타일 코드 (영문, 예: "casual") (실제 필드명: styleCode)']
+  season text [note: '계절 배열 또는 문자열']
+  memo text [note: '메모 (최대 500자)']
+  image_urls text [note: '이미지 URL 배열 (최대 5개) (실제 필드명: imageUrls)']
+  is_public boolean [default: false, note: '공개 여부 (실제 필드명: isPublic)']
+  likes text [note: '좋아요한 사용자 UID 배열']
+  created_at timestamp [note: '생성 시간 (실제 필드명: createdAt)']
+  updated_at timestamp [note: '수정 시간 (실제 필드명: updatedAt)']
+}
+
+Table comments {
+  id varchar [primary key, note: '문서 ID = recordId (착장 기록 ID)']
+  comments json [note: '댓글 배열 [{id, author, authorUid, timestamp, content, replies}]']
+  last_updated timestamp [note: '마지막 업데이트 시간 (실제 필드명: lastUpdated)']
+}
+
+Table reactions {
+  id varchar [primary key, note: 'recordId_uid 조합']
+  record_id varchar [not null, note: '착장 기록 ID (실제 필드명: recordId)']
+  uid varchar [not null, note: '반응한 사용자 UID']
+  type varchar [note: '반응 타입 ("up" | "down")']
+  created_at timestamp [note: '생성 시간 (실제 필드명: createdAt)']
+}
+
+Table follows {
+  id varchar [primary key, note: '자동 생성 ID']
+  follower_id varchar [not null, note: '팔로워 UID (팔로우하는 사람) (실제 필드명: followerId)']
+  following_id varchar [not null, note: '팔로잉 UID (팔로우받는 사람) (실제 필드명: followingId)']
+  created_at timestamp [note: '생성 시간 (실제 필드명: createdAt)']
+}
+
+Table notifications {
+  id varchar [primary key, note: '자동 생성 ID']
+  recipient varchar [not null, note: '수신자 UID']
+  sender json [note: '발신자 정보 객체 {id, nickname, avatarUrl, profilePictureUrl}']
+  type varchar [note: '알림 타입 ("follow" | "comment_on_my_post" | "reply_to_my_comment" | "user_reported")']
+  message varchar [note: '알림 내용 (최대 200자)']
+  link varchar [note: '이동할 링크 (경로)']
+  is_read boolean [default: false, note: '읽음 여부 (실제 필드명: isRead)']
+  read boolean [default: false, note: '읽음 여부 (UI용)']
+  created_at timestamp [note: '생성 시간 (실제 필드명: createdAt)']
+  updated_at timestamp [note: '수정 시간 (실제 필드명: updatedAt)']
+}
+
+Table reports {
+  id varchar [primary key, note: '자동 생성 ID']
+  reporter_id varchar [not null, note: '신고자 UID (실제 필드명: reporterId)']
+  target_user_id varchar [not null, note: '신고 대상 사용자 UID (실제 필드명: targetUserId)']
+  target_type varchar [note: '신고 대상 타입 ("post" | "comment") (실제 필드명: targetType)']
+  target_id varchar [not null, note: '신고 대상 ID (실제 필드명: targetId)']
+  record_id varchar [note: '게시물 ID (댓글 신고 시) (실제 필드명: recordId)']
+  reason varchar [note: '신고 사유']
+  date timestamp [note: '신고 날짜']
+  status varchar [default: 'pending', note: '처리 상태 ("pending" | "resolved" | "dismissed")']
+  target_content_status varchar [default: 'active', note: '신고 대상 콘텐츠 상태']
+}
+
+// Relationships
+Ref user_records: records.uid > users.uid // many-to-one: 사용자는 여러 착장 기록 작성
+Ref record_comments: comments.id > records.id // one-to-one: 착장 기록당 하나의 댓글 문서 (문서 ID = recordId)
+Ref user_reactions: reactions.uid > users.uid // many-to-one: 사용자는 여러 반응 가능
+Ref record_reactions: reactions.record_id > records.id // many-to-one: 착장 기록은 여러 반응 받음
+Ref follower: follows.follower_id > users.uid // many-to-one: 팔로워
+Ref following: follows.following_id > users.uid // many-to-one: 팔로잉
+Ref notification_recipient: notifications.recipient > users.uid // many-to-one: 알림 수신자
+Ref report_reporter: reports.reporter_id > users.uid // many-to-one: 신고자
+

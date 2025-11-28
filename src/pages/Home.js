@@ -43,7 +43,7 @@ function Home() {
   const [recommendations, setRecommendations] = useState([]);
   const [currentRecommendationIndex, setCurrentRecommendationIndex] = useState(0);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false); 
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState("");
 
   // 날씨 정보 가져오기 훅
@@ -205,15 +205,39 @@ function Home() {
             {/* 오늘의 날씨 섹션 */}
             {weather && (
               <div className="w-full max-w-md flex flex-col items-center">
-                {/* 날씨 요약 및 온도 */}
                 <div className="flex items-center gap-4 mb-2">
+                  {/* 1. 날씨 이모지 */}
                   <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <span className="text-3xl animate-bounce">
+                    <span className="text-4xl animate-bounce">
                       {getWeatherEmoji(weather.icon)}
                     </span>
                   </div>
-                  <div className="text-3xl font-bold text-gray-800">
+
+                  {/* 2. 현재 온도 */}
+                  <div className="text-4xl font-bold text-gray-800">
                     {weather.temp}°C
+                  </div>
+
+                  {/* 3. 체감온도 + 풍속 */}
+                  <div className="flex flex-col justify-center text-sm font-medium text-gray-600 space-y-1 ml-4">
+
+                    {/* 1단: 체감 온도 */}
+                    <div className="flex items-center">
+                      <span className="mr-1">체감</span>
+                      {/* 체감 온도 데이터 (예시: weather.feelsLike) */}
+                      <span className="font-bold text-gray-800">
+                        {weather.feelsLike}°C
+                      </span>
+                    </div>
+
+                    {/* 2단: 풍속 */}
+                    <div className="flex items-center">
+                      <span className="mr-1">바람</span>
+                      {/* 풍속 데이터 (예시: weather.windSpeed) */}
+                      <span className="font-bold text-gray-800">
+                        {weather.windSpeed}m/s
+                      </span>
+                    </div>
                   </div>
                 </div>
                 {/* 날씨에 따른 추천 메시지 */}
@@ -354,11 +378,11 @@ function Home() {
                       <div className="text-2xl">
                         {(() => {
                           const feelingEmojiMap = {
-                            steam: "🥟", 
-                            hot: "🥵",   
-                            nice: "👍🏻",  
-                            cold: "💨",  
-                            ice: "🥶",   
+                            steam: "🥟",
+                            hot: "🥵",
+                            nice: "👍🏻",
+                            cold: "💨",
+                            ice: "🥶",
                           };
                           return feelingEmojiMap[currentRecommendation.feeling] || currentRecommendation.feeling;
                         })()}

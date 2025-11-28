@@ -123,7 +123,7 @@ function MyPageUserInfo() {
                 type="text"
                 value={item.value}
                 readOnly // 읽기 전용 필드
-                className="flex-1 border border-gray-300 bg-gray-200 px-4 py-2 rounded text-base"
+                className="flex-1 border border-gray-300 bg-gray-100 px-4 py-2 rounded text-base"
               />
             </div>
           ))}
