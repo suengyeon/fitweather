@@ -17,6 +17,7 @@ function ProfileEdit() {
   const [nickname, setNickname] = useState("");
   const [region, setRegion] = useState("");
   const [email, setEmail] = useState("");
+  const [gender, setGender] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +44,7 @@ function ProfileEdit() {
           setNickname(data.nickname || "");
           setRegion(data.region || "");
           setEmail(data.email || "");
+          setGender(data.gender || "");
         } else {
           setError("사용자 정보를 찾을 수 없습니다.");
         }
@@ -88,6 +90,7 @@ function ProfileEdit() {
         nickname,
         region: capitalizeRegion(region),
         email: email, // 기존 이메일 유지
+        gender, // 성별 정보 저장
         updatedAt: new Date()
       };
 
@@ -177,6 +180,35 @@ function ProfileEdit() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* 성별 선택 */}
+          <div className="mb-6">
+            <label className="block font-semibold mb-2">성별</label>
+            <div className="flex space-x-6">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="male"
+                  checked={gender === "male"}
+                  onChange={() => setGender("male")}
+                  className="form-radio text-indigo-600 h-4 w-4"
+                />
+                <span className="text-gray-700">남</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="female"
+                  checked={gender === "female"}
+                  onChange={() => setGender("female")}
+                  className="form-radio text-pink-600 h-4 w-4"
+                />
+                <span className="text-gray-700">여</span>
+              </label>
+            </div>
           </div>
 
           {/* 에러 메시지 */}

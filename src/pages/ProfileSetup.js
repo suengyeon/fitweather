@@ -111,6 +111,7 @@ function ProfileSetup() {
         region: capitalizeRegion(region),
         email: userEmail || email, // 사용자가 입력한 최종 이메일 사용
         provider,
+        gender, // 성별 정보 추가
         createdAt: new Date()
       };
 

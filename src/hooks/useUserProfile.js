@@ -33,10 +33,11 @@ export default function useUserProfile() {
         if (snap.exists()) {
           const data = snap.data();
           console.log('useUserProfile: 사용자 데이터 가져옴', data);
-          // 3. 필요한 데이터만 추출하여 프로필 상태에 저장(region, isPublic 기본값 설정 포함)
+          // 3. 필요한 데이터만 추출하여 프로필 상태에 저장(region, gender, isPublic 기본값 설정 포함)
           setProfile({
             nickname: data.nickname,
             region: data.region || "Seoul", 
+            gender: data.gender || null,
             isPublic: data.isPublic || false, 
           });
         } else {

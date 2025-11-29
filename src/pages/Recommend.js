@@ -15,6 +15,8 @@ import { regionMap } from "../constants/regionData";
 import { styleOptions } from "../constants/styleOptions";
 import { seasonMap, normalizeSeason, matchesStyle } from "../utils/filterUtils";
 import { getFeelingOptions } from "../utils/weatherUtils";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 /**
  * Recommend 컴포넌트 - 전체 착장 기록을 불러와 다양한 기준으로 필터링 및 정렬하여 보여줌
@@ -50,6 +52,8 @@ function Recommend() {
   const [subscribedUsers, setSubscribedUsers] = useState([]);
   // 내가 좋아요한 기록 ID 목록
   const [likedRecordIds, setLikedRecordIds] = useState([]);
+  // 작성자 uid -> gender 매핑
+  const [userGenderMap, setUserGenderMap] = useState({});
 
   // 드롭다운/입력 필터 상태
   const [filters, setFilters] = useState(() => {
@@ -90,6 +94,51 @@ function Recommend() {
     };
     fetchAllRecords();
   }, []);
+
+  // 작성자 성별 정보 로딩 (users 컬렉션 기준)
+  useEffect(() => {
+    const loadUserGenders = async () => {
+      if (!gender) {
+        setUserGenderMap({});
+        return;
+      }
+
+      const uids = Array.from(new Set(outfits.map(o => o.uid).filter(Boolean)));
+      if (uids.length === 0) {
+        setUserGenderMap({});
+        return;
+      }
+
+      try {
+        const snapshots = await Promise.all(
+          uids.map(async (uid) => {
+            try {
+              const snap = await getDoc(doc(db, "users", uid));
+              return { uid, snap };
+            } catch {
+              return { uid, snap: null };
+            }
+          })
+        );
+
+        const map = {};
+        snapshots.forEach(({ uid, snap }) => {
+          if (snap && snap.exists()) {
+            const data = snap.data();
+            map[uid] = data.gender || null;
+          } else {
+            map[uid] = null;
+          }
+        });
+        setUserGenderMap(map);
+      } catch (e) {
+        console.error("작성자 성별 정보 로딩 실패:", e);
+        setUserGenderMap({});
+      }
+    };
+
+    loadUserGenders();
+  }, [outfits, gender]);
 
   // 구독한 사용자 목록 가져오기
   useEffect(() => {
@@ -209,7 +258,8 @@ function Recommend() {
       excludeMyRecords ||
       onlyMyRecords ||
       likedOnly ||
-      onlySubscribedUsers;
+      onlySubscribedUsers ||
+      !!gender;
     setHasActiveFilters(hasFilters);
 
     let filtered = [...outfits];
@@ -245,6 +295,17 @@ function Recommend() {
         if (!matchesStyle(recStyle, filters.style)) return false;
       }
 
+      // 성별 필터 (작성자 프로필 기준)
+      if (gender) {
+        const authorGender = userGenderMap[record.uid] || null;
+
+        // 남성 탭: authorGender === 'male' 인 기록만
+        if (gender === 'male' && authorGender !== 'male') return false;
+
+        // 여성 탭: authorGender === 'female' 인 기록만
+        if (gender === 'female' && authorGender !== 'female') return false;
+      }
+
       return true;
     });
 
@@ -260,6 +321,8 @@ function Recommend() {
     likedRecordIds,
     onlySubscribedUsers,
     subscribedUsers,
+    gender,
+    userGenderMap,
     user,
   ]);
 

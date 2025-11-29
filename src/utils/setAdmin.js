@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase'; // 초기화된 Firestore 인스턴스
 
 /**
@@ -90,5 +90,44 @@ export async function removeAdminUser(email) {
   } catch (error) {
     console.error('관리자 권한 제거 실패:', error);
     return false;
+  }
+}
+
+/**
+ * 성별 정보가 없는 모든 사용자 문서에 기본 성별('male')을 설정
+ */
+export async function setDefaultGenderMaleForAllUsers() {
+  try {
+    const usersRef = collection(db, 'users');
+    const snapshot = await getDocs(usersRef);
+
+    if (snapshot.empty) {
+      console.log('사용자 문서가 없습니다.');
+      return 0;
+    }
+
+    const batch = writeBatch(db);
+    let updatedCount = 0;
+
+    snapshot.forEach((userDoc) => {
+      const data = userDoc.data();
+      // gender 필드가 없거나 falsy(null/undefined/빈 문자열)인 경우에만 기본값 설정
+      if (!data.gender) {
+        batch.update(userDoc.ref, { gender: 'male' });
+        updatedCount += 1;
+      }
+    });
+
+    if (updatedCount === 0) {
+      console.log('업데이트할 사용자(성별 미설정)가 없습니다.');
+      return 0;
+    }
+
+    await batch.commit();
+    console.log(`성별 기본값(남)으로 업데이트된 사용자 수: ${updatedCount}`);
+    return updatedCount;
+  } catch (error) {
+    console.error('성별 기본값 일괄 설정 실패:', error);
+    throw error;
   }
 }

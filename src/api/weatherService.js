@@ -121,6 +121,9 @@ export class WeatherService {
       weatherExpression: weatherExpression,
       seasonColor: this.getSeasonColor(season),
       expressionColor: this.getExpressionColor(weatherExpression),
+      // 모의 데이터용 기본 체감/풍속
+      feelsLike: temp,
+      windSpeed: 1.5,
       fcstTime: new Date().toISOString(),
       apiSource: 'mock'
     };
@@ -266,6 +269,8 @@ export class WeatherService {
     const sky = findValue("SKY") || "1"; // 하늘 상태 (1, 3, 4)
     const pty = findValue("PTY") || "0"; // 강수 형태 (0, 1, 2, 3, 4)
     const tavg = findValue("TAVG") || nextTmp.fcstValue; // 일일 평균 기온(없으면 현재 기온 사용)
+    const wsd = findValue("WSD"); // 풍속 (m/s)
+    const sen = findValue("SEN"); // 체감온도
 
     // 표준화된 형식으로 날씨 데이터 구성
     return {
@@ -276,6 +281,9 @@ export class WeatherService {
       sky: sky,
       pty: pty,
       icon: this.getWeatherIcon(sky, pty), // 아이콘 변환
+      // 체감 온도 및 풍속(데이터 없으면 현재 기온/ null 사용)
+      feelsLike: sen !== undefined ? Number(sen) : Number(nextTmp.fcstValue),
+      windSpeed: wsd !== undefined ? Number(wsd) : null,
       // 유틸리티 함수 이용해 계절, 날씨 표현, 색상 값 추가
       season: this.getSeason(tavg, new Date()),
       weatherExpression: this.getWeatherExpression(this.getSeason(tavg, new Date()), nextTmp.fcstValue),
@@ -290,9 +298,11 @@ export class WeatherService {
    * OpenWeatherMap 데이터를 기상청 형식으로 변환
    */
   convertOpenWeatherMapToKmaFormat(owmData) {
-    const { weather, main, rain } = owmData;
+    const { weather, main, rain, wind } = owmData;
     const weatherCode = weather[0].id;
     const temperature = Math.round(main.temp);
+    const feelsLike = Math.round(main.feels_like);
+    const windSpeed = wind?.speed ?? null; // m/s
 
     // 표준화된 형식으로 날씨 데이터 구성
     return {
@@ -303,6 +313,8 @@ export class WeatherService {
       sky: this.convertToSky(weatherCode), // OWM 코드를 SKY로 변환
       pty: this.convertToPty(weatherCode), // OWM 코드를 PTY로 변환
       icon: this.convertToIconCode(weatherCode), // OWM 코드를 아이콘 코드로 변환
+      feelsLike,
+      windSpeed,
       // 유틸리티 함수를 이용해 계절, 날씨 표현, 색상 값 추가
       season: this.getSeason(temperature, new Date()),
       weatherExpression: this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature),
@@ -339,6 +351,10 @@ export class WeatherService {
   convertAccuWeatherToKmaFormat(awData) {
     const temperature = Math.round(awData.Temperature.Metric.Value);
     const weatherCode = awData.WeatherIcon; 
+    const feelsLike = Math.round(
+      awData.RealFeelTemperature?.Metric?.Value ?? awData.Temperature.Metric.Value
+    );
+    const windSpeed = awData.Wind?.Speed?.Metric?.Value ?? null;
 
     // 표준화된 형식으로 날씨 데이터 구성
     return {
@@ -349,6 +365,8 @@ export class WeatherService {
       sky: this.convertAccuWeatherToSky(weatherCode), // AW 코드를 SKY로 변환
       pty: this.convertAccuWeatherToPty(weatherCode), // AW 코드를 PTY로 변환
       icon: this.convertAccuWeatherToIcon(weatherCode), // AW 코드를 아이콘 코드로 변환
+      feelsLike,
+      windSpeed,
       // 유틸리티 함수를 이용해 계절, 날씨 표현, 색상 값 추가
       season: this.getSeason(temperature, new Date()),
       weatherExpression: this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature),
@@ -365,6 +383,9 @@ export class WeatherService {
   convertWeatherAPIToKmaFormat(waData) {
     const { current } = waData;
     const temperature = Math.round(current.temp_c);
+    const feelsLike = Math.round(current.feelslike_c);
+    // WeatherAPI wind_kph 를 m/s 로 변환 (kph / 3.6)
+    const windSpeed = current.wind_kph != null ? Number((current.wind_kph / 3.6).toFixed(1)) : null;
 
     // 표준화된 형식으로 날씨 데이터 구성
     return {
@@ -375,6 +396,8 @@ export class WeatherService {
       sky: this.convertWeatherAPIToSky(current.condition.code), // WA 코드를 SKY로 변환
       pty: this.convertWeatherAPIToPty(current.condition.code), // WA 코드를 PTY로 변환
       icon: this.convertWeatherAPIToIcon(current.condition.code), // WA 코드를 아이콘 코드로 변환
+      feelsLike,
+      windSpeed,
       // 유틸리티 함수를 이용해 계절, 날씨 표현, 색상 값 추가
       season: this.getSeason(temperature, new Date()),
       weatherExpression: this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature),
@@ -391,6 +414,8 @@ export class WeatherService {
   convertVisualCrossingToKmaFormat(vcData) {
     const current = vcData.currentConditions;
     const temperature = Math.round(current.temp);
+    const feelsLike = current.feelslike != null ? Math.round(current.feelslike) : temperature;
+    const windSpeed = current.windspeed != null ? Number(current.windspeed) : null;
 
     // 표준화된 형식으로 날씨 데이터 구성
     return {
@@ -401,6 +426,8 @@ export class WeatherService {
       sky: this.convertVisualCrossingToSky(current.conditions), // VC 조건을 SKY로 변환
       pty: this.convertVisualCrossingToPty(current.conditions), // VC 조건을 PTY로 변환
       icon: this.convertVisualCrossingToIcon(current.conditions), // VC 조건을 아이콘 코드로 변환
+      feelsLike,
+      windSpeed,
       // 유틸리티 함수를 이용해 계절, 날씨 표현, 색상 값 추가
       season: this.getSeason(temperature, new Date()),
       weatherExpression: this.getWeatherExpression(this.getSeason(temperature, new Date()), temperature),

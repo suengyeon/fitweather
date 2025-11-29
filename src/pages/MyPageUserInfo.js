@@ -19,6 +19,7 @@ function MyPageUserInfo() {
   const [region, setRegion] = useState("");
   const [email, setEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [gender, setGender] = useState("");
   
   // 알림 사이드바 훅
   const { alarmOpen, setAlarmOpen,
@@ -35,6 +36,13 @@ function MyPageUserInfo() {
     return regionMap[englishRegion] || englishRegion;
   };
 
+  // 성별 값을 한글로 변환하는 함수
+  const getKoreanGender = (value) => {
+    if (value === "male") return "남";
+    if (value === "female") return "여";
+    return "선택 안 함";
+  };
+
   // 사용자 정보 가져오기(컴포넌트 로드 시, user 객체가 있을 경우 실행)
   useEffect(() => {
     if (!user) return;
@@ -46,6 +54,7 @@ function MyPageUserInfo() {
         setNickname(data.nickname);
         setRegion(data.region);
         setEmail(data.email);
+        setGender(data.gender || "");
       }
     };
     fetchProfile();
@@ -112,9 +121,10 @@ function MyPageUserInfo() {
         {/* 정보 카드 */}
         <div className="bg-white rounded-lg px-8 py-8 w-full max-w-xl mb-8">
           {[
-            // 표시할 회원 정보 목록(지역, 닉네임, 아이디)
+            // 표시할 회원 정보 목록(지역, 닉네임, 성별, 아이디)
             { label: "지역", value: getKoreanRegionName(region) },
             { label: "닉네임", value: nickname },
+            { label: "성별", value: getKoreanGender(gender) },
             { label: "아이디", value: email },
           ].map((item, idx) => (
             <div key={idx} className="mb-10 flex items-center">

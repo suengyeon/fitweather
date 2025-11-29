@@ -51,7 +51,7 @@ function Feed() {
     selectedDate, // YYYY-MM-DD 형식의 현재 선택된 날짜
     isLoading: isFeedLoading, 
     handleToggleLike 
-  } = useFeedData(region, order, style, dateState);
+  } = useFeedData(region, order, style, dateState, gender);
 
   // 2. useSortedFeed 훅 : 데이터 정렬 및 TOP3 분리
   const isPopular = order === "popular";

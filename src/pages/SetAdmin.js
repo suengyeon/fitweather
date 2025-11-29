@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { setAdminUser, checkAdminUser, removeAdminUser } from '../utils/setAdmin';
+import { setAdminUser, checkAdminUser, removeAdminUser, setDefaultGenderMaleForAllUsers } from '../utils/setAdmin';
 
 /**
  * SetAdmin 컴포넌트 - 특정 이메일 계정에 대해 관리자 권한을 설정, 확인, 제거하는 관리 도구
@@ -62,6 +62,25 @@ function SetAdmin() {
     }
   };
 
+  // 성별이 설정되지 않은 모든 유저를 남자로 일괄 설정
+  const handleSetDefaultGenderMale = async () => {
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const updatedCount = await setDefaultGenderMaleForAllUsers();
+      if (updatedCount > 0) {
+        setMessage(`✅ 성별 미설정 사용자 ${updatedCount}명의 성별을 '남'으로 설정했습니다.`);
+      } else {
+        setMessage('ℹ️ 성별이 미설정된 사용자가 없습니다.');
+      }
+    } catch (error) {
+      setMessage(`❌ 성별 기본값 설정 중 오류 발생: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
@@ -110,6 +129,15 @@ function SetAdmin() {
             className="w-full bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {loading ? '처리 중...' : '관리자 권한 제거'}
+          </button>
+
+          {/* 성별 미설정 사용자 일괄 남자로 설정 버튼 */}
+          <button
+            onClick={handleSetDefaultGenderMale}
+            disabled={loading}
+            className="w-full bg-purple-500 text-white py-2 px-4 rounded-md hover:bg-purple-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {loading ? '처리 중...' : "성별 미설정 전체 '남'으로 설정"}
           </button>
         </div>
 

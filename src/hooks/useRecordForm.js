@@ -218,6 +218,8 @@ export const useRecordForm = (existingRecord, dateStr, weather, selectedRegion, 
                 region: selectedRegion,
                 regionName,
                 date: dateStr,
+                // 작성자의 성별 정보(회원정보에 설정된 경우) 저장
+                gender: profile?.gender || 'male',
                 weather: {
                     temp: weather.temp ?? null,
                     minTemp: weather.minTemp ?? null,

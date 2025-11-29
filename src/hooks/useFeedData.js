@@ -3,11 +3,13 @@ import { getRecords } from "../api/getRecords";
 import { toggleLike } from "../api/toggleLike"; 
 import { getStyleLabel } from "../utils/styleUtils"; 
 import { useAuth } from "../contexts/AuthContext"; 
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 /**
  * 피드 데이터를 불러오고 필터링 및 좋아요 상태 관리를 담당하는 커스텀 훅
  */
-export function useFeedData(region, order, style, dateState) {
+export function useFeedData(region, order, style, dateState, gender = null) {
   const { user } = useAuth();
   const [outfits, setOutfits] = useState([]); 
   const [isLoading, setIsLoading] = useState(false);
@@ -34,18 +36,54 @@ export function useFeedData(region, order, style, dateState) {
       try {
         // Firestore에서 기록 조회(지역, 정렬, 날짜 기준)
         const records = await getRecords(region, order, selectedDate);
-        
-        // 스타일 필터링 적용
-        const filteredRecords = records.filter(record => {
-          if (!style) return true; // 필터가 없으면 모두 포함
-          
-          // 기록의 스타일과 필터의 스타일 라벨이 일치하는지 확인
-          const recordStyleLabel = record.style; 
-          const filterStyleLabel = getStyleLabel(style);
 
-          return recordStyleLabel === filterStyleLabel;
+        // 작성자별 성별 정보 로딩 (users 컬렉션 기준)
+        let userGenderMap = {};
+        if (gender) {
+          const uids = Array.from(new Set(records.map(r => r.uid).filter(Boolean)));
+          const snapshots = await Promise.all(
+            uids.map(async (uid) => {
+              try {
+                const snap = await getDoc(doc(db, "users", uid));
+                return { uid, snap };
+              } catch {
+                return { uid, snap: null };
+              }
+            })
+          );
+          snapshots.forEach(({ uid, snap }) => {
+            if (snap && snap.exists()) {
+              const data = snap.data();
+              userGenderMap[uid] = data.gender || null;
+            } else {
+              userGenderMap[uid] = null;
+            }
+          });
+        }
+
+        // 스타일 / 성별 필터링 적용
+        const filteredRecords = records.filter(record => {
+          // 스타일 필터
+          if (style) {
+            const recordStyleLabel = record.style;
+            const filterStyleLabel = getStyleLabel(style);
+            if (recordStyleLabel !== filterStyleLabel) return false;
+          }
+
+          // 성별 필터: gender 파라미터가 있을 때만 적용 (작성자 프로필 기준)
+          if (gender) {
+            const authorGender = userGenderMap[record.uid] || null;
+
+            // 남성 탭: authorGender === 'male' 인 기록만
+            if (gender === 'male' && authorGender !== 'male') return false;
+
+            // 여성 탭: authorGender === 'female' 인 기록만
+            if (gender === 'female' && authorGender !== 'female') return false;
+          }
+
+          return true;
         });
-        
+
         setOutfits(filteredRecords);
       } catch (error) {
         console.error("피드 데이터 로딩 실패:", error);
@@ -56,7 +94,7 @@ export function useFeedData(region, order, style, dateState) {
     };
 
     fetchRecords();
-  }, [region, order, style, selectedDate]);
+  }, [region, order, style, selectedDate, gender]);
 
   // 좋아요 토글 함수(Firestore + UI 동기화)
   const handleToggleLike = async (recordId, isLiked) => {
